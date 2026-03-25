@@ -397,17 +397,17 @@ function DashboardTab({
   return (
     <div className="space-y-6">
       {/* Header row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-foreground">{team.name}</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+          <h2 className="text-lg font-semibold text-foreground truncate">{team.name}</h2>
           <Badge
             variant={team.status === "active" ? "default" : "secondary"}
-            className="capitalize"
+            className="capitalize shrink-0"
           >
             {team.status}
           </Badge>
         </div>
-        {isLeaderOrAdmin && (
+        {/* {isLeaderOrAdmin && (
           <Button
             size="sm"
             onClick={onAutoAssign}
@@ -421,7 +421,7 @@ function DashboardTab({
             )}
             Auto-assign Leads
           </Button>
-        )}
+        )} */}
       </div>
 
       {/* Stat cards */}
@@ -558,17 +558,17 @@ function DashboardTab({
                       </div>
                     </div>
 
-                    {/* Stat chips */}
-                    <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                    {/* Stat chips — 2 on mobile, 4 on sm+ */}
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                       {[
-                        { label: "Total", value: member.total, cls: "text-foreground" },
-                        { label: "Active", value: member.assigned + member.followup + (member.cnc ?? 0) + (member.booking ?? 0) + (member.interested ?? 0), cls: "text-amber-400" },
-                        { label: "Closed", value: member.closed, cls: "text-green-400" },
-                        { label: "Rejected", value: member.rejected, cls: "text-red-400" },
-                      ].map(({ label, value, cls }) => (
+                        { label: "Total",    value: member.total,   cls: "text-foreground",  show: "always" },
+                        { label: "Active",   value: member.assigned + member.followup + (member.cnc ?? 0) + (member.booking ?? 0) + (member.interested ?? 0), cls: "text-amber-400",  show: "sm" },
+                        { label: "Closed",   value: member.closed,  cls: "text-green-400",  show: "always" },
+                        { label: "Rejected", value: member.rejected,cls: "text-red-400",    show: "sm" },
+                      ].map(({ label, value, cls, show }) => (
                         <div
                           key={label}
-                          className="flex flex-col items-center rounded bg-muted/60 px-2 py-1 min-w-[38px]"
+                          className={`flex flex-col items-center rounded bg-muted/60 px-1.5 sm:px-2 py-1 min-w-[32px] sm:min-w-[38px] ${show === "sm" ? "hidden sm:flex" : ""}`}
                         >
                           <span className={`text-xs font-bold ${cls}`}>{value}</span>
                           <span className="text-[10px] text-muted-foreground">{label}</span>
@@ -1367,8 +1367,8 @@ function LeadsTab({
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border px-6 py-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-border px-4 sm:px-6 py-4">
+              <p className="text-sm text-muted-foreground text-center sm:text-left">
                 Showing{" "}
                 <span className="font-medium text-foreground">
                   {(pagination.page - 1) * pagination.limit + 1}–
@@ -1377,26 +1377,26 @@ function LeadsTab({
                 of{" "}
                 <span className="font-medium text-foreground">{pagination.total}</span> leads
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
+                  variant="outline" size="sm"
+                  className="gap-1"
                   disabled={!pagination.hasPrevPage || isFetching}
                   onClick={() => setPage((p) => p - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Prev</span>
                 </Button>
-                <span className="text-sm font-medium px-1">
+                <span className="text-sm font-medium px-1 tabular-nums">
                   {pagination.page} / {pagination.totalPages}
                 </span>
                 <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
+                  variant="outline" size="sm"
+                  className="gap-1"
                   disabled={!pagination.hasNextPage || isFetching}
                   onClick={() => setPage((p) => p + 1)}
                 >
+                  <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -1529,42 +1529,43 @@ function LeadsTab({
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
           >
-            <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-2xl px-4 py-3">
-              <div className="flex items-center gap-2 pr-3 border-r border-border">
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-2xl px-3 sm:px-4 py-2.5 sm:py-3">
+              <div className="flex items-center gap-1.5 pr-2.5 sm:pr-3 border-r border-border shrink-0">
                 <CheckSquare className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold whitespace-nowrap">
-                  {selectedIds.size} selected
+                <span className="text-xs sm:text-sm font-semibold whitespace-nowrap">
+                  {selectedIds.size}
+                  <span className="hidden sm:inline"> selected</span>
                 </span>
               </div>
               {/* Assign to member */}
               {isLeaderOrAdmin && (
                 <Button
                   variant="ghost" size="sm"
-                  className="gap-1.5 h-8 text-xs hover:bg-muted"
+                  className="gap-1 sm:gap-1.5 h-8 text-xs px-2 sm:px-3 hover:bg-muted"
                   onClick={() => setBulkAssignOpen(true)}
                 >
-                  <UserCheck className="h-3.5 w-3.5" />
-                  Assign Member
+                  <UserCheck className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Assign</span>
                 </Button>
               )}
               {/* Change status */}
               <Button
                 variant="ghost" size="sm"
-                className="gap-1.5 h-8 text-xs hover:bg-muted"
+                className="gap-1 sm:gap-1.5 h-8 text-xs px-2 sm:px-3 hover:bg-muted"
                 onClick={() => setBulkStatusOpen(true)}
               >
-                <Tags className="h-3.5 w-3.5" />
-                Status
+                <Tags className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">Status</span>
               </Button>
               {/* Transfer */}
               {isLeaderOrAdmin && (
                 <Button
                   variant="ghost" size="sm"
-                  className="gap-1.5 h-8 text-xs hover:bg-muted"
+                  className="gap-1 sm:gap-1.5 h-8 text-xs px-2 sm:px-3 hover:bg-muted"
                   onClick={() => setBulkTransferOpen(true)}
                 >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
-                  Transfer
+                  <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Transfer</span>
                 </Button>
               )}
               {/* Clear */}
@@ -1700,29 +1701,30 @@ function LogsTab({ teamId }: { teamId: string }) {
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border px-6 py-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-border px-4 sm:px-6 py-4">
+              <p className="text-sm text-muted-foreground text-center sm:text-left">
                 Page{" "}
                 <span className="font-medium text-foreground">{pagination.page}</span> of{" "}
                 <span className="font-medium text-foreground">{pagination.totalPages}</span>
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
+                  variant="outline" size="sm" className="gap-1"
                   disabled={!pagination.hasPrevPage || isFetching}
                   onClick={() => setPage((p) => p - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Prev</span>
                 </Button>
+                <span className="text-sm font-medium px-1 tabular-nums">
+                  {pagination.page} / {pagination.totalPages}
+                </span>
                 <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
+                  variant="outline" size="sm" className="gap-1"
                   disabled={!pagination.hasNextPage || isFetching}
                   onClick={() => setPage((p) => p + 1)}
                 >
+                  <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -1810,38 +1812,38 @@ export default function TeamDetailPage() {
         transition={{ delay: 0.05 }}
       >
         <Card className="border-border/50 overflow-hidden">
-          <div className="h-16 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
+          <div className="h-14 sm:h-16 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
           <CardContent className="relative pt-0 pb-5">
-            <div className="-mt-8 flex items-end justify-between gap-4 flex-wrap">
+            <div className="-mt-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               {/* Team icon + name */}
-              <div className="flex items-end gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border-4 border-background bg-primary/10 shadow-lg">
-                  <Users className="h-7 w-7 text-primary" />
+              <div className="flex items-end gap-3 sm:gap-4 min-w-0">
+                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-xl border-4 border-background bg-primary/10 shadow-lg">
+                  <Users className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 </div>
-                <div className="pb-1">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h1 className="text-xl font-bold text-foreground">{team.name}</h1>
+                <div className="pb-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">{team.name}</h1>
                     <Badge
                       variant={team.status === "active" ? "default" : "secondary"}
-                      className="capitalize"
+                      className="capitalize shrink-0"
                     >
                       {team.status}
                     </Badge>
                   </div>
                   {team.description && (
-                    <p className="text-sm text-muted-foreground mt-0.5">{team.description}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{team.description}</p>
                   )}
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Crown className="h-3 w-3 text-amber-400" />
+                      <Crown className="h-3 w-3 text-amber-400 shrink-0" />
                       {team.leaders?.length ?? 0} leader{(team.leaders?.length ?? 0) !== 1 ? "s" : ""}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
+                      <Users className="h-3 w-3 shrink-0" />
                       {team.members?.length ?? 0} member{(team.members?.length ?? 0) !== 1 ? "s" : ""}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
+                      <Calendar className="h-3 w-3 shrink-0" />
                       Created {formatDate(team.createdAt)}
                     </span>
                   </div>
@@ -1849,7 +1851,7 @@ export default function TeamDetailPage() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 pb-1 flex-wrap">
+              <div className="flex items-center gap-2 pb-1 flex-wrap shrink-0">
                 {/* {isLeaderOrAdmin && (
                   <Button
                     variant="outline"
@@ -1926,14 +1928,14 @@ export default function TeamDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        {/* Tab list */}
-        <div className="flex items-center gap-1 border-b border-border mb-6 overflow-x-auto">
+        {/* Tab list — scrollable on mobile */}
+        <div className="flex items-center gap-1 border-b border-border mb-6 overflow-x-auto scrollbar-none -mx-1 px-1">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={[
-                "relative px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap shrink-0",
+                "relative px-3 sm:px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap shrink-0",
                 activeTab === tab.id
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",

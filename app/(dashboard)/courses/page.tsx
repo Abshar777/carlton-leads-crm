@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BookOpen, Plus, Search, Filter, X, Edit2, Trash2,
+  BookOpen, Plus, Search, X, Edit2, Trash2,
   IndianRupee, ChevronLeft, ChevronRight, BookMarked,
   TrendingUp, Package,
 } from "lucide-react";
@@ -19,7 +19,7 @@ import { CourseDialog } from "@/components/courses/CourseDialog";
 import { DeleteCourseDialog } from "@/components/courses/DeleteCourseDialog";
 import type { Course } from "@/types/course";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAmount(amount: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -29,7 +29,7 @@ function formatAmount(amount: number) {
   }).format(amount);
 }
 
-// ─── Skeleton Card ────────────────────────────────────────────────────────────
+// ─── Skeleton Card ─────────────────────────────────────────────────────────────
 
 function CourseCardSkeleton() {
   return (
@@ -50,7 +50,7 @@ function CourseCardSkeleton() {
   );
 }
 
-// ─── Course Card ─────────────────────────────────────────────────────────────
+// ─── Course Card ──────────────────────────────────────────────────────────────
 
 interface CourseCardProps {
   course: Course;
@@ -65,18 +65,17 @@ function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
       layout
     >
-      <Card className="group h-full overflow-hidden border-border/60 transition-all duration-200 hover:shadow-md hover:border-primary/30">
-        <CardHeader className="pb-3">
+      <Card className="group h-full overflow-hidden border-border/60 transition-all duration-200 hover:shadow-md hover:border-primary/30 flex flex-col">
+        <CardHeader className="pb-3 flex-1">
           <div className="flex items-start justify-between">
             {/* Icon */}
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200 shrink-0">
               <BookOpen className="h-5 w-5" />
             </div>
-
-            {/* Status Badge */}
+            {/* Status badge */}
             <Badge
               variant={course.status === "active" ? "default" : "secondary"}
               className="text-xs"
@@ -86,29 +85,28 @@ function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
           </div>
 
           {/* Name */}
-          <h3 className="mt-3 font-semibold text-foreground leading-snug line-clamp-1">
+          <h3 className="mt-3 font-semibold text-foreground leading-snug line-clamp-2">
             {course.name}
           </h3>
 
           {/* Description */}
           <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
             {course.description || (
-              <span className="italic text-muted-foreground/60">No description</span>
+              <span className="italic text-muted-foreground/50">No description</span>
             )}
           </p>
         </CardHeader>
 
         <CardContent className="pb-3">
-          {/* Amount */}
-          <div className="flex items-center gap-1.5 text-lg font-bold text-foreground">
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-1 text-lg font-bold text-foreground">
+            <IndianRupee className="h-4 w-4 text-muted-foreground shrink-0" />
             {formatAmount(course.amount).replace("₹", "")}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">Course fee</p>
         </CardContent>
 
-        <CardFooter className="pt-3 border-t border-border/50 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
+        <CardFooter className="pt-3 border-t border-border/50 flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground truncate">
             {new Date(course.createdAt).toLocaleDateString("en-IN", {
               day: "numeric",
               month: "short",
@@ -116,8 +114,8 @@ function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
             })}
           </p>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          {/* Actions — always visible on mobile, hover-only on desktop */}
+          <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150 shrink-0">
             <Button
               size="icon"
               variant="ghost"
@@ -144,14 +142,14 @@ function CourseCard({ course, onEdit, onDelete, index }: CourseCardProps) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CoursesPage() {
-  const [search, setSearch] = useState("");
+  const [search, setSearch]               = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [page, setPage] = useState(1);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editCourse, setEditCourse] = useState<Course | null>(null);
+  const [statusFilter, setStatusFilter]   = useState<string>("all");
+  const [page, setPage]                   = useState(1);
+  const [dialogOpen, setDialogOpen]       = useState(false);
+  const [editCourse, setEditCourse]       = useState<Course | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteCourse, setDeleteCourse] = useState<Course | null>(null);
+  const [deleteCourse, setDeleteCourse]   = useState<Course | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const { data, isLoading } = useCourses({
@@ -161,10 +159,9 @@ export default function CoursesPage() {
     limit: 12,
   });
 
-  const courses = data?.data ?? [];
+  const courses    = data?.data ?? [];
   const pagination = data?.pagination;
 
-  // Debounced search
   const handleSearchChange = (val: string) => {
     setSearch(val);
     clearTimeout(searchTimer.current);
@@ -179,121 +176,127 @@ export default function CoursesPage() {
     setPage(1);
   };
 
-  const openCreate = () => {
-    setEditCourse(null);
-    setDialogOpen(true);
-  };
+  const openCreate = () => { setEditCourse(null); setDialogOpen(true); };
+  const openEdit   = (c: Course) => { setEditCourse(c); setDialogOpen(true); };
+  const openDelete = (c: Course) => { setDeleteCourse(c); setDeleteDialogOpen(true); };
 
-  const openEdit = (course: Course) => {
-    setEditCourse(course);
-    setDialogOpen(true);
-  };
-
-  const openDelete = (course: Course) => {
-    setDeleteCourse(course);
-    setDeleteDialogOpen(true);
-  };
-
-  // Stats
-  const totalCourses = pagination?.total ?? 0;
+  const totalCourses  = pagination?.total ?? 0;
   const activeCourses = courses.filter((c) => c.status === "active").length;
-  const avgAmount = courses.length
-    ? courses.reduce((sum, c) => sum + c.amount, 0) / courses.length
+  const avgAmount     = courses.length
+    ? courses.reduce((s, c) => s + c.amount, 0) / courses.length
     : 0;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border-b border-border/60 bg-background/95 backdrop-blur-sm px-6 py-5"
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+    <>
+      {/* ── Page wrapper — natural flow, parent main handles scrolling ───────── */}
+      <div className="flex flex-col gap-6 pb-6">
+
+        {/* ── Page header ─────────────────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
               <BookMarked className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl font-bold text-foreground">Courses</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground truncate">
                 Manage all available courses and programs
               </p>
             </div>
           </div>
-          <Button onClick={openCreate} className="gap-2 shrink-0">
+          <Button onClick={openCreate} className="gap-2 shrink-0 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Add Course
           </Button>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* ── Stats Strip ────────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-3 gap-4 px-6 py-4 border-b border-border/40"
-      >
-        {[
-          { label: "Total Courses", value: totalCourses, icon: Package, color: "text-blue-500" },
-          { label: "Active", value: activeCourses, icon: TrendingUp, color: "text-emerald-500" },
-          {
-            label: "Avg. Fee",
-            value: formatAmount(avgAmount),
-            icon: IndianRupee,
-            color: "text-amber-500",
-          },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-3">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-muted ${color}`}>
-              <Icon className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="text-lg font-bold text-foreground">{value}</p>
-            </div>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* ── Filters ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 px-6 py-4 border-b border-border/40">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search courses..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9 pr-8"
-          />
-          {search && (
-            <button
-              onClick={() => handleSearchChange("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        {/* ── Stats strip ─────────────────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.08 }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        >
+          {[
+            {
+              label: "Total Courses",
+              value: totalCourses,
+              icon: Package,
+              color: "text-blue-500",
+              bg: "bg-blue-500/10",
+            },
+            {
+              label: "Active",
+              value: activeCourses,
+              icon: TrendingUp,
+              color: "text-emerald-500",
+              bg: "bg-emerald-500/10",
+            },
+            {
+              label: "Avg. Fee",
+              value: formatAmount(avgAmount),
+              icon: IndianRupee,
+              color: "text-amber-500",
+              bg: "bg-amber-500/10",
+            },
+          ].map(({ label, value, icon: Icon, color, bg }, i) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 + i * 0.05 }}
+              className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4"
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${bg} ${color}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-xl font-bold text-foreground truncate">{value}</p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* ── Filters ─────────────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search courses..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9 pr-8"
+            />
+            {search && (
+              <button
+                onClick={() => handleSearchChange("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Status */}
-        <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[160px]">
-            <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* ── Content ────────────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* ── Content grid ────────────────────────────────────────────────────── */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -304,13 +307,13 @@ export default function CoursesPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-24 text-center"
+            className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-20 text-center"
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mb-4">
               <BookOpen className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-foreground mb-1">No courses found</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
+            <p className="text-sm text-muted-foreground max-w-xs px-4">
               {debouncedSearch || statusFilter !== "all"
                 ? "Try adjusting your filters to see more courses."
                 : "Get started by adding your first course."}
@@ -340,52 +343,56 @@ export default function CoursesPage() {
             </motion.div>
           </AnimatePresence>
         )}
+
+        {/* ── Pagination ──────────────────────────────────────────────────────── */}
+        {pagination && pagination.totalPages > 1 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 border-t border-border/40 pt-4"
+          >
+            {/* Page info */}
+            <p className="text-sm text-muted-foreground text-center sm:text-left">
+              Showing{" "}
+              <span className="font-medium text-foreground">
+                {(page - 1) * 12 + 1}–{Math.min(page * 12, pagination.total)}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-foreground">{pagination.total}</span>{" "}
+              courses
+            </p>
+
+            {/* Prev / page counter / Next */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!pagination.hasPrevPage}
+                onClick={() => setPage((p) => p - 1)}
+                className="gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Prev</span>
+              </Button>
+              <span className="text-sm font-medium px-2 tabular-nums">
+                {page} / {pagination.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!pagination.hasNextPage}
+                onClick={() => setPage((p) => p + 1)}
+                className="gap-1"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
       </div>
 
-      {/* ── Pagination ─────────────────────────────────────────────────────── */}
-      {pagination && pagination.totalPages > 1 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-between border-t border-border/40 px-6 py-4"
-        >
-          <p className="text-sm text-muted-foreground">
-            Showing{" "}
-            <span className="font-medium text-foreground">
-              {(page - 1) * 12 + 1}–{Math.min(page * 12, pagination.total)}
-            </span>{" "}
-            of{" "}
-            <span className="font-medium text-foreground">{pagination.total}</span> courses
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!pagination.hasPrevPage}
-              onClick={() => setPage((p) => p - 1)}
-              className="gap-1"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Prev
-            </Button>
-            <span className="text-sm font-medium px-2">
-              {page} / {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!pagination.hasNextPage}
-              onClick={() => setPage((p) => p + 1)}
-              className="gap-1"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Dialogs ────────────────────────────────────────────────────────── */}
+      {/* ── Dialogs ───────────────────────────────────────────────────────────── */}
       <CourseDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -396,6 +403,6 @@ export default function CoursesPage() {
         onOpenChange={setDeleteDialogOpen}
         course={deleteCourse}
       />
-    </div>
+    </>
   );
 }

@@ -244,7 +244,7 @@ function NotesPanel({
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="group rounded-lg border border-border/40 bg-muted/20 p-4 hover:bg-muted/30 transition-colors"
+                      className="group rounded-lg overflow-hidden border border-border/40 bg-muted/20 p-4 hover:bg-muted/30 transition-colors"
                     >
                       {editingId === note._id ? (
                         <form onSubmit={editForm.handleSubmit(handleUpdate)} className="space-y-2">
@@ -338,7 +338,7 @@ function ActivityTimeline({ logs }: { logs: ActivityLog[] }) {
   }
 
   return (
-    <Card className="border-border/50">
+    <Card className="border-border/50 overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="h-4 w-4 text-muted-foreground" />

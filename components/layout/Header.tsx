@@ -13,6 +13,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useLogout } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
+import Link from "next/link";
 
 interface HeaderProps {
   title?: string;
@@ -66,9 +67,11 @@ export function Header({ title }: HeaderProps) {
               <p className="text-xs text-muted-foreground font-normal mt-0.5">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
-              <User className="mr-2 h-4 w-4" />
-              Profile
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/profile">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
