@@ -25,7 +25,7 @@ export function Header({ title }: HeaderProps) {
   const { toggleMobileDrawer } = useUiStore();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 md:px-6">
+    <header className="flex md:mt-0 mt-3 h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 md:px-6">
       {/* Left side — hamburger (mobile) + optional title */}
       <div className="flex items-center gap-3">
         {/* Hamburger — visible only on mobile */}
