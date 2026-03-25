@@ -657,7 +657,7 @@ export default function LeadsPage() {
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               )}
-                              {isAdmin && (
+                              {/* {isAdmin && (
                                 <Button
                                   variant="ghost" size="icon"
                                   className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-400"
@@ -666,7 +666,7 @@ export default function LeadsPage() {
                                 >
                                   <UserCheck className="h-4 w-4" />
                                 </Button>
-                              )}
+                              )} */}
                               {canDelete && (
                                 <Button
                                   variant="ghost" size="icon"
