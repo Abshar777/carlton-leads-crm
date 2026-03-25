@@ -1,21 +1,48 @@
 "use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useAuthStore } from "@/lib/store/authStore";
 
+import { navItems } from "@/components/layout/Sidebar";
+
+
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, hasPermission } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (typeof window !== "undefined" && !isAuthenticated) {
+      // alert("You are not authorized to access this page");
       router.replace("/login");
+
     }
   }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) return null;
+
+
+  if (!isAuthenticated && typeof window !== "undefined") return null;
+
+  const pathname = usePathname();
+
+  const redirectPermisionPage = useCallback(() => {
+    if (typeof window == "undefined") return;
+    for (let i = 0; i < navItems.length; i++) {
+      const item = navItems[i];
+      if (hasPermission(item.href.split("/")[1], "view")) {
+        router.push(item.href);
+        break;
+      }
+    }
+  }, [hasPermission]);
+  useEffect(() => {
+    if (pathname == "/login") return;
+    if (!hasPermission(pathname.split("/")[1], "view")) {
+      redirectPermisionPage();
+    }
+  }, [pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

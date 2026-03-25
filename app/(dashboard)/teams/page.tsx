@@ -1,0 +1,250 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Plus,
+  Search,
+  Loader2,
+  Edit2,
+  Trash2,
+  ExternalLink,
+  UsersRound,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTeams } from "@/hooks/useTeams";
+import { TeamDialog } from "@/components/teams/TeamDialog";
+import { DeleteTeamDialog } from "@/components/teams/DeleteTeamDialog";
+import { useAuthStore } from "@/lib/store/authStore";
+import type { Team } from "@/types/team";
+
+export default function TeamsPage() {
+  const { hasPermission } = useAuthStore();
+  const canCreate = hasPermission("leads", "create");
+  const canEdit   = hasPermission("leads", "edit");
+  const canDelete = hasPermission("leads", "delete");
+
+  const [search, setSearch]           = useState("");
+  const [statusFilter, setStatus]     = useState("all");
+  const [page, setPage]               = useState(1);
+  const [teamDialog, setTeamDialog]   = useState<{ open: boolean; team: Team | null }>({ open: false, team: null });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; team: Team | null }>({ open: false, team: null });
+
+  const { data, isLoading } = useTeams({
+    search:  search  || undefined,
+    status:  statusFilter !== "all" ? statusFilter : undefined,
+    page,
+    limit: 12,
+  });
+
+  const teams      = data?.data ?? [];
+  const pagination = data?.pagination;
+
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage teams, leaders, and members
+          </p>
+        </div>
+        {canCreate && (
+          <Button onClick={() => setTeamDialog({ open: true, team: null })}>
+            <Plus className="h-4 w-4" />
+            New Team
+          </Button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search teams..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      {/* Grid */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : teams.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <UsersRound className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-lg font-semibold">No teams found</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            {search || statusFilter !== "all"
+              ? "Try adjusting your filters."
+              : "Create your first team to start organising leads."}
+          </p>
+        </div>
+      ) : (
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
+        >
+          <AnimatePresence>
+            {teams.map((team) => (
+              <motion.div
+                key={team._id}
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                layout
+              >
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <UsersRound className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-base truncate">{team.name}</CardTitle>
+                          {team.description && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {team.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={team.status === "active" ? "default" : "secondary"}
+                        className="shrink-0"
+                      >
+                        {team.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-3">
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-md bg-muted/50 p-2">
+                        <p className="text-lg font-bold">{team.leaders?.length ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Leaders</p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 p-2">
+                        <p className="text-lg font-bold">{team.members?.length ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Members</p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 p-2">
+                        <p className="text-lg font-bold">{team.leadStats?.total ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Leads</p>
+                      </div>
+                    </div>
+
+                    {team.leadStats && team.leadStats.unassigned > 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        {team.leadStats.unassigned} unassigned lead
+                        {team.leadStats.unassigned > 1 ? "s" : ""}
+                      </p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button asChild variant="outline" size="sm" className="flex-1">
+                        <Link href={`/teams/${team._id}`}>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          View
+                        </Link>
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setTeamDialog({ open: true, team })}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteDialog({ open: true, team })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} teams)
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={!pagination.hasPrevPage}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!pagination.hasNextPage}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <TeamDialog
+        open={teamDialog.open}
+        onOpenChange={(open) => setTeamDialog((d) => ({ ...d, open }))}
+        team={teamDialog.team}
+      />
+      <DeleteTeamDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog((d) => ({ ...d, open }))}
+        team={deleteDialog.team}
+      />
+    </div>
+  );
+}

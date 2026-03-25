@@ -1,43 +1,9 @@
 "use client";
 import { motion } from "framer-motion";
-import { Users, Shield, Activity, TrendingUp } from "lucide-react";
+import { Users, Shield, Activity, TrendingUp, FileText, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/store/authStore";
-
-const stats = [
-  {
-    title: "Total Users",
-    value: "—",
-    description: "Manage team members",
-    icon: Users,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-  },
-  {
-    title: "Roles",
-    value: "—",
-    description: "Permission groups",
-    icon: Shield,
-    color: "text-purple-400",
-    bg: "bg-purple-500/10",
-  },
-  {
-    title: "Active Users",
-    value: "—",
-    description: "Currently active",
-    icon: Activity,
-    color: "text-green-400",
-    bg: "bg-green-500/10",
-  },
-  {
-    title: "Modules",
-    value: "6",
-    description: "System modules",
-    icon: TrendingUp,
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
-  },
-];
+import { useLeads } from "@/hooks/useLeads";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -54,6 +20,64 @@ const itemVariants = {
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+
+  // Fetch total leads count (page=1, limit=1 gives us pagination.total)
+  const { data: allLeadsData } = useLeads({ page: 1, limit: 1 });
+  const { data: unassignedLeadsData } = useLeads({ page: 1, limit: 1, assignedTo: "unassigned" });
+
+  const totalLeads = allLeadsData?.pagination?.total;
+  const unassignedLeads = unassignedLeadsData?.pagination?.total;
+
+  const stats = [
+    {
+      title: "Total Users",
+      value: "—",
+      description: "Manage team members",
+      icon: Users,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10",
+    },
+    {
+      title: "Roles",
+      value: "—",
+      description: "Permission groups",
+      icon: Shield,
+      color: "text-purple-400",
+      bg: "bg-purple-500/10",
+    },
+    {
+      title: "Active Users",
+      value: "—",
+      description: "Currently active",
+      icon: Activity,
+      color: "text-green-400",
+      bg: "bg-green-500/10",
+    },
+    {
+      title: "Modules",
+      value: "6",
+      description: "System modules",
+      icon: TrendingUp,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10",
+    },
+    {
+      title: "Total Leads",
+      value: totalLeads !== undefined ? String(totalLeads) : "—",
+      description: "All leads in system",
+      icon: FileText,
+      color: "text-cyan-400",
+      bg: "bg-cyan-500/10",
+    },
+    {
+      title: "Unassigned Leads",
+      value: unassignedLeads !== undefined ? String(unassignedLeads) : "—",
+      description: "Pending assignment",
+      icon: UserX,
+      color: "text-rose-400",
+      bg: "bg-rose-500/10",
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -76,7 +100,7 @@ export default function DashboardPage() {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
       >
         {stats.map((stat) => (
           <motion.div key={stat.title} variants={itemVariants}>
@@ -111,11 +135,11 @@ export default function DashboardPage() {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Phase 1 — Users & Roles Management</h3>
+                <h3 className="font-semibold text-foreground">Phase 2 — Leads Management</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  This is the foundation of the Carlton CRM. Manage users, assign roles, and
-                  configure granular permissions through the matrix-based RBAC system. Future phases
-                  will include lead management, auto-assignment, and analytics.
+                  Phase 2 adds full lead lifecycle management to Carlton CRM. Create, assign, and
+                  track leads through their pipeline stages. Bulk import via Excel/CSV, auto-assign
+                  to BDE users, and monitor per-user lead stats. Built on the Phase 1 RBAC foundation.
                 </p>
               </div>
             </div>

@@ -1,5 +1,5 @@
 "use client";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/axios";
@@ -13,18 +13,23 @@ export const useLogin = () => {
 
   return useMutation({
     mutationFn: async (data: LoginFormValues) => {
-      const response = await api.post<ApiResponse<LoginResponse>>("/auth/login", data);
+      const response = await api.post<ApiResponse<LoginResponse>>(
+        "/auth/login",
+        data,
+      );
       return response.data.data!;
     },
     onSuccess: (data) => {
       setAuth(data.user, data.accessToken, data.refreshToken);
-      toast.success("Welcome back!", { description: `Logged in as ${data.user.name}` });
+      toast.success("Welcome back!", {
+        description: `Logged in as ${data.user.name}`,
+      });
       router.push("/dashboard");
     },
     onError: (error: unknown) => {
       const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Login failed. Please check your credentials.";
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ?? "Login failed. Please check your credentials.";
       toast.error(message);
     },
   });
@@ -33,10 +38,19 @@ export const useLogin = () => {
 export const useLogout = () => {
   const { clearAuth } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return () => {
-    clearAuth();
+    // clearAuth();
     toast.success("Logged out successfully");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("crm-auth");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      queryClient.clear();
+      
+    }
+
     router.push("/login");
   };
 };

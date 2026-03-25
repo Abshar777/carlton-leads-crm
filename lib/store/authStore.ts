@@ -1,3 +1,4 @@
+"use client"
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { AuthUser } from "@/types";
@@ -19,7 +20,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
-      isAuthenticated: false,
+      isAuthenticated: typeof window !== "undefined" ? localStorage.getItem("crm-auth") !== null? JSON.parse(localStorage.getItem("crm-auth")!)?.state?.isAuthenticated : false : false,
 
       setAuth: (user, accessToken, refreshToken) => {
         // Also store tokens in localStorage for Axios interceptor

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { useRolesSimple } from "@/hooks/useRoles";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { User } from "@/types";
+import Link from "next/link";
 
 type SortField = "name" | "email" | "createdAt" | "status";
 type SortOrder = "asc" | "desc";
@@ -242,6 +243,16 @@ export default function UsersPage() {
                         {(canEdit || canDelete) && (
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-end gap-2">
+                              <Link href={`/users/${user._id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
+                                  title="View Detail"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </Link>
                               {canEdit && (
                                 <Button
                                   variant="ghost"

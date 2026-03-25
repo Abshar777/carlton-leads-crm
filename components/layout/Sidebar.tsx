@@ -9,20 +9,29 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  FileText,
+  UsersRound,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useAuthStore } from "@/lib/store/authStore";
+import { toast } from "sonner";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/users", label: "Users", icon: Users },
-  { href: "/roles", label: "Roles & Permissions", icon: Shield },
+export const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
+  { href: "/leads",     label: "Leads",               icon: FileText,      permModule: "leads" },
+  { href: "/teams",     label: "Teams",               icon: UsersRound,    permModule: "leads" },
+  { href: "/courses",   label: "Courses",             icon: BookOpen,      permModule: "leads" },
+  { href: "/users",     label: "Users",               icon: Users,         permModule: "users" },
+  { href: "/roles",     label: "Roles & Permissions", icon: Shield,        permModule: "roles" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUiStore();
+  const {hasPermission}=useAuthStore()
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -48,7 +57,7 @@ export function Sidebar() {
                 <p className="text-sm font-bold text-sidebar-foreground whitespace-nowrap">
                   Carlton CRM
                 </p>
-                <p className="text-xs text-muted-foreground whitespace-nowrap">Phase 1</p>
+                <p className="text-xs text-muted-foreground whitespace-nowrap">Phase 2</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -56,13 +65,21 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon, permModule }) => {
             const isActive = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Tooltip key={href}>
                 <TooltipTrigger asChild>
                   <Link
                     href={href}
+                    {...(!hasPermission(permModule ?? href.split("/")[1], "view") && {
+                      disabled: true,
+                      onClick: (e) => {
+                        e.preventDefault();
+                        toast.error("You don't have permission to access this page");
+                      },
+                      className: "opacity-50 cursor-not-allowed",
+                    })}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                       isActive

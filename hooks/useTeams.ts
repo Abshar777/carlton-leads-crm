@@ -1,0 +1,272 @@
+"use client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import api from "@/lib/axios";
+import type { ApiResponse } from "@/types";
+import type { Lead, LeadFilters } from "@/types/lead";
+import type {
+  Team, TeamFilters, TeamMemberStat, TeamAutoAssignResult,
+  TeamDashboard, TeamLog,
+} from "@/types/team";
+
+const TEAMS_KEY = ["teams"] as const;
+
+function errMsg(error: unknown, fallback: string) {
+  return (
+    (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback
+  );
+}
+
+// ─── Queries ──────────────────────────────────────────────────────────────────
+
+export const useTeams = (filters?: TeamFilters) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, filters],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (filters?.page)   params.page   = String(filters.page);
+      if (filters?.limit)  params.limit  = String(filters.limit);
+      if (filters?.status) params.status = filters.status;
+      if (filters?.search) params.search = filters.search;
+      const res = await api.get<ApiResponse<Team[]>>("/teams", { params });
+      return { data: res.data.data ?? [], pagination: res.data.pagination };
+    },
+  });
+};
+
+export const useTeam = (id: string) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, id],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Team>>(`/teams/${id}`);
+      return res.data.data!;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useTeamLeads = (teamId: string, filters?: LeadFilters & { unassignedOnly?: boolean }) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "leads", filters],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (filters?.page)           params.page           = String(filters.page);
+      if (filters?.limit)          params.limit          = String(filters.limit);
+      if (filters?.status)         params.status         = filters.status;
+      if (filters?.assignedTo)     params.assignedTo     = filters.assignedTo;
+      if (filters?.reporter)       params.reporter       = filters.reporter;
+      if (filters?.search)         params.search         = filters.search;
+      if (filters?.dateFrom)       params.dateFrom       = filters.dateFrom;
+      if (filters?.dateTo)         params.dateTo         = filters.dateTo;
+      if (filters?.unassignedOnly) params.unassignedOnly = "true";
+      const res = await api.get<ApiResponse<Lead[]>>(`/teams/${teamId}/leads`, { params });
+      return { data: res.data.data ?? [], pagination: res.data.pagination };
+    },
+    enabled: !!teamId,
+  });
+};
+
+export const useTeamMemberStats = (teamId: string) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "member-stats"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TeamMemberStat[]>>(`/teams/${teamId}/member-stats`);
+      return res.data.data ?? [];
+    },
+    enabled: !!teamId,
+  });
+};
+
+// ─── Mutations ────────────────────────────────────────────────────────────────
+
+export type TeamFormData = {
+  name: string;
+  description?: string;
+  leaders?: string[];
+  members?: string[];
+  status?: "active" | "inactive";
+};
+
+export const useCreateTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: TeamFormData) => {
+      const res = await api.post<ApiResponse<Team>>("/teams", data);
+      return res.data.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      toast.success("Team created successfully");
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to create team")),
+  });
+};
+
+export const useUpdateTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TeamFormData> }) => {
+      const res = await api.put<ApiResponse<Team>>(`/teams/${id}`, data);
+      return res.data.data!;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: [...TEAMS_KEY, vars.id] });
+      toast.success("Team updated successfully");
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to update team")),
+  });
+};
+
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/teams/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      toast.success("Team deleted successfully");
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to delete team")),
+  });
+};
+
+export const useAutoAssignTeamLeads = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (leadIds?: string[]) => {
+      const res = await api.post<ApiResponse<TeamAutoAssignResult>>(
+        `/teams/${teamId}/auto-assign`,
+        { leadIds },
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(`Auto-assigned ${data.assigned} lead(s) to team members`);
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to auto-assign leads")),
+  });
+};
+
+// Alias used by team detail page
+export const useTransferLead = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadId, newTeamId }: { leadId: string; newTeamId: string }) => {
+      const res = await api.patch<ApiResponse<unknown>>(`/leads/${leadId}/transfer`, { teamId: newTeamId });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Lead transferred to new team");
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to transfer lead")),
+  });
+};
+
+export const useAssignLeadToMember = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadId, memberId }: { leadId: string; memberId: string }) => {
+      const res = await api.patch<ApiResponse<unknown>>(
+        `/teams/${teamId}/leads/${leadId}/assign`,
+        { memberId },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Lead assigned to member");
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to assign lead")),
+  });
+};
+
+// ─── Bulk Team-Lead Mutations ─────────────────────────────────────────────────
+
+export const useBulkAssignTeamLeadsToMember = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadIds, memberId }: { leadIds: string[]; memberId: string }) => {
+      const res = await api.patch<ApiResponse<{ updated: number }>>(
+        `/teams/${teamId}/leads/bulk/assign`,
+        { leadIds, memberId },
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(`${data.updated} lead(s) assigned to member`);
+    },
+    onError: (err: unknown) => toast.error(errMsg(err, "Failed to assign leads")),
+  });
+};
+
+export const useBulkTransferTeamLeads = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadIds, newTeamId }: { leadIds: string[]; newTeamId: string }) => {
+      const res = await api.patch<ApiResponse<{ updated: number }>>(
+        `/teams/${teamId}/leads/bulk/transfer`,
+        { leadIds, newTeamId },
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(`${data.updated} lead(s) transferred`);
+    },
+    onError: (err: unknown) => toast.error(errMsg(err, "Failed to transfer leads")),
+  });
+};
+
+export const useBulkUpdateTeamLeadsStatus = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadIds, status }: { leadIds: string[]; status: string }) => {
+      const res = await api.patch<ApiResponse<{ updated: number }>>(
+        `/teams/${teamId}/leads/bulk/status`,
+        { leadIds, status },
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(`${data.updated} lead(s) status updated`);
+    },
+    onError: (err: unknown) => toast.error(errMsg(err, "Failed to update status")),
+  });
+};
+
+export const useTeamDashboard = (teamId: string) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "dashboard"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TeamDashboard>>(`/teams/${teamId}/dashboard`);
+      return res.data.data!;
+    },
+    enabled: !!teamId,
+  });
+};
+
+export const useTeamLogs = (teamId: string, page = 1) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "logs", page],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TeamLog[]>>(
+        `/teams/${teamId}/logs`,
+        { params: { page: String(page), limit: "20" } },
+      );
+      return { data: res.data.data ?? [], pagination: res.data.pagination };
+    },
+    enabled: !!teamId,
+  });
+};
