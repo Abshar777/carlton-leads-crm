@@ -43,25 +43,25 @@ import LeadDialog from "@/components/leads/LeadDialog";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: string }> = {
-  new:        { label: "New",        color: "bg-blue-500/15 text-blue-400 border-blue-500/30",       dot: "bg-blue-400" },
-  assigned:   { label: "Assigned",   color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", dot: "bg-yellow-400" },
-  followup:   { label: "Follow Up",  color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
-  closed:     { label: "Closed",     color: "bg-green-500/15 text-green-400 border-green-500/30",    dot: "bg-green-400" },
-  rejected:   { label: "Rejected",   color: "bg-red-500/15 text-red-400 border-red-500/30",          dot: "bg-red-400" },
-  cnc:        { label: "CNC",        color: "bg-slate-500/15 text-slate-400 border-slate-500/30",    dot: "bg-slate-400" },
-  booking:    { label: "Booking",    color: "bg-teal-500/15 text-teal-400 border-teal-500/30",       dot: "bg-teal-400" },
+  new: { label: "New", color: "bg-blue-500/15 text-blue-400 border-blue-500/30", dot: "bg-blue-400" },
+  assigned: { label: "Assigned", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", dot: "bg-yellow-400" },
+  followup: { label: "Follow Up", color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
+  closed: { label: "Closed", color: "bg-green-500/15 text-green-400 border-green-500/30", dot: "bg-green-400" },
+  rejected: { label: "Rejected", color: "bg-red-500/15 text-red-400 border-red-500/30", dot: "bg-red-400" },
+  cnc: { label: "CNC", color: "bg-slate-500/15 text-slate-400 border-slate-500/30", dot: "bg-slate-400" },
+  booking: { label: "Booking", color: "bg-teal-500/15 text-teal-400 border-teal-500/30", dot: "bg-teal-400" },
   interested: { label: "Interested", color: "bg-violet-500/15 text-violet-400 border-violet-500/30", dot: "bg-violet-400" },
 };
 
 const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; color: string; bg: string }> = {
-  lead_created:  { icon: FilePlus2,        color: "text-blue-400",   bg: "bg-blue-500/15" },
-  lead_updated:  { icon: PencilLine,       color: "text-purple-400", bg: "bg-purple-500/15" },
-  status_changed:{ icon: RefreshCw,        color: "text-orange-400", bg: "bg-orange-500/15" },
-  team_assigned: { icon: UsersRound,       color: "text-indigo-400", bg: "bg-indigo-500/15" },
-  lead_assigned: { icon: UserCheck,        color: "text-yellow-400", bg: "bg-yellow-500/15" },
-  note_added:    { icon: MessageSquarePlus,color: "text-green-400",  bg: "bg-green-500/15" },
-  note_updated:  { icon: PencilLine,       color: "text-cyan-400",   bg: "bg-cyan-500/15" },
-  note_deleted:  { icon: Minus,            color: "text-red-400",    bg: "bg-red-500/15" },
+  lead_created: { icon: FilePlus2, color: "text-blue-400", bg: "bg-blue-500/15" },
+  lead_updated: { icon: PencilLine, color: "text-purple-400", bg: "bg-purple-500/15" },
+  status_changed: { icon: RefreshCw, color: "text-orange-400", bg: "bg-orange-500/15" },
+  team_assigned: { icon: UsersRound, color: "text-indigo-400", bg: "bg-indigo-500/15" },
+  lead_assigned: { icon: UserCheck, color: "text-yellow-400", bg: "bg-yellow-500/15" },
+  note_added: { icon: MessageSquarePlus, color: "text-green-400", bg: "bg-green-500/15" },
+  note_updated: { icon: PencilLine, color: "text-cyan-400", bg: "bg-cyan-500/15" },
+  note_deleted: { icon: Minus, color: "text-red-400", bg: "bg-red-500/15" },
 };
 
 const noteSchema = z.object({ content: z.string().min(1, "Note cannot be empty").max(2000) });
@@ -281,7 +281,7 @@ function NotesPanel({
                               </span>
                             </div>
                             {(isAuthor || canEdit) && (
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <div className="flex items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                 {isAuthor && (
                                   <Button
                                     variant="ghost" size="icon"
@@ -429,13 +429,13 @@ export default function LeadDetailPage() {
   const { data: allCourses = [] } = useAllCourses();
   const teams = teamsData?.data ?? [];
 
-  const updateStatus   = useUpdateLeadStatus();
-  const updateLead     = useUpdateLead();
-  const assignLead     = useAssignLead();
-  const assignToTeam   = useAssignLeadToTeam();
+  const updateStatus = useUpdateLeadStatus();
+  const updateLead = useUpdateLead();
+  const assignLead = useAssignLead();
+  const assignToTeam = useAssignLeadToTeam();
   const transferToTeam = useTransferLeadToTeam();
 
-  const canEdit       = hasPermission("leads", "edit");
+  const canEdit = hasPermission("leads", "edit");
   const currentUserId = authUser?._id ?? "";
 
   // ── Access control helpers (computed after lead loads) ────────────────────
@@ -481,7 +481,7 @@ export default function LeadDetailPage() {
   }
 
   const assignedUser = typeof lead.assignedTo === "object" ? lead.assignedTo as User : null;
-  const reporterUser = typeof lead.reporter  === "object" ? lead.reporter  as User : null;
+  const reporterUser = typeof lead.reporter === "object" ? lead.reporter as User : null;
 
   return (
     <div className="space-y-6 pb-10">

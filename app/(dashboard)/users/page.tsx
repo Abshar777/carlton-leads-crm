@@ -247,7 +247,7 @@ export default function UsersPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
                                   title="View Detail"
                                 >
                                   <ExternalLink className="h-4 w-4" />
@@ -257,7 +257,7 @@ export default function UsersPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity"
                                   onClick={() => handleEdit(user)}
                                 >
                                   <Pencil className="h-4 w-4" />
@@ -267,7 +267,7 @@ export default function UsersPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                                   onClick={() => handleDelete(user)}
                                 >
                                   <Trash2 className="h-4 w-4" />

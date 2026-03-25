@@ -25,13 +25,13 @@ import Link from "next/link";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: string }> = {
-  new:        { label: "New",        color: "bg-blue-500/15 text-blue-400 border-blue-500/30",       dot: "bg-blue-400" },
-  assigned:   { label: "Assigned",   color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", dot: "bg-yellow-400" },
-  followup:   { label: "Follow Up",  color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
-  closed:     { label: "Closed",     color: "bg-green-500/15 text-green-400 border-green-500/30",    dot: "bg-green-400" },
-  rejected:   { label: "Rejected",   color: "bg-red-500/15 text-red-400 border-red-500/30",          dot: "bg-red-400" },
-  cnc:        { label: "CNC",        color: "bg-slate-500/15 text-slate-400 border-slate-500/30",    dot: "bg-slate-400" },
-  booking:    { label: "Booking",    color: "bg-teal-500/15 text-teal-400 border-teal-500/30",       dot: "bg-teal-400" },
+  new: { label: "New", color: "bg-blue-500/15 text-blue-400 border-blue-500/30", dot: "bg-blue-400" },
+  assigned: { label: "Assigned", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", dot: "bg-yellow-400" },
+  followup: { label: "Follow Up", color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
+  closed: { label: "Closed", color: "bg-green-500/15 text-green-400 border-green-500/30", dot: "bg-green-400" },
+  rejected: { label: "Rejected", color: "bg-red-500/15 text-red-400 border-red-500/30", dot: "bg-red-400" },
+  cnc: { label: "CNC", color: "bg-slate-500/15 text-slate-400 border-slate-500/30", dot: "bg-slate-400" },
+  booking: { label: "Booking", color: "bg-teal-500/15 text-teal-400 border-teal-500/30", dot: "bg-teal-400" },
   interested: { label: "Interested", color: "bg-violet-500/15 text-violet-400 border-violet-500/30", dot: "bg-violet-400" },
 };
 
@@ -427,7 +427,7 @@ export default function UserDetailPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-7 w-7 md:opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </Button>

@@ -38,36 +38,36 @@ import type { User } from "@/types";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
-  { value: "all",        label: "All Status" },
-  { value: "new",        label: "New" },
-  { value: "assigned",   label: "Assigned" },
-  { value: "followup",   label: "Follow Up" },
+  { value: "all", label: "All Status" },
+  { value: "new", label: "New" },
+  { value: "assigned", label: "Assigned" },
+  { value: "followup", label: "Follow Up" },
   { value: "interested", label: "Interested" },
-  { value: "cnc",        label: "CNC" },
-  { value: "booking",    label: "Booking" },
-  { value: "closed",     label: "Closed" },
-  { value: "rejected",   label: "Rejected" },
+  { value: "cnc", label: "CNC" },
+  { value: "booking", label: "Booking" },
+  { value: "closed", label: "Closed" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
-  new:        "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  assigned:   "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-  followup:   "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  closed:     "bg-green-500/15 text-green-400 border-green-500/30",
-  rejected:   "bg-red-500/15 text-red-400 border-red-500/30",
-  cnc:        "bg-slate-500/15 text-slate-400 border-slate-500/30",
-  booking:    "bg-teal-500/15 text-teal-400 border-teal-500/30",
+  new: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  assigned: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+  followup: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+  closed: "bg-green-500/15 text-green-400 border-green-500/30",
+  rejected: "bg-red-500/15 text-red-400 border-red-500/30",
+  cnc: "bg-slate-500/15 text-slate-400 border-slate-500/30",
+  booking: "bg-teal-500/15 text-teal-400 border-teal-500/30",
   interested: "bg-violet-500/15 text-violet-400 border-violet-500/30",
 };
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
-  new:        "New",
-  assigned:   "Assigned",
-  followup:   "Follow Up",
-  closed:     "Closed",
-  rejected:   "Rejected",
-  cnc:        "CNC",
-  booking:    "Booking",
+  new: "New",
+  assigned: "Assigned",
+  followup: "Follow Up",
+  closed: "Closed",
+  rejected: "Rejected",
+  cnc: "CNC",
+  booking: "Booking",
   interested: "Interested",
 };
 
@@ -113,34 +113,34 @@ export default function LeadsPage() {
   const router = useRouter();
 
   // ── Filter state ─────────────────────────────────────────────────────────────
-  const [search, setSearch]               = useState("");
+  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage]                   = useState(1);
-  const [status, setStatus]               = useState<string>("all");
-  const [assignedTo, setAssignedTo]       = useState<string>("all");
-  const [reporter, setReporter]           = useState<string>("all");
-  const [dateFrom, setDateFrom]           = useState<string>("");
-  const [dateTo, setDateTo]               = useState<string>("");
-  const [courseId, setCourseId]           = useState<string>("all");
-  const [showFilters, setShowFilters]     = useState(false);
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<string>("all");
+  const [assignedTo, setAssignedTo] = useState<string>("all");
+  const [reporter, setReporter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [courseId, setCourseId] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
-  const [selectedLead, setSelectedLead]   = useState<Lead | null>(null);
-  const [dialogOpen, setDialogOpen]       = useState(false);
-  const [deleteOpen, setDeleteOpen]       = useState(false);
-  const [assignOpen, setAssignOpen]       = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
 
   // ── Bulk selection state ──────────────────────────────────────────────────────
-  const [selectedIds, setSelectedIds]         = useState<Set<string>>(new Set());
-  const [bulkStatusOpen, setBulkStatusOpen]   = useState(false);
-  const [bulkTeamOpen, setBulkTeamOpen]       = useState(false);
-  const [bulkDeleteOpen, setBulkDeleteOpen]   = useState(false);
-  const [bulkStatus, setBulkStatus]           = useState<LeadStatus>("followup");
-  const [bulkTeamId, setBulkTeamId]           = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkTeamOpen, setBulkTeamOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<LeadStatus>("followup");
+  const [bulkTeamId, setBulkTeamId] = useState<string>("");
 
   const bulkUpdateStatus = useBulkUpdateLeadStatus();
-  const bulkDeleteLeads  = useBulkDeleteLeads();
-  const bulkAssignTeam   = useBulkAssignLeadsToTeam();
+  const bulkDeleteLeads = useBulkDeleteLeads();
+  const bulkAssignTeam = useBulkAssignLeadsToTeam();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { mutate: updateStatus } = useUpdateLeadStatus();
@@ -183,13 +183,13 @@ export default function LeadsPage() {
   const filters = useMemo(() => ({
     page,
     limit: 10,
-    ...(debouncedSearch              ? { search:     debouncedSearch } : {}),
-    ...(status     !== "all"         ? { status }                      : {}),
-    ...(assignedTo !== "all"         ? { assignedTo }                  : {}),
-    ...(reporter   !== "all"         ? { reporter }                    : {}),
-    ...(courseId   !== "all"         ? { course: courseId }            : {}),
-    ...(dateFrom                     ? { dateFrom }                    : {}),
-    ...(dateTo                       ? { dateTo }                      : {}),
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    ...(status !== "all" ? { status } : {}),
+    ...(assignedTo !== "all" ? { assignedTo } : {}),
+    ...(reporter !== "all" ? { reporter } : {}),
+    ...(courseId !== "all" ? { course: courseId } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
   }), [page, debouncedSearch, status, assignedTo, reporter, courseId, dateFrom, dateTo]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
@@ -197,14 +197,14 @@ export default function LeadsPage() {
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const { data: allCourses = [] } = useAllCourses();
 
-  const leads      = data?.data       ?? [];
+  const leads = data?.data ?? [];
   const pagination = data?.pagination;
-  const allUsers   = usersData?.data  ?? [];
+  const allUsers = usersData?.data ?? [];
 
   // ── Permissions & role detection ──────────────────────────────────────────────
-  const canCreate    = hasPermission("leads", "create");
-  const canEdit      = hasPermission("leads", "edit");
-  const canDelete    = hasPermission("leads", "delete");
+  const canCreate = hasPermission("leads", "create");
+  const canEdit = hasPermission("leads", "edit");
+  const canDelete = hasPermission("leads", "delete");
   const isSuperAdmin =
     user?.role?.isSystemRole === true && user?.role?.roleName === "Super Admin";
 
@@ -221,18 +221,18 @@ export default function LeadsPage() {
   const filterableUsers = isSuperAdmin
     ? allUsers
     : isTeamLeader && myLeaderTeam
-    ? (myLeaderTeam.members ?? []).filter((m): m is typeof allUsers[0] => typeof m === "object")
-    : [];
+      ? (myLeaderTeam.members ?? []).filter((m): m is typeof allUsers[0] => typeof m === "object")
+      : [];
 
   // Reporter filter only makes sense for super admin
   const showReporterFilter = isSuperAdmin;
 
   // ── Active filter detection ───────────────────────────────────────────────────
   const activeFilterCount = [
-    status     !== "all",
+    status !== "all",
     assignedTo !== "all",
-    reporter   !== "all",
-    courseId   !== "all",
+    reporter !== "all",
+    courseId !== "all",
     !!dateFrom,
     !!dateTo,
     !!debouncedSearch,
@@ -253,11 +253,11 @@ export default function LeadsPage() {
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
-  const handleCreate      = ()            => { setSelectedLead(null); setDialogOpen(true); };
-  const handleEdit        = (l: Lead)     => { setSelectedLead(l);    setDialogOpen(true); };
-  const handleDelete      = (l: Lead)     => { setSelectedLead(l);    setDeleteOpen(true); };
-  const handleAssign      = (l: Lead)     => { setSelectedLead(l);    setAssignOpen(true); };
-  const handleStatusChange= (l: Lead, s: LeadStatus) => updateStatus({ id: l._id, status: s });
+  const handleCreate = () => { setSelectedLead(null); setDialogOpen(true); };
+  const handleEdit = (l: Lead) => { setSelectedLead(l); setDialogOpen(true); };
+  const handleDelete = (l: Lead) => { setSelectedLead(l); setDeleteOpen(true); };
+  const handleAssign = (l: Lead) => { setSelectedLead(l); setAssignOpen(true); };
+  const handleStatusChange = (l: Lead, s: LeadStatus) => updateStatus({ id: l._id, status: s });
 
   // ── Active filter label helpers ───────────────────────────────────────────────
   function userName(id: string) {
@@ -641,7 +641,7 @@ export default function LeadsPage() {
                               <Link href={`/leads/${lead._id}`}>
                                 <Button
                                   variant="ghost" size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
                                   title="View Detail"
                                 >
                                   <ExternalLink className="h-4 w-4" />
@@ -650,7 +650,7 @@ export default function LeadsPage() {
                               {canEdit && (
                                 <Button
                                   variant="ghost" size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity"
                                   onClick={() => handleEdit(lead)}
                                   title="Edit"
                                 >
@@ -660,7 +660,7 @@ export default function LeadsPage() {
                               {/* {isAdmin && (
                                 <Button
                                   variant="ghost" size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-400"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-400"
                                   onClick={() => handleAssign(lead)}
                                   title="Assign"
                                 >
@@ -670,7 +670,7 @@ export default function LeadsPage() {
                               {canDelete && (
                                 <Button
                                   variant="ghost" size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                                   onClick={() => handleDelete(lead)}
                                   title="Delete"
                                 >
