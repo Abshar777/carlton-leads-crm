@@ -286,7 +286,7 @@ export default function UsersPage() {
                             {formatDate(user.createdAt)}
                           </span>
                         </td>
-                        {(canEdit || canDelete) && (
+                        { (
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-end gap-2">
                               <Link href={`/users/${user._id}`}>
