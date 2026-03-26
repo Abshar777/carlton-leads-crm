@@ -122,6 +122,7 @@ export default function LeadsPage() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [courseId, setCourseId] = useState<string>("all");
+  const [teamId, setTeamId] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ export default function LeadsPage() {
   const { mutate: updateStatus } = useUpdateLeadStatus();
 
   // Clear selection when page/filters change
-  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, courseId]);
+  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, courseId, teamId]);
 
   const toggleId = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -188,9 +189,10 @@ export default function LeadsPage() {
     ...(assignedTo !== "all" ? { assignedTo } : {}),
     ...(reporter !== "all" ? { reporter } : {}),
     ...(courseId !== "all" ? { course: courseId } : {}),
+    ...(teamId !== "all" ? { team: teamId } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
-  }), [page, debouncedSearch, status, assignedTo, reporter, courseId, dateFrom, dateTo]);
+  }), [page, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
@@ -233,6 +235,7 @@ export default function LeadsPage() {
     assignedTo !== "all",
     reporter !== "all",
     courseId !== "all",
+    teamId !== "all",
     !!dateFrom,
     !!dateTo,
     !!debouncedSearch,
@@ -245,6 +248,7 @@ export default function LeadsPage() {
     setAssignedTo("all");
     setReporter("all");
     setCourseId("all");
+    setTeamId("all");
     setDateFrom("");
     setDateTo("");
     setSearch("");
@@ -433,6 +437,24 @@ export default function LeadsPage() {
                       </div>
                     )}
 
+                    {/* Team — only visible to super admins */}
+                    {isSuperAdmin && (teamsData?.data?.length ?? 0) > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Team</p>
+                        <Select value={teamId} onValueChange={(v) => applyFilter(setTeamId, v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="All Teams" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            <SelectItem value="all">All Teams</SelectItem>
+                            {(teamsData?.data ?? []).map((t) => (
+                              <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     {/* Date Range */}
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -487,6 +509,12 @@ export default function LeadsPage() {
                     onRemove={() => applyFilter(setCourseId, "all")}
                   />
                 )}
+                {teamId !== "all" && (
+                  <FilterPill
+                    label={`Team: ${teamsData?.data?.find((t) => t._id === teamId)?.name ?? teamId}`}
+                    onRemove={() => applyFilter(setTeamId, "all")}
+                  />
+                )}
                 {dateFrom && (
                   <FilterPill label={`From: ${dateFrom}`} onRemove={() => { setDateFrom(""); setPage(1); }} />
                 )}
@@ -533,8 +561,9 @@ export default function LeadsPage() {
                       <th className="px-4 py-3 text-left hidden md:table-cell">Source</th>
                       <th className="px-4 py-3 text-left hidden xl:table-cell">Course</th>
                       <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left hidden lg:table-cell">Team</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Assigned To</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Reporter</th>
+                      <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
                       <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -616,6 +645,17 @@ export default function LeadsPage() {
                             </DropdownMenu>
                           </td>
 
+                          {/* Team */}
+                          <td className="px-4 py-4 hidden lg:table-cell">
+                            {lead.team ? (
+                              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                {typeof lead.team === "object" ? lead.team.name : lead.team}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50">—</span>
+                            )}
+                          </td>
+
                           {/* Assigned To */}
                           <td className="px-4 py-4 hidden lg:table-cell">
                             <span className="text-sm text-muted-foreground">
@@ -624,7 +664,7 @@ export default function LeadsPage() {
                           </td>
 
                           {/* Reporter */}
-                          <td className="px-4 py-4 hidden lg:table-cell">
+                          <td className="px-4 py-4 hidden xl:table-cell">
                             <span className="text-sm text-muted-foreground">
                               {getUserName(lead.reporter as User | string | null)}
                             </span>

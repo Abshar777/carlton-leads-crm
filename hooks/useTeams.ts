@@ -19,6 +19,21 @@ function errMsg(error: unknown, fallback: string) {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
+/**
+ * Returns the team the currently-authenticated user belongs to
+ * (as leader or member). Returns null if not in any team.
+ */
+export const useMyTeam = () => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, "mine"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Team | null>>("/teams/mine");
+      return res.data.data ?? null;
+    },
+    staleTime: 60_000,
+  });
+};
+
 export const useTeams = (filters?: TeamFilters) => {
   return useQuery({
     queryKey: [...TEAMS_KEY, filters],

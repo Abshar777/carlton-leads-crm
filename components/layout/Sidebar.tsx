@@ -12,6 +12,7 @@ import {
   FileText,
   UsersRound,
   BookOpen,
+  BarChart2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,12 +33,13 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { toast } from "sonner";
 
 export const navItems = [
-  { href: "/dashboard", label: "Dashboard",          icon: LayoutDashboard, permModule: "dashboard" },
-  { href: "/leads",     label: "Leads",              icon: FileText,        permModule: "leads" },
-  { href: "/teams",     label: "Teams",              icon: UsersRound,      permModule: "leads" },
-  { href: "/courses",   label: "Courses",            icon: BookOpen,        permModule: "leads" },
-  { href: "/users",     label: "Users",              icon: Users,           permModule: "users" },
-  { href: "/roles",     label: "Roles & Permissions",icon: Shield,          permModule: "roles" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
+  { href: "/leads", label: "Leads", icon: FileText, permModule: "leads" },
+  { href: "/teams", label: "Teams", icon: UsersRound, permModule: "leads" },
+  { href: "/courses", label: "Courses", icon: BookOpen, permModule: "leads" },
+  { href: "/reports", label: "Reports", icon: BarChart2, permModule: "reports" },
+  { href: "/users", label: "Users", icon: Users, permModule: "users" },
+  { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
 ];
 
 // ─── Shared nav link list (used in both desktop + mobile) ────────────────────
@@ -55,7 +57,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
-        const allowed  = hasPermission(permModule ?? href.split("/")[1], "view");
+        const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
 
         const linkEl = (
           <Link
@@ -73,7 +75,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
               isActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
-              !allowed && "opacity-50 cursor-not-allowed",
+              !allowed && "opacity-50 cursor-not-allowed hidden",
             )}
           >
             <Icon className="h-5 w-5 shrink-0" />
@@ -128,7 +130,7 @@ function Logo({ collapsed = false }: { collapsed?: boolean }) {
             <p className="text-sm font-bold text-sidebar-foreground whitespace-nowrap">
               Carlton CRM
             </p>
-            <p className="text-xs text-muted-foreground whitespace-nowrap">Phase 2</p>
+            <p className="text-xs text-muted-foreground whitespace-nowrap">Phase 4</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -195,7 +197,7 @@ function MobileDrawer() {
             </div>
             <div>
               <p className="text-sm font-bold text-sidebar-foreground">Carlton CRM</p>
-              <p className="text-xs text-muted-foreground">Phase 2</p>
+              <p className="text-xs text-muted-foreground">Phase 4</p>
             </div>
           </div>
           <button

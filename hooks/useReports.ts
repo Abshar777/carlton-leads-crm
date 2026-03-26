@@ -1,0 +1,115 @@
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/axios";
+import type {
+  OverviewReport,
+  TimelinePoint,
+  UserRankItem,
+  TeamRankItem,
+  TimelinePeriod,
+  TeamSplitReport,
+  SplitPeriod,
+} from "@/types/reports";
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message: string;
+}
+
+// ── Overview ─────────────────────────────────────────────────────────────────
+
+export function useReportOverview(dateFrom: string, dateTo: string) {
+  return useQuery<OverviewReport>({
+    queryKey: ["reports", "overview", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<OverviewReport>>(
+        `/reports/overview?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── Timeline ─────────────────────────────────────────────────────────────────
+
+export function useReportTimeline(
+  period: TimelinePeriod,
+  dateFrom: string,
+  dateTo: string,
+) {
+  return useQuery<TimelinePoint[]>({
+    queryKey: ["reports", "timeline", period, dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period });
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<TimelinePoint[]>>(
+        `/reports/timeline?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── User Rankings ─────────────────────────────────────────────────────────────
+
+export function useReportUserRankings(dateFrom: string, dateTo: string) {
+  return useQuery<UserRankItem[]>({
+    queryKey: ["reports", "users", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: "20" });
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<UserRankItem[]>>(
+        `/reports/users?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── Team Rankings ─────────────────────────────────────────────────────────────
+
+export function useReportTeamRankings(dateFrom: string, dateTo: string) {
+  return useQuery<TeamRankItem[]>({
+    queryKey: ["reports", "teams", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<TeamRankItem[]>>(
+        `/reports/teams?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── Team Split ────────────────────────────────────────────────────────────────
+
+export function useReportTeamSplit(
+  period: SplitPeriod,
+  dateFrom: string,
+  dateTo: string,
+) {
+  return useQuery<TeamSplitReport>({
+    queryKey: ["reports", "team-split", period, dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period });
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<TeamSplitReport>>(
+        `/reports/team-split?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}

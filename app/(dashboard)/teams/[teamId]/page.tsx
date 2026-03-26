@@ -80,6 +80,7 @@ import {
   useAutoAssignTeamLeads,
   useTeams,
   useDeleteTeam,
+  useMyTeam,
   useBulkAssignTeamLeadsToMember,
   useBulkTransferTeamLeads,
   useBulkUpdateTeamLeadsStatus,
@@ -1752,12 +1753,47 @@ export default function TeamDetailPage() {
   const { mutate: autoAssign, isPending: assigning } = useAutoAssignTeamLeads(teamId);
   const { mutate: deleteTeam, isPending: deleting } = useDeleteTeam();
 
+  // ── Access control ───────────────────────────────────────────────────────────
+  const isSuperAdmin =
+    user?.role?.isSystemRole && user?.role?.roleName === "Super Admin";
+
+  // Always call the hook (rules of hooks) — only redirect for non-super-admins
+  const { data: myTeam, isLoading: myTeamLoading } = useMyTeam();
+
+  // Once we know the user's team, redirect if they're trying to view another team
+  useEffect(() => {
+    if (isSuperAdmin || myTeamLoading || !myTeam) return;
+    // If the page's teamId doesn't match the user's team → redirect to their team
+    if (myTeam._id !== teamId) {
+      router.replace(`/teams/${myTeam._id}`);
+    }
+  }, [isSuperAdmin, myTeamLoading, myTeam, teamId, router]);
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const isAdmin = hasPermission("leads", "edit");
   const isLeader =
     user &&
     team?.leaders?.some((l: User) => l._id === user._id);
   const isLeaderOrAdmin = isLeader || isAdmin;
   const canDelete = hasPermission("leads", "delete");
+
+  // Leads + Logs tabs are only visible to: Super Admin, team leaders, and Reporters
+  const isReporter =
+    user?.role?.roleName === "Reporter" ||
+    user?.role?.roleName === "reporter";
+  const canSeeSensitiveTabs = isSuperAdmin || !!isLeader || isReporter;
+
+  // If a regular member somehow lands on a restricted tab, bounce them to dashboard
+  useEffect(() => {
+    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs")) {
+      setActiveTab("dashboard");
+    }
+  }, [canSeeSensitiveTabs, activeTab]);
+
+  const visibleTabs = TABS.filter(
+    (tab) =>
+      (tab.id !== "leads" && tab.id !== "logs") || canSeeSensitiveTabs,
+  );
 
   function handleAutoAssign() {
     autoAssign(undefined);
@@ -1767,6 +1803,25 @@ export default function TeamDetailPage() {
     deleteTeam(teamId, {
       onSuccess: () => router.push("/teams"),
     });
+  }
+
+  // ── Access guard: show spinner while checking for non-super-admins ───────────
+  if (!isSuperAdmin && (myTeamLoading || (myTeam && myTeam._id !== teamId))) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Non-super-admin with no team at all → redirect to teams list
+  if (!isSuperAdmin && !myTeamLoading && !myTeam) {
+    router.replace("/teams");
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────────
@@ -1834,14 +1889,33 @@ export default function TeamDetailPage() {
                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{team.description}</p>
                   )}
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Crown className="h-3 w-3 text-amber-400 shrink-0" />
-                      {team.leaders?.length ?? 0} leader{(team.leaders?.length ?? 0) !== 1 ? "s" : ""}
-                    </span>
+                    {/* Leader names */}
+                    {(team.leaders?.length ?? 0) > 0 ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Crown className="h-3 w-3 text-amber-400 shrink-0" />
+                        {team.leaders.map((l: User) => (
+                          <div key={l._id} className="flex items-center gap-1">
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback className="text-[9px] bg-amber-500/15 text-amber-500">
+                                {getInitials(l.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-foreground">{l.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Crown className="h-3 w-3 text-amber-400 shrink-0" />
+                        No leader assigned
+                      </span>
+                    )}
+                    <span className="text-muted-foreground/40">·</span>
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3 shrink-0" />
                       {team.members?.length ?? 0} member{(team.members?.length ?? 0) !== 1 ? "s" : ""}
                     </span>
+                    <span className="text-muted-foreground/40">·</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3 shrink-0" />
                       Created {formatDate(team.createdAt)}
@@ -1930,7 +2004,7 @@ export default function TeamDetailPage() {
       >
         {/* Tab list — scrollable on mobile */}
         <div className="flex items-center gap-1 border-b border-border mb-6 overflow-x-auto scrollbar-none -mx-1 px-1">
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -1989,7 +2063,7 @@ export default function TeamDetailPage() {
             </motion.div>
           )}
 
-          {activeTab === "leads" && (
+          {activeTab === "leads" && canSeeSensitiveTabs && (
             <motion.div
               key="leads"
               initial={{ opacity: 0, y: 8 }}
@@ -2007,7 +2081,7 @@ export default function TeamDetailPage() {
             </motion.div>
           )}
 
-          {activeTab === "logs" && (
+          {activeTab === "logs" && canSeeSensitiveTabs && (
             <motion.div
               key="logs"
               initial={{ opacity: 0, y: 8 }}

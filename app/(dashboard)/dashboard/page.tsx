@@ -135,9 +135,9 @@ export default function DashboardPage() {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Phase 2 — Leads Management</h3>
+                <h3 className="font-semibold text-foreground">Phase 4 — Leads Management</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Phase 2 adds full lead lifecycle management to Carlton CRM. Create, assign, and
+                  Phase 4 adds full lead lifecycle management to Carlton CRM. Create, assign, and
                   track leads through their pipeline stages. Bulk import via Excel/CSV, auto-assign
                   to BDE users, and monitor per-user lead stats. Built on the Phase 1 RBAC foundation.
                 </p>

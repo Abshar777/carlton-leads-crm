@@ -1,41 +1,48 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, Loader2, Edit2, Trash2, ExternalLink,
-  UsersRound, ChevronLeft, ChevronRight, X,
+  UsersRound, ChevronLeft, ChevronRight, X, ShieldOff, Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getInitials } from "@/lib/utils";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useTeams } from "@/hooks/useTeams";
+import { useTeams, useMyTeam } from "@/hooks/useTeams";
 import { TeamDialog } from "@/components/teams/TeamDialog";
 import { DeleteTeamDialog } from "@/components/teams/DeleteTeamDialog";
 import { useAuthStore } from "@/lib/store/authStore";
 import type { Team } from "@/types/team";
 
-export default function TeamsPage() {
+// ─── Super-Admin Teams List ───────────────────────────────────────────────────
+// Only rendered when isSuperAdmin === true, so hooks run unconditionally here.
+
+function AdminTeamsList() {
   const { hasPermission } = useAuthStore();
   const canCreate = hasPermission("leads", "create");
   const canEdit   = hasPermission("leads", "edit");
   const canDelete = hasPermission("leads", "delete");
 
-  const [search, setSearch]           = useState("");
-  const [statusFilter, setStatus]     = useState("all");
-  const [page, setPage]               = useState(1);
-  const [teamDialog, setTeamDialog]   = useState<{ open: boolean; team: Team | null }>({ open: false, team: null });
+  const [search, setSearch]     = useState("");
+  const [statusFilter, setStatus] = useState("all");
+  const [page, setPage]           = useState(1);
+  const [teamDialog, setTeamDialog]     = useState<{ open: boolean; team: Team | null }>({ open: false, team: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; team: Team | null }>({ open: false, team: null });
 
   const { data, isLoading } = useTeams({
     search:  search || undefined,
     status:  statusFilter !== "all" ? statusFilter : undefined,
     page,
-    limit: 12,
+    limit:   12,
   });
 
   const teams      = data?.data ?? [];
@@ -43,7 +50,7 @@ export default function TeamsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Header ────────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
@@ -62,9 +69,8 @@ export default function TeamsPage() {
         )}
       </div>
 
-      {/* ── Filters ───────────────────────────────────────────────────────────── */}
+      {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
@@ -82,8 +88,6 @@ export default function TeamsPage() {
             </button>
           )}
         </div>
-
-        {/* Status filter — shadcn Select, not native <select> */}
         <Select value={statusFilter} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="All Status" />
@@ -96,7 +100,7 @@ export default function TeamsPage() {
         </Select>
       </div>
 
-      {/* ── Grid ──────────────────────────────────────────────────────────────── */}
+      {/* Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -113,12 +117,8 @@ export default function TeamsPage() {
               : "Create your first team to start organising leads."}
           </p>
           {canCreate && !search && statusFilter === "all" && (
-            <Button
-              onClick={() => setTeamDialog({ open: true, team: null })}
-              className="mt-2 gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Team
+            <Button onClick={() => setTeamDialog({ open: true, team: null })} className="mt-2 gap-2">
+              <Plus className="h-4 w-4" /> New Team
             </Button>
           )}
         </div>
@@ -133,10 +133,7 @@ export default function TeamsPage() {
             {teams.map((team) => (
               <motion.div
                 key={team._id}
-                variants={{
-                  hidden: { opacity: 0, y: 12 },
-                  visible: { opacity: 1, y: 0 },
-                }}
+                variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
                 layout
               >
                 <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
@@ -149,24 +146,17 @@ export default function TeamsPage() {
                         <div className="min-w-0">
                           <CardTitle className="text-base truncate">{team.name}</CardTitle>
                           {team.description && (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {team.description}
-                            </p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{team.description}</p>
                           )}
                         </div>
                       </div>
-                      <Badge
-                        variant={team.status === "active" ? "default" : "secondary"}
-                        className="shrink-0 capitalize"
-                      >
+                      <Badge variant={team.status === "active" ? "default" : "secondary"} className="shrink-0 capitalize">
                         {team.status}
                       </Badge>
                     </div>
                   </CardHeader>
-
                   <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
                     <div className="space-y-3">
-                      {/* Stats */}
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div className="rounded-md bg-muted/50 p-2">
                           <p className="text-lg font-bold">{team.leaders?.length ?? 0}</p>
@@ -181,40 +171,48 @@ export default function TeamsPage() {
                           <p className="text-xs text-muted-foreground">Leads</p>
                         </div>
                       </div>
-
+                      {/* Leaders */}
+                      {team.leaders && team.leaders.length > 0 && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <Crown className="h-3 w-3 text-amber-400 shrink-0" />
+                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                            {team.leaders.map((l) => (
+                              <div key={typeof l === "object" ? l._id : l} className="flex items-center gap-1">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarFallback className="text-[9px] bg-amber-500/15 text-amber-400">
+                                    {getInitials(typeof l === "object" ? l.name : "?")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {typeof l === "object" ? l.name : l}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {team.leadStats && team.leadStats.unassigned > 0 && (
                         <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          {team.leadStats.unassigned} unassigned lead
-                          {team.leadStats.unassigned > 1 ? "s" : ""}
+                          {team.leadStats.unassigned} unassigned lead{team.leadStats.unassigned > 1 ? "s" : ""}
                         </p>
                       )}
                     </div>
-
-                    {/* Actions */}
                     <div className="flex items-center gap-2 pt-1">
                       <Button asChild variant="outline" size="sm" className="flex-1">
                         <Link href={`/teams/${team._id}`}>
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          View
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> View
                         </Link>
                       </Button>
                       {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => setTeamDialog({ open: true, team })}
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"
+                          onClick={() => setTeamDialog({ open: true, team })}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
                       )}
                       {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button variant="ghost" size="icon"
                           className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteDialog({ open: true, team })}
-                        >
+                          onClick={() => setDeleteDialog({ open: true, team })}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -227,44 +225,27 @@ export default function TeamsPage() {
         </motion.div>
       )}
 
-      {/* ── Pagination ────────────────────────────────────────────────────────── */}
+      {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-border/40 pt-4">
           <p className="text-sm text-muted-foreground text-center sm:text-left">
-            Page{" "}
-            <span className="font-medium text-foreground">{pagination.page}</span> of{" "}
-            <span className="font-medium text-foreground">{pagination.totalPages}</span>{" "}
-            <span className="hidden sm:inline">({pagination.total} teams)</span>
+            Page <span className="font-medium text-foreground">{pagination.page}</span> of{" "}
+            <span className="font-medium text-foreground">{pagination.totalPages}</span>
+            <span className="hidden sm:inline"> ({pagination.total} teams)</span>
           </p>
           <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => p - 1)}
-              disabled={!pagination.hasPrevPage}
-              className="gap-1"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Prev</span>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={!pagination.hasPrevPage} className="gap-1">
+              <ChevronLeft className="h-4 w-4" /><span className="hidden sm:inline">Prev</span>
             </Button>
-            <span className="text-sm font-medium px-1 tabular-nums">
-              {pagination.page} / {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!pagination.hasNextPage}
-              className="gap-1"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="h-4 w-4" />
+            <span className="text-sm font-medium px-1 tabular-nums">{pagination.page} / {pagination.totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!pagination.hasNextPage} className="gap-1">
+              <span className="hidden sm:inline">Next</span><ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* ── Dialogs ───────────────────────────────────────────────────────────── */}
+      {/* Dialogs */}
       <TeamDialog
         open={teamDialog.open}
         onOpenChange={(open) => setTeamDialog((d) => ({ ...d, open }))}
@@ -275,6 +256,62 @@ export default function TeamsPage() {
         onOpenChange={(open) => setDeleteDialog((d) => ({ ...d, open }))}
         team={deleteDialog.team}
       />
+    </div>
+  );
+}
+
+// ─── Gate component — all hooks run unconditionally here ─────────────────────
+
+export default function TeamsPage() {
+  const { user } = useAuthStore();
+  const router   = useRouter();
+
+  const isSuperAdmin =user?.role?.roleName === "Super Admin" || user?.role?.roleName === "Reporter";
+
+  // Always call useMyTeam — but only act on it for non-super-admins
+  const { data: myTeam, isLoading: myTeamLoading } = useMyTeam();
+
+  useEffect(() => {
+    if (isSuperAdmin || myTeamLoading) return;
+    // Non-super-admin: send them directly to their team page
+    if (myTeam?._id) {
+      router.replace(`/teams/${myTeam._id}`);
+    }
+  }, [isSuperAdmin, myTeamLoading, myTeam, router]);
+
+  // ── Super Admin: render the full list
+  if (isSuperAdmin) return <AdminTeamsList />;
+
+  // ── Non-super-admin: resolving …
+  if (myTeamLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Not in any team
+  if (!myTeam) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-20 gap-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <ShieldOff className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-lg font-semibold">Not assigned to a team</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+            You are not a member of any team yet. Please contact your administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Has a team — redirect in progress, show spinner
+  return (
+    <div className="flex h-64 items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
   );
 }

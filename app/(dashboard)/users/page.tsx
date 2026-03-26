@@ -12,6 +12,7 @@ import { UserDialog } from "@/components/users/UserDialog";
 import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
 import { useUsers } from "@/hooks/useUsers";
 import { useRolesSimple } from "@/hooks/useRoles";
+import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { User } from "@/types";
@@ -26,6 +27,7 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -40,17 +42,36 @@ export default function UsersPage() {
     if (search) p.search = search;
     if (status !== "all") p.status = status;
     if (roleFilter !== "all") p.role = roleFilter;
+    if (teamFilter !== "all") p.team = teamFilter;
     if (sortField) p.sortBy = sortField;
     if (sortOrder) p.sortOrder = sortOrder;
     return p;
-  }, [page, search, status, roleFilter, sortField, sortOrder]);
+  }, [page, search, status, roleFilter, teamFilter, sortField, sortOrder]);
 
   const { data, isLoading, isFetching } = useUsers(params);
   const { data: rolesData } = useRolesSimple();
+  const { data: teamsData } = useTeams({ status: "active", limit: 200 });
 
   const users = data?.data ?? [];
   const pagination = data?.pagination;
   const roles = rolesData ?? [];
+  const teams = teamsData?.data ?? [];
+
+  // Build userId → teamName map
+  const userTeamMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const team of teams) {
+      for (const leader of team.leaders ?? []) {
+        const id = typeof leader === "object" ? leader._id : leader;
+        map[id] = team.name;
+      }
+      for (const member of team.members ?? []) {
+        const id = typeof member === "object" ? member._id : member;
+        map[id] = team.name;
+      }
+    }
+    return map;
+  }, [teams]);
 
   const handleCreate = () => {
     setSelectedUser(null);
@@ -135,6 +156,21 @@ export default function UsersPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {teams.length > 0 && (
+                  <Select value={teamFilter} onValueChange={(v) => { setTeamFilter(v); setPage(1); }}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      {teams.map((team) => (
+                        <SelectItem key={team._id} value={team._id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Select value={sortField} onValueChange={(v) => { setSortField(v as SortField); setPage(1); }}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Sort by" />
@@ -155,11 +191,11 @@ export default function UsersPage() {
                 >
                   {sortOrder === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
                 </Button>
-                {(status !== "all" || roleFilter !== "all") && (
+                {(status !== "all" || roleFilter !== "all" || teamFilter !== "all") && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => { setStatus("all"); setRoleFilter("all"); setPage(1); }}
+                    onClick={() => { setStatus("all"); setRoleFilter("all"); setTeamFilter("all"); setPage(1); }}
                   >
                     <X className="h-4 w-4 mr-1" />
                     Clear Filters
@@ -190,9 +226,10 @@ export default function UsersPage() {
                     <tr className="border-b border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       <th className="px-6 py-3 text-left">User</th>
                       <th className="px-6 py-3 text-left">Role</th>
-                      <th className="px-6 py-3 text-left">Designation</th>
+                      <th className="px-6 py-3 text-left hidden md:table-cell">Team</th>
+                      <th className="px-6 py-3 text-left hidden lg:table-cell">Designation</th>
                       <th className="px-6 py-3 text-left">Status</th>
-                      <th className="px-6 py-3 text-left">Created</th>
+                      <th className="px-6 py-3 text-left hidden xl:table-cell">Created</th>
                       {(canEdit || canDelete) && (
                         <th className="px-6 py-3 text-right">Actions</th>
                       )}
@@ -225,7 +262,16 @@ export default function UsersPage() {
                             {typeof user.role === "object" ? user.role.roleName : "—"}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          {userTeamMap[user._id] ? (
+                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                              {userTeamMap[user._id]}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 hidden lg:table-cell">
                           <span className="text-sm text-muted-foreground">
                             {user.designation || "—"}
                           </span>
@@ -235,7 +281,7 @@ export default function UsersPage() {
                             {user.status}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 hidden xl:table-cell">
                           <span className="text-sm text-muted-foreground">
                             {formatDate(user.createdAt)}
                           </span>
