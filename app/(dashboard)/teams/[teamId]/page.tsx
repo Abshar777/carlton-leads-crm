@@ -41,6 +41,7 @@ import {
   X,
   Filter,
   CalendarDays,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,7 @@ import {
 } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate, getInitials } from "@/lib/utils";
+import { TeamDialog } from "@/components/teams/TeamDialog";
 import type { Team, TeamMemberStat } from "@/types/team";
 import type { Lead, LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
@@ -593,16 +595,36 @@ function MembersTab({
   team,
   memberStats,
   isLoading,
+  isLeaderOrAdmin = false,
+  onEditMembers,
 }: {
   team: Team;
   memberStats: TeamMemberStat[] | undefined;
   isLoading: boolean;
+  isLeaderOrAdmin?: boolean;
+  onEditMembers?: () => void;
 }) {
   const leaderIds = new Set((team.leaders ?? []).map((l) => l._id));
 
   return (
     <div className="space-y-4">
       <Card className="border-border/50">
+        {isLeaderOrAdmin && (
+          <div className="flex mb-2 items-center justify-between px-4 pt-4 pb-0">
+            <p className="text-sm font-medium text-muted-foreground">
+              {(team.members?.length ?? 0) + (team.leaders?.length ?? 0)} member{((team.members?.length ?? 0) + (team.leaders?.length ?? 0)) !== 1 ? "s" : ""} total
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={onEditMembers}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Edit Members
+            </Button>
+          </div>
+        )}
         <CardContent className="p-0">
           {isLoading ? (
             <div className="space-y-0 divide-y divide-border/50">
@@ -1747,6 +1769,7 @@ export default function TeamDetailPage() {
   const { user, hasPermission } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editMembersOpen, setEditMembersOpen] = useState(false);
 
   const { data: team, isLoading: loadingTeam } = useTeam(teamId);
   const { data: memberStats, isLoading: loadingStats } = useTeamMemberStats(teamId);
@@ -1946,11 +1969,11 @@ export default function TeamDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push(`/teams/${teamId}/edit`)}
+                    onClick={() => setEditMembersOpen(true)}
                     className="gap-2"
                   >
                     <Edit3 className="h-3.5 w-3.5" />
-                    Edit
+                    Edit Team
                   </Button>
                 )}
                 {canDelete && (
@@ -2059,6 +2082,8 @@ export default function TeamDetailPage() {
                 team={team}
                 memberStats={memberStats}
                 isLoading={loadingStats}
+                isLeaderOrAdmin={!!isLeaderOrAdmin}
+                onEditMembers={() => setEditMembersOpen(true)}
               />
             </motion.div>
           )}
@@ -2094,6 +2119,13 @@ export default function TeamDetailPage() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Edit members dialog — reuses TeamDialog pre-filled with current team */}
+      <TeamDialog
+        open={editMembersOpen}
+        onOpenChange={setEditMembersOpen}
+        team={team}
+      />
     </div>
   );
 }

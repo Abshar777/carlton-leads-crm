@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Search, X, Check } from "lucide-react";
+import { Loader2, Search, X, Check, UsersRound } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useCreateTeam, useUpdateTeam } from "@/hooks/useTeams";
+import { useCreateTeam, useUpdateTeam, useTeams } from "@/hooks/useTeams";
 import { useUsers } from "@/hooks/useUsers";
 import type { Team } from "@/types/team";
 import type { User } from "@/types";
@@ -44,12 +44,15 @@ function UserPicker({
   onChange,
   allUsers,
   disabledIds,
+  userTeamMap = {},
 }: {
   label: string;
   selected: string[];
   onChange: (ids: string[]) => void;
   allUsers: User[];
   disabledIds: string[];
+  /** userId → teamName for users already in another team */
+  userTeamMap?: Record<string, string>;
 }) {
   const [search, setSearch] = useState("");
 
@@ -81,8 +84,11 @@ function UserPicker({
       {selectedUsers.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedUsers.map((u) => (
-            <Badge key={u._id} variant="secondary" className="gap-1 pr-1">
+            <Badge  key={u._id} variant="secondary" className="gap-1 pr-1">
               {u.name}
+              {userTeamMap[u._id] && (
+                <span className="ml-0.5 text-[10px] text-amber-500">({userTeamMap[u._id]})</span>
+              )}
               <button
                 type="button"
                 onClick={() => toggle(u._id)}
@@ -106,13 +112,15 @@ function UserPicker({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="h-40 overflow-y-auto">
+        <div className="h-44 overflow-y-auto">
           {filtered.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">No users found</p>
           ) : (
             filtered.map((u) => {
-              const isSelected = selected.includes(u._id);
-              const isDisabled = disabledIds.includes(u._id);
+              const isSelected  = selected.includes(u._id);
+              const existsInTeam = userTeamMap[u._id];
+              const isDisabled  = disabledIds.includes(u._id) || !!existsInTeam;
+              console.log(!!existsInTeam,existsInTeam,"existsInTeam")
               return (
                 <button
                   key={u._id}
@@ -129,9 +137,17 @@ function UserPicker({
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-semibold shrink-0">
                     {u.name[0]}
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">{u.name}</p>
-                    <p className="text-xs text-muted-foreground">{u.email}</p>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-medium">{u.name}</p>
+                      {existsInTeam && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-500 border border-amber-500/25 leading-none shrink-0">
+                          <UsersRound className="h-2.5 w-2.5" />
+                          {existsInTeam}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                   </div>
                   {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
                 </button>
@@ -153,6 +169,23 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
 
   const { data: usersResult } = useUsers({ limit: "200", status: "active" });
   const allUsers: User[] = usersResult?.data ?? [];
+
+  // Fetch all teams so we can show "already in team" badges
+  const { data: teamsResult } = useTeams({ limit: "200" } as any);
+  const allTeams = teamsResult?.data ?? [];
+
+  // Build userId → teamName map, excluding the team currently being edited
+  const userTeamMap = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const t of allTeams) {
+      if (isEdit && team && t._id === team._id) continue;
+      for (const u of [...(t.leaders ?? []), ...(t.members ?? [])]) {
+        const id = typeof u === "string" ? u : u._id;
+        if (id && !map[id]) map[id] = t.name;
+      }
+    }
+    return map;
+  }, [allTeams, isEdit, team]);
 
   const {
     register,
@@ -248,6 +281,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                 onChange={field.onChange}
                 allUsers={allUsers}
                 disabledIds={members}
+                userTeamMap={userTeamMap}
               />
             )}
           />
@@ -263,6 +297,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                 onChange={field.onChange}
                 allUsers={allUsers}
                 disabledIds={leaders}
+                userTeamMap={userTeamMap}
               />
             )}
           />
