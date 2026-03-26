@@ -80,3 +80,29 @@ export interface TeamLog {
   changes?: Record<string, { from: unknown; to: unknown }>;
   createdAt: string;
 }
+
+/** A chat message posted by a team member */
+export interface TeamMessageItem {
+  _id:       string;
+  type:      "message";
+  team:      string;
+  author:    { _id: string; name: string; email: string; designation?: string };
+  content:   string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A lead activity event surfaced in the updates feed */
+export interface TeamActivityItem {
+  _id:         string;
+  type:        "activity";
+  action:      string;
+  description: string;
+  performedBy: { _id: string; name: string; email: string } | null;
+  leadId:      string;
+  leadName:    string;
+  changes?:    Record<string, { from: unknown; to: unknown }>;
+  createdAt:   string;
+}
+
+export type TeamUpdateItem = TeamMessageItem | TeamActivityItem;

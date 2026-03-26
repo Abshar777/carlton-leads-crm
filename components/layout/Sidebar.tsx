@@ -51,14 +51,17 @@ interface NavLinksProps {
 
 function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   const pathname = usePathname();
-  const { hasPermission } = useAuthStore();
-
+  const { hasPermission ,user} = useAuthStore();
+  if(typeof window == "undefined"){
+    return null;
+  }
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
-        const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
 
+        const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
+       
         const linkEl = (
           <Link
             href={href}
@@ -142,7 +145,7 @@ function Logo({ collapsed = false }: { collapsed?: boolean }) {
 
 function DesktopSidebar() {
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUiStore();
-
+  if (typeof window == undefined) return;
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside

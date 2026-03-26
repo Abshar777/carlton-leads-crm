@@ -38,7 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [hasPermission]);
   useEffect(() => {
-    if (pathname == "/login") return;
+    if (pathname == "/login" || pathname == "/profile") return;
     if (!hasPermission(pathname.split("/")[1], "view")) {
       redirectPermisionPage();
     }

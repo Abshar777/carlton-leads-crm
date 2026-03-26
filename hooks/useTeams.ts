@@ -6,7 +6,7 @@ import type { ApiResponse } from "@/types";
 import type { Lead, LeadFilters } from "@/types/lead";
 import type {
   Team, TeamFilters, TeamMemberStat, TeamAutoAssignResult,
-  TeamDashboard, TeamLog,
+  TeamDashboard, TeamLog, TeamUpdateItem,
 } from "@/types/team";
 
 const TEAMS_KEY = ["teams"] as const;
@@ -283,5 +283,55 @@ export const useTeamLogs = (teamId: string, page = 1) => {
       return { data: res.data.data ?? [], pagination: res.data.pagination };
     },
     enabled: !!teamId,
+  });
+};
+
+// ─── Team Updates (combined activity feed + chat) ────────────────────────────
+
+export interface TeamUpdatesFilters {
+  page?:     number;
+  dateFrom?: string;
+  dateTo?:   string;
+  memberId?: string;
+  search?:   string;
+  action?:   string;
+}
+
+export const useTeamUpdates = (teamId: string, filters: TeamUpdatesFilters = {}) => {
+  const { page = 1, dateFrom, dateTo, memberId, search, action } = filters;
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "updates", page, dateFrom, dateTo, memberId, search, action],
+    queryFn: async () => {
+      const params: Record<string, string> = { page: String(page), limit: "30" };
+      if (dateFrom)  params.dateFrom  = dateFrom;
+      if (dateTo)    params.dateTo    = dateTo;
+      if (memberId)  params.memberId  = memberId;
+      if (search)    params.search    = search;
+      if (action)    params.action    = action;
+      const res = await api.get<ApiResponse<TeamUpdateItem[]>>(
+        `/teams/${teamId}/updates`,
+        { params },
+      );
+      return { data: res.data.data ?? [], pagination: res.data.pagination };
+    },
+    enabled: !!teamId,
+    refetchInterval: 30_000,
+  });
+};
+
+export const usePostTeamMessage = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (content: string) => {
+      const res = await api.post<ApiResponse<TeamUpdateItem>>(
+        `/teams/${teamId}/messages`,
+        { content },
+      );
+      return res.data.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...TEAMS_KEY, teamId, "updates"] });
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to send message")),
   });
 };

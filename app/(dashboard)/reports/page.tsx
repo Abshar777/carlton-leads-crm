@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import {
   useReportOverview,
   useReportTimeline,
@@ -965,16 +966,21 @@ export default function ReportsPage() {
       <div className="sticky top-0 z-10 border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="px-4 sm:px-6 py-4 space-y-4">
           {/* Title row */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <BarChart2 className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <BarChart2 className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold text-foreground">Reports & Analytics</h1>
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  {dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : "All time"}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-foreground">Reports & Analytics</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                {dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : "All time"}
-              </p>
-            </div>
+
+            {/* Export PDF */}
+            <ExportPdfDialog type="overall" entityName="CRM Overall" />
           </div>
 
           {/* Tabs */}

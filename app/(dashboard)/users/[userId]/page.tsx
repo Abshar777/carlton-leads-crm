@@ -7,7 +7,8 @@ import {
   ArrowLeft, Loader2, ChevronLeft, ChevronRight,
   FileText, Users, Clock, CheckCircle2, XCircle,
   TrendingUp, Search, Mail, Phone, Shield, Calendar,
-  Activity, StickyNote, ExternalLink,
+  Activity, StickyNote, ExternalLink, PhoneMissed,
+  BookMarked, Sparkles, Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUser } from "@/hooks/useUsers";
 import { useUserLeads, useUserLeadStats } from "@/hooks/useLeads";
 import { formatDate, getInitials } from "@/lib/utils";
+import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import type { LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
 import Link from "next/link";
@@ -126,14 +128,35 @@ export default function UserDetailPage() {
   const roleObj = typeof user.role === "object" ? user.role as { roleName: string; isSystemRole?: boolean } : null;
 
   // ── Stat Cards ───────────────────────────────────────────────────────────────
-  const statCards = [
+  const statCards: {
+    title: string;
+    value: number;
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+    border: string;
+    activeRing: string;
+    filterKey: string; // "all" or a LeadStatus value
+  }[] = [
     {
-      title: "Total Leads",
+      title: "Total",
       value: stats?.total ?? 0,
       icon: FileText,
+      color: "text-primary",
+      bg: "bg-primary/10",
+      border: "border-primary/20",
+      activeRing: "ring-primary/40",
+      filterKey: "all",
+    },
+    {
+      title: "New",
+      value: stats?.new ?? 0,
+      icon: Star,
       color: "text-blue-400",
       bg: "bg-blue-500/10",
       border: "border-blue-500/20",
+      activeRing: "ring-blue-400/40",
+      filterKey: "new",
     },
     {
       title: "Assigned",
@@ -142,6 +165,8 @@ export default function UserDetailPage() {
       color: "text-yellow-400",
       bg: "bg-yellow-500/10",
       border: "border-yellow-500/20",
+      activeRing: "ring-yellow-400/40",
+      filterKey: "assigned",
     },
     {
       title: "Follow Up",
@@ -150,6 +175,38 @@ export default function UserDetailPage() {
       color: "text-orange-400",
       bg: "bg-orange-500/10",
       border: "border-orange-500/20",
+      activeRing: "ring-orange-400/40",
+      filterKey: "followup",
+    },
+    {
+      title: "Interested",
+      value: stats?.interested ?? 0,
+      icon: Sparkles,
+      color: "text-violet-400",
+      bg: "bg-violet-500/10",
+      border: "border-violet-500/20",
+      activeRing: "ring-violet-400/40",
+      filterKey: "interested",
+    },
+    {
+      title: "Booking",
+      value: stats?.booking ?? 0,
+      icon: BookMarked,
+      color: "text-teal-400",
+      bg: "bg-teal-500/10",
+      border: "border-teal-500/20",
+      activeRing: "ring-teal-400/40",
+      filterKey: "booking",
+    },
+    {
+      title: "CNC",
+      value: stats?.cnc ?? 0,
+      icon: PhoneMissed,
+      color: "text-slate-400",
+      bg: "bg-slate-500/10",
+      border: "border-slate-500/20",
+      activeRing: "ring-slate-400/40",
+      filterKey: "cnc",
     },
     {
       title: "Closed",
@@ -158,6 +215,8 @@ export default function UserDetailPage() {
       color: "text-green-400",
       bg: "bg-green-500/10",
       border: "border-green-500/20",
+      activeRing: "ring-green-400/40",
+      filterKey: "closed",
     },
     {
       title: "Rejected",
@@ -166,6 +225,8 @@ export default function UserDetailPage() {
       color: "text-red-400",
       bg: "bg-red-500/10",
       border: "border-red-500/20",
+      activeRing: "ring-red-400/40",
+      filterKey: "rejected",
     },
   ];
 
@@ -208,8 +269,8 @@ export default function UserDetailPage() {
                 </AvatarFallback>
               </Avatar>
 
-              {/* Status + role badges */}
-              <div className="flex items-center gap-2 pb-1">
+              {/* Status + role badges + export */}
+              <div className="flex items-center gap-2 pb-1 flex-wrap">
                 <Badge
                   variant={user.status === "active" ? "success" : "secondary"}
                   className="capitalize"
@@ -222,6 +283,11 @@ export default function UserDetailPage() {
                     System
                   </Badge>
                 )}
+                <ExportPdfDialog
+                  type="user"
+                  entityId={userId}
+                  entityName={user.name}
+                />
               </div>
             </div>
 
@@ -262,30 +328,48 @@ export default function UserDetailPage() {
         </Card>
       </motion.div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards — click to filter leads below */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+        className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9"
       >
-        {statCards.map((stat) => (
-          <motion.div key={stat.title} variants={itemVariants}>
-            <Card className={`border-border/50 hover:${stat.border} transition-colors`}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground">{stat.title}</CardTitle>
-                <div className={`rounded-lg p-1.5 ${stat.bg}`}>
-                  <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <p className="text-2xl font-bold text-foreground">
-                  {statsLoading ? <span className="animate-pulse">—</span> : stat.value}
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+        {statCards.map((stat) => {
+          const isActive = statusFilter === stat.filterKey;
+          return (
+            <motion.div key={stat.title} variants={itemVariants}>
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => {
+                  setStatusFilter(stat.filterKey);
+                  setPage(1);
+                }}
+              >
+                <Card className={`border transition-all cursor-pointer ${
+                  isActive
+                    ? `${stat.border} ring-2 ${stat.activeRing} bg-card`
+                    : "border-border/50 hover:border-border hover:shadow-sm"
+                }`}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-3 px-3">
+                    <CardTitle className={`text-[10px] font-medium uppercase tracking-wide ${isActive ? stat.color : "text-muted-foreground"}`}>
+                      {stat.title}
+                    </CardTitle>
+                    <div className={`rounded-md p-1 ${stat.bg}`}>
+                      <stat.icon className={`h-3 w-3 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-3 pb-3">
+                    <p className={`text-xl font-bold ${isActive ? "text-foreground" : "text-foreground"}`}>
+                      {statsLoading ? <span className="animate-pulse text-muted-foreground">—</span> : stat.value}
+                    </p>
+                  </CardContent>
+                </Card>
+              </button>
+            </motion.div>
+          );
+        })}
       </motion.div>
 
       {/* Leads Table */}
@@ -297,13 +381,23 @@ export default function UserDetailPage() {
         <Card className="border-border/50">
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2 text-base flex-wrap">
                 <Activity className="h-4 w-4 text-muted-foreground" />
                 Assigned Leads
                 {pagination && (
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {pagination.total}
                   </span>
+                )}
+                {statusFilter !== "all" && (
+                  <button
+                    type="button"
+                    onClick={() => { setStatusFilter("all"); setPage(1); }}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    {STATUS_CONFIG[statusFilter as LeadStatus]?.label}
+                    <XCircle className="h-3 w-3" />
+                  </button>
                 )}
               </CardTitle>
 

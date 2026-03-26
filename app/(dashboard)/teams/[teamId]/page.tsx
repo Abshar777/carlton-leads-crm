@@ -42,6 +42,14 @@ import {
   Filter,
   CalendarDays,
   UserPlus,
+  MessageCircle,
+  Send,
+  RefreshCw,
+  GitMerge,
+  UserCheck2,
+  ArrowUpDown,
+  FileEdit,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,11 +101,15 @@ import {
   useAssignLeadToMember,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   useTransferLead,
+  useTeamUpdates,
+  usePostTeamMessage,
+  type TeamUpdatesFilters,
 } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate, getInitials } from "@/lib/utils";
 import { TeamDialog } from "@/components/teams/TeamDialog";
-import type { Team, TeamMemberStat } from "@/types/team";
+import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
+import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
 import type { Lead, LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
 
@@ -143,13 +155,14 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "logs";
+type TabId = "dashboard" | "members" | "leads" | "logs" | "updates";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
-  { id: "members", label: "Members" },
-  { id: "leads", label: "Leads" },
-  { id: "logs", label: "Logs" },
+  { id: "members",   label: "Members"   },
+  { id: "leads",     label: "Leads"     },
+  { id: "updates",   label: "Updates"   },
+  { id: "logs",      label: "Logs"      },
 ];
 
 const STATUS_CONFIG: Record<
@@ -1759,6 +1772,572 @@ function LogsTab({ teamId }: { teamId: string }) {
   );
 }
 
+// ─── Updates Tab ──────────────────────────────────────────────────────────────
+
+const ACTION_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
+  lead_created:   { icon: Zap,         color: "text-blue-400",   bg: "bg-blue-500/15"   },
+  lead_updated:   { icon: FileEdit,    color: "text-yellow-400", bg: "bg-yellow-500/15" },
+  status_changed: { icon: ArrowUpDown, color: "text-violet-400", bg: "bg-violet-500/15" },
+  lead_assigned:  { icon: UserCheck2,  color: "text-teal-400",   bg: "bg-teal-500/15"   },
+  team_assigned:  { icon: GitMerge,    color: "text-orange-400", bg: "bg-orange-500/15" },
+  note_added:     { icon: StickyNote,  color: "text-green-400",  bg: "bg-green-500/15"  },
+  note_updated:   { icon: FileEdit,    color: "text-amber-400",  bg: "bg-amber-500/15"  },
+  note_deleted:   { icon: Trash2,      color: "text-red-400",    bg: "bg-red-500/15"    },
+};
+
+// function timeAgo(iso: string) {
+//   const diff = Date.now() - new Date(iso).getTime();
+//   const m = Math.floor(diff / 60_000);
+//   if (m < 1)  return "just now";
+//   if (m < 60) return `${m}m ago`;
+//   const h = Math.floor(m / 60);
+//   if (h < 24) return `${h}h ago`;
+//   const d = Math.floor(h / 24);
+//   if (d < 7)  return `${d}d ago`;
+//   return formatDate(iso);
+// }
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+function weekStartISO() {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  return d.toISOString().slice(0, 10);
+}
+function monthStartISO() {
+  const d = new Date();
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
+type DatePreset = "today" | "week" | "month" | "custom";
+
+const PRESET_LABELS: Record<DatePreset, string> = {
+  today:  "Today",
+  week:   "This Week",
+  month:  "This Month",
+  custom: "Custom",
+};
+
+const ACTION_FILTERS = [
+  { key: "all",         label: "All",         icon: Activity  },
+  { key: "notes",       label: "Notes",       icon: StickyNote },
+  { key: "status",      label: "Status",      icon: ArrowUpDown },
+  { key: "assignments", label: "Assigned",    icon: UserCheck2  },
+  { key: "messages",    label: "Messages",    icon: MessageCircle },
+  { key: "created",     label: "Created",     icon: Zap         },
+] as const;
+
+function UpdatesTab({
+  teamId,
+  currentUserId,
+  team,
+}: {
+  teamId: string;
+  currentUserId: string;
+  team: Team | undefined;
+}) {
+  // ── Filter state ─────────────────────────────────────────────────────────
+  const [preset,      setPreset]      = useState<DatePreset>("today");
+  const [customFrom,  setCustomFrom]  = useState("");
+  const [customTo,    setCustomTo]    = useState(todayISO());
+  const [memberId,    setMemberId]    = useState("all");
+  const [actionType,  setActionType]  = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search,      setSearch]      = useState("");
+  const [page,        setPage]        = useState(1);
+  const [message,     setMessage]     = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Derive dateFrom / dateTo from preset
+  const dateFrom = preset === "today"  ? todayISO()
+                 : preset === "week"   ? weekStartISO()
+                 : preset === "month"  ? monthStartISO()
+                 : preset === "custom" ? (customFrom || undefined)
+                 : undefined;
+  const dateTo   = preset === "custom" ? (customTo || todayISO()) : todayISO();
+
+  const filters: TeamUpdatesFilters = {
+    page,
+    dateFrom,
+    dateTo,
+    memberId:  memberId  !== "all" ? memberId  : undefined,
+    action:    actionType !== "all" ? actionType : undefined,
+    search:    search || undefined,
+  };
+
+  const { data, isLoading, isFetching, refetch } = useTeamUpdates(teamId, filters);
+  const { mutate: sendMessage, isPending: sending } = usePostTeamMessage(teamId);
+
+  const items      = data?.data       ?? [];
+  const pagination = data?.pagination;
+
+  // Team members list (leaders + members) for the member filter dropdown
+  const allMembers: { _id: string; name: string }[] = [
+    ...(team?.leaders ?? []).map((u: User) => ({ _id: u._id, name: u.name })),
+    ...(team?.members ?? []).map((u: User) => ({ _id: u._id, name: u.name })),
+  ];
+
+  function resetPage() { setPage(1); }
+
+  function handlePreset(p: DatePreset) {
+    setPreset(p);
+    if (p !== "custom") { setCustomFrom(""); setCustomTo(todayISO()); }
+    resetPage();
+  }
+
+  function handleSend() {
+    const text = message.trim();
+    if (!text || sending) return;
+    sendMessage(text, {
+      onSuccess: () => {
+        setMessage("");
+        resetPage();
+        setTimeout(() => inputRef.current?.focus(), 50);
+      },
+    });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  }
+
+  // Count active non-default filters for badge
+  const activeFilterCount = [
+    memberId  !== "all",
+    actionType !== "all",
+    !!search,
+    preset    !== "today",
+  ].filter(Boolean).length;
+
+  return (
+    <div className="flex flex-col gap-4">
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold text-sm text-foreground">Team Updates</span>
+          {pagination && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              {pagination.total}
+            </span>
+          )}
+          {activeFilterCount > 0 && (
+            <span className="rounded-full bg-primary/15 border border-primary/30 px-2 py-0.5 text-xs font-medium text-primary">
+              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
+
+      {/* ── Filters Card ────────────────────────────────────────────────────── */}
+      <Card className="border-border/50 bg-card/60">
+        <CardContent className="p-4 space-y-3">
+
+          {/* Row 1: Date presets */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <div className="flex gap-1.5 flex-wrap">
+              {(Object.keys(PRESET_LABELS) as DatePreset[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handlePreset(p)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium border transition-all ${
+                    preset === p
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/40 border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {PRESET_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom date pickers */}
+          <AnimatePresence>
+            {preset === "custom" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground w-7">From</span>
+                    <Input
+                      type="date"
+                      value={customFrom}
+                      max={customTo || todayISO()}
+                      onChange={(e) => { setCustomFrom(e.target.value); resetPage(); }}
+                      className="h-7 text-xs w-36"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground w-5">To</span>
+                    <Input
+                      type="date"
+                      value={customTo}
+                      min={customFrom}
+                      max={todayISO()}
+                      onChange={(e) => { setCustomTo(e.target.value); resetPage(); }}
+                      className="h-7 text-xs w-36"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Row 2: Search + Member + Action type */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="flex items-center gap-1 flex-1 min-w-[180px]">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { setSearch(searchInput); resetPage(); }
+                  }}
+                  placeholder="Search notes, leads…"
+                  className="pl-8 h-8 text-xs"
+                />
+              </div>
+              {searchInput !== search && (
+                <Button
+                  variant="outline" size="sm" className="h-8 px-2.5 text-xs shrink-0"
+                  onClick={() => { setSearch(searchInput); resetPage(); }}
+                >
+                  Go
+                </Button>
+              )}
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(""); setSearchInput(""); resetPage(); }}
+                  className="rounded-full p-1 hover:bg-muted transition-colors"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+
+            {/* Member filter */}
+            <Select
+              value={memberId}
+              onValueChange={(v) => { setMemberId(v); resetPage(); }}
+            >
+              <SelectTrigger className="h-8 w-[160px] text-xs">
+                <SelectValue placeholder="All Members" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All Members</SelectItem>
+                {allMembers.map((m) => (
+                  <SelectItem key={m._id} value={m._id} className="text-xs">{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Row 3: Action type pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {ACTION_FILTERS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => { setActionType(key); resetPage(); }}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
+                  actionType === key
+                    ? "bg-primary/15 border-primary/40 text-primary"
+                    : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+        </CardContent>
+      </Card>
+
+      {/* ── Message Composer ────────────────────────────────────────────────── */}
+      <Card className="border-border/60 bg-card/80">
+        <CardContent className="p-3 flex gap-3 items-end">
+          <div className="flex-1">
+            <textarea
+              ref={inputRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Write a message to your team… (Enter to send, Shift+Enter for new line)"
+              rows={2}
+              maxLength={1000}
+              className="w-full resize-none rounded-lg bg-muted/40 border border-border/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
+            />
+            <div className="flex justify-end mt-1">
+              <span className="text-[10px] text-muted-foreground/60">{message.length}/1000</span>
+            </div>
+          </div>
+          <Button
+            size="sm" onClick={handleSend}
+            disabled={!message.trim() || sending}
+            className="mb-5 gap-2 shrink-0"
+          >
+            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Send
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ── Feed ────────────────────────────────────────────────────────────── */}
+      <Card className="border-border/50">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <div className="rounded-full bg-muted/50 p-4">
+                <MessageCircle className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <p className="text-muted-foreground text-sm">No updates found</p>
+              <p className="text-muted-foreground/60 text-xs">
+                {activeFilterCount > 0 ? "Try adjusting your filters" : "Be the first to send a message"}
+              </p>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreset("today"); setMemberId("all"); setActionType("all");
+                    setSearch(""); setSearchInput(""); resetPage();
+                  }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${page}-${dateFrom}-${dateTo}-${memberId}-${actionType}-${search}`}
+                className="divide-y divide-border/40"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.15 }}
+              >
+                {items.map((item) => (
+                  <motion.div
+                    key={item._id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    {item.type === "message" ? (
+                      <MessageBubble
+                        item={item as TeamMessageItem}
+                        isSelf={(item as TeamMessageItem).author?._id === currentUserId}
+                      />
+                    ) : (
+                      <ActivityRow item={item as TeamActivityItem} />
+                    )}
+                  </motion.div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* Pagination */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border/50 px-5 py-3">
+              <p className="text-xs text-muted-foreground">
+                Page {pagination.page} of {pagination.totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                  disabled={!pagination.hasPrevPage || isFetching}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Newer
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                  disabled={!pagination.hasNextPage || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Older <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MessageBubble({ item, isSelf }: { item: TeamMessageItem; isSelf: boolean }) {
+  const author = item.author;
+  const initials = author?.name
+    ? author.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
+  return (
+    <div className={`flex gap-3 px-4 py-3.5 hover:bg-muted/20 transition-colors ${isSelf ? "flex-row-reverse" : ""}`}>
+      <Avatar className="h-8 w-8 shrink-0 mt-0.5">
+        <AvatarFallback className={`text-[10px] font-semibold ${isSelf ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+
+      <div className={`flex flex-col max-w-[72%] gap-1 ${isSelf ? "items-end" : "items-start"}`}>
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-foreground">{author?.name ?? "Unknown"}</span>
+          {author?.designation && (
+            <span className="text-[10px] text-muted-foreground/70">{author.designation}</span>
+          )}
+          <span className="text-[10px] text-muted-foreground/50">{timeAgo(item.createdAt)}</span>
+        </div>
+        <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words ${
+          isSelf
+            ? "bg-primary text-primary-foreground rounded-tr-sm"
+            : "bg-muted/60 text-foreground rounded-tl-sm border border-border/40"
+        }`}>
+          {item.content}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityRow({ item }: { item: TeamActivityItem }) {
+  const meta = ACTION_META[item.action] ?? { icon: Activity, color: "text-muted-foreground", bg: "bg-muted/30" };
+  const Icon = meta.icon;
+  const performer = typeof item.performedBy === "object" && item.performedBy !== null
+    ? item.performedBy
+    : null;
+
+  const isNote = item.action === "note_added" || item.action === "note_updated";
+  const noteContent = isNote
+    ? (item.changes?.note?.to as string | undefined) ?? null
+    : null;
+
+  if (isNote && noteContent) {
+    return (
+      <div className="flex gap-3 px-4 py-3.5 hover:bg-muted/10 transition-colors">
+        {/* Avatar */}
+        <div className="flex flex-col items-center gap-1">
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="text-[10px] font-semibold bg-green-500/15 text-green-400">
+              {performer?.name
+                ? performer.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+                : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="w-px flex-1 bg-border/30 min-h-[8px]" />
+        </div>
+
+        <div className="flex-1 min-w-0 pb-1">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-2 flex-wrap mb-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <div className={`flex h-5 w-5 items-center justify-center rounded-full ${meta.bg}`}>
+                <Icon className={`h-3 w-3 ${meta.color}`} />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                {item.action === "note_updated" ? "Note updated" : "Note added"}
+              </span>
+              {item.leadName && (
+                <>
+                  <span className="text-[10px] text-muted-foreground/40">on</span>
+                  <Link
+                    href={`/leads/${item.leadId}`}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-foreground hover:text-primary transition-colors"
+                  >
+                    {item.leadName}
+                    <ExternalLink className="h-2.5 w-2.5" />
+                  </Link>
+                </>
+              )}
+              {performer && (
+                <>
+                  <span className="text-[10px] text-muted-foreground/40">by</span>
+                  <span className="text-xs font-semibold text-foreground">{performer.name}</span>
+                </>
+              )}
+            </div>
+            <span className="text-[10px] text-muted-foreground/50 shrink-0">{timeAgo(item.createdAt)}</span>
+          </div>
+
+          {/* Note bubble */}
+          <div className="rounded-2xl rounded-tl-sm bg-green-500/10 border border-green-500/20 px-3.5 py-2.5 text-sm text-foreground leading-relaxed break-words">
+            {noteContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-3 px-4 py-3 hover:bg-muted/10 transition-colors">
+      {/* Timeline dot */}
+      <div className="flex flex-col items-center pt-0.5">
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${meta.bg}`}>
+          <Icon className={`h-3.5 w-3.5 ${meta.color}`} />
+        </div>
+        <div className="mt-1 w-px flex-1 bg-border/40 min-h-[8px]" />
+      </div>
+
+      <div className="flex-1 min-w-0 pb-1">
+        <div className="flex items-start justify-between gap-2 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-sm text-foreground leading-snug">{item.description}</p>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {item.leadName && (
+                <Link
+                  href={`/leads/${item.leadId}`}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {item.leadName}
+                </Link>
+              )}
+              {performer && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="text-muted-foreground/40">by</span>
+                  <span className="font-medium text-muted-foreground">{performer.name}</span>
+                </span>
+              )}
+            </div>
+          </div>
+          <span className="text-[10px] text-muted-foreground/50 shrink-0 mt-0.5">
+            {timeAgo(item.createdAt)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function TeamDetailPage() {
@@ -1813,9 +2392,10 @@ export default function TeamDetailPage() {
     }
   }, [canSeeSensitiveTabs, activeTab]);
 
+
+  // "updates" is always visible to team members; "leads"/"logs" only for leaders/admins
   const visibleTabs = TABS.filter(
-    (tab) =>
-      (tab.id !== "leads" && tab.id !== "logs") || canSeeSensitiveTabs,
+    (tab) => (tab.id !== "leads" && tab.id !== "logs") || canSeeSensitiveTabs,
   );
 
   function handleAutoAssign() {
@@ -1965,6 +2545,13 @@ export default function TeamDetailPage() {
                     Auto-assign
                   </Button>
                 )}
+                {isLeaderOrAdmin && (
+                  <ExportPdfDialog
+                    type="team"
+                    entityId={teamId}
+                    entityName={team.name}
+                  />
+                )}
                 {isAdmin && (
                   <Button
                     variant="outline"
@@ -2103,6 +2690,18 @@ export default function TeamDetailPage() {
                 onAutoAssign={handleAutoAssign}
                 assigning={assigning}
               />
+            </motion.div>
+          )}
+
+          {activeTab === "updates" && (
+            <motion.div
+              key="updates"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <UpdatesTab teamId={teamId} currentUserId={user?._id ?? ""} team={team} />
             </motion.div>
           )}
 
