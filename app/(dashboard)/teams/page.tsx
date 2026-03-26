@@ -28,9 +28,9 @@ import type { Team } from "@/types/team";
 
 function AdminTeamsList() {
   const { hasPermission } = useAuthStore();
-  const canCreate = hasPermission("leads", "create");
-  const canEdit   = hasPermission("leads", "edit");
-  const canDelete = hasPermission("leads", "delete");
+  const canCreate = hasPermission("teams", "create");
+  const canEdit   = hasPermission("teams", "edit");
+  const canDelete = hasPermission("teams", "delete");
 
   const [search, setSearch]     = useState("");
   const [statusFilter, setStatus] = useState("all");
@@ -47,7 +47,7 @@ function AdminTeamsList() {
 
   const teams      = data?.data ?? [];
   const pagination = data?.pagination;
-
+  console.log(canCreate,"can Create",canEdit,"can Edit",canDelete,"can Delete")
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
