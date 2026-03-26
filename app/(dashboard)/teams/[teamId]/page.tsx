@@ -277,8 +277,8 @@ function ClosureRateBadge({ rate }: { rate: number }) {
     pct >= 50
       ? "bg-green-500/15 text-green-400 border-green-500/30"
       : pct >= 20
-      ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-      : "bg-red-500/15 text-red-400 border-red-500/30";
+        ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+        : "bg-red-500/15 text-red-400 border-red-500/30";
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
       {pct}%
@@ -363,14 +363,14 @@ function DashboardTab({
   ];
 
   const statusBars: Array<{ key: LeadStatus; label: string }> = [
-    { key: "new",        label: "New" },
-    { key: "assigned",   label: "Assigned" },
-    { key: "followup",   label: "Follow Up" },
+    { key: "new", label: "New" },
+    { key: "assigned", label: "Assigned" },
+    { key: "followup", label: "Follow Up" },
     { key: "interested", label: "Interested" },
-    { key: "cnc",        label: "CNC" },
-    { key: "booking",    label: "Booking" },
-    { key: "closed",     label: "Closed" },
-    { key: "rejected",   label: "Rejected" },
+    { key: "cnc", label: "CNC" },
+    { key: "booking", label: "Booking" },
+    { key: "closed", label: "Closed" },
+    { key: "rejected", label: "Rejected" },
   ];
 
   const medalColors = ["text-yellow-400", "text-slate-400", "text-amber-600"];
@@ -562,10 +562,10 @@ function DashboardTab({
                     {/* Stat chips — 2 on mobile, 4 on sm+ */}
                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                       {[
-                        { label: "Total",    value: member.total,   cls: "text-foreground",  show: "always" },
-                        { label: "Active",   value: member.assigned + member.followup + (member.cnc ?? 0) + (member.booking ?? 0) + (member.interested ?? 0), cls: "text-amber-400",  show: "sm" },
-                        { label: "Closed",   value: member.closed,  cls: "text-green-400",  show: "always" },
-                        { label: "Rejected", value: member.rejected,cls: "text-red-400",    show: "sm" },
+                        { label: "Total", value: member.total, cls: "text-foreground", show: "always" },
+                        { label: "Active", value: member.assigned + member.followup + (member.cnc ?? 0) + (member.booking ?? 0) + (member.interested ?? 0), cls: "text-amber-400", show: "sm" },
+                        { label: "Closed", value: member.closed, cls: "text-green-400", show: "always" },
+                        { label: "Rejected", value: member.rejected, cls: "text-red-400", show: "sm" },
                       ].map(({ label, value, cls, show }) => (
                         <div
                           key={label}
@@ -746,16 +746,16 @@ function LeadsTab({
   onAutoAssign: () => void;
   assigning: boolean;
 }) {
-  const [search, setSearch]               = useState("");
+  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter]   = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [reporterFilter, setReporterFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom]           = useState<string>("");
-  const [dateTo, setDateTo]               = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [unassignedOnly, setUnassignedOnly] = useState(false);
-  const [showFilters, setShowFilters]     = useState(false);
-  const [page, setPage]                   = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
   const [transferLeadId, setTransferLeadId] = useState<string | null>(null);
@@ -771,9 +771,9 @@ function LeadsTab({
   const [bulkNewTeamId, setBulkNewTeamId] = useState<string>("");
   const [bulkStatus, setBulkStatus] = useState<string>("followup");
 
-  const bulkAssignMutation   = useBulkAssignTeamLeadsToMember(teamId);
+  const bulkAssignMutation = useBulkAssignTeamLeadsToMember(teamId);
   const bulkTransferMutation = useBulkTransferTeamLeads(teamId);
-  const bulkStatusMutation   = useBulkUpdateTeamLeadsStatus(teamId);
+  const bulkStatusMutation = useBulkUpdateTeamLeadsStatus(teamId);
 
   function toggleId(id: string) {
     setSelectedIds((prev) => {
@@ -816,7 +816,7 @@ function LeadsTab({
   }
 
   const activeFilterCount = [
-    statusFilter   !== "all",
+    statusFilter !== "all",
     assigneeFilter !== "all",
     reporterFilter !== "all",
     !!dateFrom,
@@ -828,12 +828,12 @@ function LeadsTab({
   const hasActiveFilters = activeFilterCount > 0;
 
   const { data: leadsResult, isLoading, isFetching } = useTeamLeads(teamId, {
-    search:      debouncedSearch || undefined,
-    status:      statusFilter   !== "all" ? (statusFilter as LeadStatus) : undefined,
-    assignedTo:  assigneeFilter !== "all" ? assigneeFilter               : undefined,
-    reporter:    reporterFilter !== "all" ? reporterFilter               : undefined,
-    dateFrom:    dateFrom  || undefined,
-    dateTo:      dateTo    || undefined,
+    search: debouncedSearch || undefined,
+    status: statusFilter !== "all" ? (statusFilter as LeadStatus) : undefined,
+    assignedTo: assigneeFilter !== "all" ? assigneeFilter : undefined,
+    reporter: reporterFilter !== "all" ? reporterFilter : undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
     unassignedOnly,
     page,
     limit: 10,
@@ -1755,7 +1755,7 @@ export default function TeamDetailPage() {
 
   // ── Access control ───────────────────────────────────────────────────────────
   const isSuperAdmin =
-    user?.role?.isSystemRole && user?.role?.roleName === "Super Admin";
+    (user?.role?.isSystemRole && user?.role?.roleName === "Super Admin") || user?.role?.roleName === "Reporter";
 
   // Always call the hook (rules of hooks) — only redirect for non-super-admins
   const { data: myTeam, isLoading: myTeamLoading } = useMyTeam();
