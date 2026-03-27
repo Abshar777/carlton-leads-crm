@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuthStore } from "@/lib/store/authStore";
 import { toast } from "sonner";
+import { useUserLeadStats } from "@/hooks/useLeads";
 
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
@@ -51,17 +52,24 @@ interface NavLinksProps {
 
 function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   const pathname = usePathname();
-  const { hasPermission ,user} = useAuthStore();
-  if(typeof window == "undefined"){
-    return null;
-  }
+  const { hasPermission, user } = useAuthStore();
+
+  // Fetch "new" leads count for the current user — shown as a badge on /leads
+  const userId = user?._id ?? "";
+
+  if (typeof window === "undefined") return null;
+
+  const { data: myStats } = useUserLeadStats(userId);
+  const newLeadsCount = myStats?.assigned ?? 0;
+  
+
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
-
         const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
-       
+        const showBadge = href === "/leads" && newLeadsCount > 0;
+
         const linkEl = (
           <Link
             href={href}
@@ -74,15 +82,28 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
               onNavigate?.();
             }}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
               isActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
               !allowed && "opacity-50 cursor-not-allowed hidden",
             )}
           >
-            <Icon className="h-5 w-5 shrink-0" />
-            {/* Desktop collapsed: label hidden; mobile / expanded: always show */}
+            {/* Icon — with pulsing dot when collapsed and badge > 0 */}
+            <span className="relative shrink-0">
+              <Icon className="h-5 w-5" />
+              {showBadge && collapsed && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-900 text-[8px] font-bold text-white"
+                >
+                  {newLeadsCount > 9 ? "9+" : newLeadsCount}
+                </motion.span>
+              )}
+            </span>
+
+            {/* Label + badge (expanded state) */}
             <AnimatePresence>
               {!collapsed && (
                 <motion.span
@@ -90,9 +111,23 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.15 }}
-                  className="whitespace-nowrap overflow-hidden"
+                  className="flex flex-1 items-center justify-between whitespace-nowrap overflow-hidden"
                 >
                   {label}
+                  {showBadge && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className={cn(
+                        "ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+                        isActive
+                          ? "bg-red-900 text-white"
+                          : "bg-red-900 text-white",
+                      )}
+                    >
+                      {newLeadsCount > 99 ? "99+" : newLeadsCount}
+                    </motion.span>
+                  )}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -102,9 +137,18 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
         return (
           <Tooltip key={href}>
             <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
-            {/* Only show tooltip when desktop sidebar is collapsed */}
+            {/* Tooltip shows label + count when collapsed */}
             {collapsed && (
-              <TooltipContent side="right">{label}</TooltipContent>
+              <TooltipContent side="right">
+                <span className="flex items-center gap-1.5">
+                  {label}
+                  {showBadge && (
+                    <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      {newLeadsCount}
+                    </span>
+                  )}
+                </span>
+              </TooltipContent>
             )}
           </Tooltip>
         );

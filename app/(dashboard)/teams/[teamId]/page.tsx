@@ -106,6 +106,7 @@ import {
   type TeamUpdatesFilters,
 } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useTeamSocket } from "@/hooks/useTeamSocket";
 import { formatDate, getInitials } from "@/lib/utils";
 import { TeamDialog } from "@/components/teams/TeamDialog";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
@@ -528,7 +529,7 @@ function DashboardTab({
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="flex items-center gap-3 rounded-lg border border-border/40 p-3 hover:bg-muted/20 transition-colors"
+                    className="flex items-center gap-2 rounded-lg border border-border/40 p-2.5 hover:bg-muted/20 transition-colors"
                   >
                     {/* Rank badge */}
                     <div
@@ -549,7 +550,7 @@ function DashboardTab({
                     </Avatar>
 
                     {/* Info */}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-none">
                       <p className="text-sm font-medium text-foreground truncate">
                         {member.user.name}
                       </p>
@@ -575,7 +576,7 @@ function DashboardTab({
                     </div>
 
                     {/* Stat chips — 2 on mobile, 4 on sm+ */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0 ml-auto">
                       {[
                         { label: "Total", value: member.total, cls: "text-foreground", show: "always" },
                         { label: "Active", value: member.assigned + member.followup + (member.cnc ?? 0) + (member.booking ?? 0) + (member.interested ?? 0), cls: "text-amber-400", show: "sm" },
@@ -584,9 +585,9 @@ function DashboardTab({
                       ].map(({ label, value, cls, show }) => (
                         <div
                           key={label}
-                          className={`flex flex-col items-center rounded bg-muted/60 px-1.5 sm:px-2 py-1 min-w-[32px] sm:min-w-[38px] ${show === "sm" ? "hidden sm:flex" : ""}`}
+                          className={`flex flex-col items-center rounded bg-muted/60 px-1.5 sm:px-2 py-1 min-w-[28px] sm:min-w-[36px] ${show === "sm" ? "hidden sm:flex" : ""}`}
                         >
-                          <span className={`text-xs font-bold ${cls}`}>{value}</span>
+                          <span className={`text-[11px] font-bold ${cls}`}>{value}</span>
                           <span className="text-[10px] text-muted-foreground">{label}</span>
                         </div>
                       ))}
@@ -655,18 +656,18 @@ function MembersTab({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-3 text-center w-12">Rank</th>
-                    <th className="px-4 py-3 text-left">Member</th>
-                    <th className="px-4 py-3 text-center hidden sm:table-cell">Role</th>
-                    <th className="px-4 py-3 text-center">Total</th>
-                    <th className="px-4 py-3 text-center hidden md:table-cell">Assigned</th>
-                    <th className="px-4 py-3 text-center hidden md:table-cell">Follow Up</th>
-                    <th className="px-4 py-3 text-center hidden lg:table-cell">Interested</th>
-                    <th className="px-4 py-3 text-center hidden lg:table-cell">CNC</th>
-                    <th className="px-4 py-3 text-center hidden xl:table-cell">Booking</th>
-                    <th className="px-4 py-3 text-center">Closed</th>
-                    <th className="px-4 py-3 text-center hidden lg:table-cell">Rejected</th>
-                    <th className="px-4 py-3 text-center">Closure Rate</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center w-8 sm:w-12">Rank</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-left">Member</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden sm:table-cell">Role</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Total</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">Assigned</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">Follow Up</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Interested</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">CNC</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden xl:table-cell">Booking</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Closed</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Rejected</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Closure Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -684,12 +685,12 @@ function MembersTab({
                           transition={{ delay: idx * 0.04 }}
                           className="hover:bg-muted/20 transition-colors"
                         >
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <span className="text-sm font-semibold text-muted-foreground">
                               {idx + 1}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3">
                             <div className="flex items-center gap-2.5">
                               <Avatar className="h-8 w-8 shrink-0">
                                 <AvatarFallback className="text-xs bg-primary/10 text-primary">
@@ -711,7 +712,7 @@ function MembersTab({
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center hidden sm:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden sm:table-cell">
                             {isLeader ? (
                               <Badge
                                 variant="outline"
@@ -726,31 +727,31 @@ function MembersTab({
                               </Badge>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <span className="text-sm font-semibold">{stat.total}</span>
                           </td>
-                          <td className="px-4 py-3 text-center hidden md:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">
                             <span className="text-sm text-amber-400">{stat.assigned}</span>
                           </td>
-                          <td className="px-4 py-3 text-center hidden md:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">
                             <span className="text-sm text-purple-400">{stat.followup}</span>
                           </td>
-                          <td className="px-4 py-3 text-center hidden lg:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">
                             <span className="text-sm text-violet-400">{stat.interested ?? 0}</span>
                           </td>
-                          <td className="px-4 py-3 text-center hidden lg:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">
                             <span className="text-sm text-slate-400">{stat.cnc ?? 0}</span>
                           </td>
-                          <td className="px-4 py-3 text-center hidden xl:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden xl:table-cell">
                             <span className="text-sm text-teal-400">{stat.booking ?? 0}</span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <span className="text-sm text-green-400 font-medium">{stat.closed}</span>
                           </td>
-                          <td className="px-4 py-3 text-center hidden lg:table-cell">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">
                             <span className="text-sm text-red-400">{stat.rejected}</span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <ClosureRateBadge rate={closureRate} />
                           </td>
                         </motion.tr>
@@ -951,7 +952,7 @@ function LeadsTab({
             </div>
 
             {/* Right actions */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <Button
                 variant={showFilters ? "secondary" : "outline"}
                 size="sm"
@@ -1151,20 +1152,20 @@ function LeadsTab({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="pl-4 pr-2 py-3 w-10">
+                    <th className="pl-2 pr-1 sm:pl-4 sm:pr-2 py-2.5 sm:py-3 w-10">
                       <Checkbox
                         checked={leads.length > 0 && leads.every((l) => selectedIds.has(l._id))}
                         onCheckedChange={() => toggleAll(leads.map((l) => l._id))}
                         aria-label="Select all"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left">Lead</th>
-                    <th className="px-4 py-3 text-left hidden sm:table-cell">Phone</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left hidden md:table-cell">Assigned To</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Source</th>
-                    <th className="px-4 py-3 text-left hidden lg:table-cell">Date</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left">Lead</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden sm:table-cell">Phone</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left">Status</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden md:table-cell">Assigned To</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden lg:table-cell">Source</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden lg:table-cell">Date</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -1181,7 +1182,7 @@ function LeadsTab({
                         transition={{ delay: i * 0.03 }}
                         className={`hover:bg-muted/20 transition-colors group ${selectedIds.has(lead._id) ? "bg-primary/5" : ""}`}
                       >
-                        <td className="pl-4 pr-2 py-3">
+                        <td className="pl-2 pr-1 sm:pl-4 sm:pr-2 py-2.5 sm:py-3">
                           <Checkbox
                             checked={selectedIds.has(lead._id)}
                             onCheckedChange={() => toggleId(lead._id)}
@@ -1189,7 +1190,7 @@ function LeadsTab({
                             aria-label="Select lead"
                           />
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3">
                           <div>
                             <p className="text-sm font-medium text-foreground">{lead.name}</p>
                             {lead.email && (
@@ -1200,7 +1201,7 @@ function LeadsTab({
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3 hidden sm:table-cell">
                           {lead.phone ? (
                             <span className="text-sm text-muted-foreground flex items-center gap-1">
                               <Phone className="h-3 w-3" />
@@ -1210,10 +1211,10 @@ function LeadsTab({
                             <span className="text-sm text-muted-foreground/40">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3">
                           <StatusBadge status={lead.status} />
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3 hidden md:table-cell">
                           {assignedTo ? (
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6 shrink-0">
@@ -1227,18 +1228,18 @@ function LeadsTab({
                             <span className="text-xs text-muted-foreground italic">Unassigned</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3 hidden lg:table-cell">
                           <span className="text-sm text-muted-foreground capitalize">
                             {lead.source ?? "—"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3 hidden lg:table-cell">
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {formatDate(lead.createdAt)}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2.5 sm:px-4 sm:py-3">
                           <div className="flex items-center justify-center gap-1">
                             {/* View */}
                             <Button asChild variant="ghost" size="icon" className="h-7 w-7">
@@ -1868,6 +1869,9 @@ function UpdatesTab({
     search:    search || undefined,
   };
 
+  // Real-time socket connection — auto-prepends new items to the feed
+  useTeamSocket(teamId);
+
   const { data, isLoading, isFetching, refetch } = useTeamUpdates(teamId, filters);
   const { mutate: sendMessage, isPending: sending } = usePostTeamMessage(teamId);
 
@@ -1920,6 +1924,14 @@ function UpdatesTab({
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-muted-foreground" />
           <span className="font-semibold text-sm text-foreground">Team Updates</span>
+          {/* Live indicator */}
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 border border-green-500/30 px-2 py-0.5 text-[10px] font-medium text-green-400">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+            </span>
+            Live
+          </span>
           {pagination && (
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               {pagination.total}
@@ -1948,13 +1960,13 @@ function UpdatesTab({
           {/* Row 1: Date presets */}
           <div className="flex items-center gap-2 flex-wrap">
             <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5 min-w-0">
               {(Object.keys(PRESET_LABELS) as DatePreset[]).map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => handlePreset(p)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium border transition-all ${
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-all ${
                     preset === p
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted/40 border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -1976,7 +1988,7 @@ function UpdatesTab({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-2 flex-wrap pt-1">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted-foreground w-7">From</span>
                     <Input
@@ -2004,7 +2016,7 @@ function UpdatesTab({
           </AnimatePresence>
 
           {/* Row 2: Search + Member + Action type */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {/* Search */}
             <div className="flex items-center gap-1 flex-1 min-w-[180px]">
               <div className="relative flex-1">
@@ -2043,7 +2055,7 @@ function UpdatesTab({
               value={memberId}
               onValueChange={(v) => { setMemberId(v); resetPage(); }}
             >
-              <SelectTrigger className="h-8 w-[160px] text-xs">
+              <SelectTrigger className="h-8 w-full sm:w-[160px] text-xs">
                 <SelectValue placeholder="All Members" />
               </SelectTrigger>
               <SelectContent>
@@ -2056,13 +2068,13 @@ function UpdatesTab({
           </div>
 
           {/* Row 3: Action type pills */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
             {ACTION_FILTERS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => { setActionType(key); resetPage(); }}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
+                className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
                   actionType === key
                     ? "bg-primary/15 border-primary/40 text-primary"
                     : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -2098,7 +2110,7 @@ function UpdatesTab({
           <Button
             size="sm" onClick={handleSend}
             disabled={!message.trim() || sending}
-            className="mb-5 gap-2 shrink-0"
+            className="gap-2 shrink-0 self-end mb-[22px]"
           >
             {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             Send
@@ -2209,7 +2221,7 @@ function MessageBubble({ item, isSelf }: { item: TeamMessageItem; isSelf: boolea
         </AvatarFallback>
       </Avatar>
 
-      <div className={`flex flex-col max-w-[72%] gap-1 ${isSelf ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col max-w-[85%] sm:max-w-[72%] gap-1 ${isSelf ? "items-end" : "items-start"}`}>
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-xs font-semibold text-foreground">{author?.name ?? "Unknown"}</span>
           {author?.designation && (

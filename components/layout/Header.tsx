@@ -14,6 +14,7 @@ import { useLogout } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
 import Link from "next/link";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface HeaderProps {
   title?: string;
@@ -42,8 +43,9 @@ export function Header({ title }: HeaderProps) {
         )}
       </div>
 
-      {/* Right side — user menu */}
-      <div className="ml-auto flex items-center gap-3">
+      {/* Right side — notifications + user menu */}
+      <div className="ml-auto flex items-center gap-2">
+        <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-accent">
