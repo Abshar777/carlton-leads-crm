@@ -1,9 +1,16 @@
 "use client";
 import { motion } from "framer-motion";
-import { Users, Shield, Activity, TrendingUp, FileText, UserX } from "lucide-react";
+import Link from "next/link";
+import {
+  Users, Shield, Activity, TrendingUp, FileText, UserX,
+  Trophy, Crown, Medal,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useLeads } from "@/hooks/useLeads";
+import { useReportTeamRankings } from "@/hooks/useReports";
+import { cn } from "@/lib/utils";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -18,15 +25,19 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
 };
 
+const MEDAL_COLORS = ["text-yellow-400", "text-slate-400", "text-amber-600"];
+const MEDAL_BG    = ["bg-yellow-400/10", "bg-slate-400/10", "bg-amber-600/10"];
+
 export default function DashboardPage() {
   const { user } = useAuthStore();
 
-  // Fetch total leads count (page=1, limit=1 gives us pagination.total)
-  const { data: allLeadsData } = useLeads({ page: 1, limit: 1 });
+  const { data: allLeadsData }        = useLeads({ page: 1, limit: 1 });
   const { data: unassignedLeadsData } = useLeads({ page: 1, limit: 1, assignedTo: "unassigned" });
+  const teamRanks                     = useReportTeamRankings("", "");
 
-  const totalLeads = allLeadsData?.pagination?.total;
+  const totalLeads      = allLeadsData?.pagination?.total;
   const unassignedLeads = unassignedLeadsData?.pagination?.total;
+  const topTeams        = teamRanks.data?.slice(0, 5) ?? [];
 
   const stats = [
     {
@@ -55,7 +66,7 @@ export default function DashboardPage() {
     },
     {
       title: "Modules",
-      value: "6",
+      value: "9",
       description: "System modules",
       icon: TrendingUp,
       color: "text-amber-400",
@@ -122,27 +133,108 @@ export default function DashboardPage() {
         ))}
       </motion.div>
 
-      {/* Phase info */}
+      {/* Team Rankings */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.35 }}
+        transition={{ delay: 0.22, duration: 0.4 }}
       >
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <TrendingUp className="h-6 w-6 text-primary" />
+        <Card className="border-border/50">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-400" />
+              Team Performance Rankings
+            </CardTitle>
+            <Link
+              href="/reports"
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              View full report →
+            </Link>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {teamRanks.isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                ))}
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground">Phase 4 — Leads Management</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Phase 4 adds full lead lifecycle management to Carlton CRM. Create, assign, and
-                  track leads through their pipeline stages. Bulk import via Excel/CSV, auto-assign
-                  to BDE users, and monitor per-user lead stats. Built on the Phase 1 RBAC foundation.
-                </p>
+            ) : topTeams.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No team data available yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {topTeams.map((team, idx) => {
+                  const isMedal    = idx < 3;
+                  const medalColor = isMedal ? MEDAL_COLORS[idx] : "text-muted-foreground";
+                  const medalBg    = isMedal ? MEDAL_BG[idx]    : "bg-muted/60";
+                  const maxRev     = topTeams[0]?.totalPayments ?? 1;
+                  const barPct     = maxRev > 0 ? ((team.totalPayments ?? 0) / maxRev) * 100 : 0;
+
+                  return (
+                    <motion.div
+                      key={team.teamId}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.07 }}
+                      className="flex items-center gap-3 rounded-lg border border-border/40 p-3 hover:bg-muted/20 transition-colors"
+                    >
+                      {/* Rank badge */}
+                      <div
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                          medalBg,
+                        )}
+                      >
+                        {isMedal ? (
+                          <Medal className={cn("h-4 w-4", medalColor)} />
+                        ) : (
+                          <span className="text-xs font-bold text-muted-foreground">{idx + 1}</span>
+                        )}
+                      </div>
+
+                      {/* Team info + bar */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Link
+                            href={`/teams/${team.teamId}`}
+                            className="text-sm font-semibold text-foreground hover:text-primary truncate max-w-[160px] sm:max-w-xs transition-colors"
+                          >
+                            {team.name}
+                          </Link>
+                          <span className="text-sm font-bold text-emerald-400 tabular-nums shrink-0 ml-2">
+                            ₹{(team.totalPayments ?? 0).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        {/* Revenue progress bar */}
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${barPct}%` }}
+                            transition={{ duration: 0.8, ease: "easeOut", delay: idx * 0.07 + 0.2 }}
+                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-400"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[10px] text-muted-foreground">
+                            {team.memberCount} members · {team.total} leads
+                          </span>
+                          <span className="text-[10px] text-green-500">
+                            {team.closed} closed · {team.conversionRate}% conv
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Leader crown if rank 1 */}
+                      {idx === 0 && (
+                        <Crown className="h-5 w-5 text-yellow-400 shrink-0" />
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

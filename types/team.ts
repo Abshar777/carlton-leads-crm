@@ -7,6 +7,8 @@ export interface Team {
   leaders: User[];
   members: User[];
   status: "active" | "inactive";
+  /** Member IDs excluded from auto-assignment within this team (team-scoped) */
+  inactiveMembers: string[];
   leadStats?: {
     teamId: string;
     total: number;
@@ -32,6 +34,7 @@ export interface TeamMemberStat {
   rejected: number;
   cnc: number;
   booking: number;
+  partialbooking: number;
   interested: number;
 }
 
@@ -50,7 +53,9 @@ export interface TeamMemberRanking {
   rejected: number;
   cnc: number;
   booking: number;
+  partialbooking: number;
   interested: number;
+  totalPayments: number;
   closureRate: number;
 }
 
@@ -65,6 +70,7 @@ export interface TeamDashboard {
     unassigned: number;
     cnc: number;
     booking: number;
+    partialbooking: number;
     interested: number;
   };
   memberRankings: TeamMemberRanking[];

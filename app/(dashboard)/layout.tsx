@@ -4,14 +4,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useAuthStore } from "@/lib/store/authStore";
-
 import { navItems } from "@/components/layout/Sidebar";
-
-
+import { useReminderNotifications } from "@/hooks/useReminderNotifications";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasPermission } = useAuthStore();
   const router = useRouter();
+  useReminderNotifications();
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthenticated) {

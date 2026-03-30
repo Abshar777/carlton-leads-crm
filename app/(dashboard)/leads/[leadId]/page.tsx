@@ -39,6 +39,9 @@ import type { Course } from "@/types/course";
 import type { User } from "@/types";
 import type { Team } from "@/types/team";
 import LeadDialog from "@/components/leads/LeadDialog";
+import { ReminderPanel } from "@/components/leads/ReminderPanel";
+import { AiChatPanel } from "@/components/leads/AiChatPanel";
+import { PaymentPanel } from "@/components/leads/PaymentPanel";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -50,6 +53,7 @@ const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: str
   rejected: { label: "Rejected", color: "bg-red-500/15 text-red-400 border-red-500/30", dot: "bg-red-400" },
   cnc: { label: "CNC", color: "bg-slate-500/15 text-slate-400 border-slate-500/30", dot: "bg-slate-400" },
   booking: { label: "Booking", color: "bg-teal-500/15 text-teal-400 border-teal-500/30", dot: "bg-teal-400" },
+  partialbooking: { label: "Partial Booking", color: "bg-pink-500/15 text-pink-400 border-pink-500/30", dot: "bg-pink-400" },
   interested: { label: "Interested", color: "bg-violet-500/15 text-violet-400 border-violet-500/30", dot: "bg-violet-400" },
 };
 
@@ -699,6 +703,15 @@ export default function LeadDetailPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
+                              {/* {assignedUser && (
+                                <DropdownMenuItem
+                                  onClick={() => updateLead.mutate({ id: lead._id, data: { assignedTo: null } })}
+                                  className="gap-2 text-muted-foreground"
+                                >
+                                  <X className="h-4 w-4 text-red-400" />
+                                  Unassigned
+                                </DropdownMenuItem>
+                              )} */}
                               {teamMembers.map((u) => (
                                 <DropdownMenuItem
                                   key={u._id}
@@ -773,12 +786,12 @@ export default function LeadDetailPage() {
           </motion.div>
         </div>
 
-        {/* Right column — Notes */}
+        {/* Right column — Notes + Reminders */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="lg:col-span-2"
+          className="lg:col-span-2 space-y-4"
         >
           <NotesPanel
             leadId={lead._id}
@@ -786,6 +799,22 @@ export default function LeadDetailPage() {
             currentUserId={currentUserId}
             canEdit={canEdit}
           />
+          <PaymentPanel
+            leadId={lead._id}
+            payments={lead.payments ?? []}
+            courseAmount={
+              typeof lead.course === "object" && lead.course
+                ? (lead.course as Course).amount
+                : undefined
+            }
+            canEdit={canEdit}
+          />
+          <ReminderPanel
+            leadId={lead._id}
+            reminders={lead.reminders ?? []}
+            canEdit={canEdit}
+          />
+          {/* <AiChatPanel contextType="lead" contextId={lead._id} /> */}
         </motion.div>
       </div>
 

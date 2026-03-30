@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   BookOpen,
   BarChart2,
   X,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -32,12 +34,16 @@ import {
 import { useAuthStore } from "@/lib/store/authStore";
 import { toast } from "sonner";
 import { useUserLeadStats } from "@/hooks/useLeads";
+import { useMyReminderCount } from "@/hooks/useReminders";
+import { useQueryClient } from "@tanstack/react-query";
+import { getSocket } from "@/lib/socket";
 
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
   { href: "/leads", label: "Leads", icon: FileText, permModule: "leads" },
-  { href: "/teams", label: "Teams", icon: UsersRound, permModule: "leads" },
-  { href: "/courses", label: "Courses", icon: BookOpen, permModule: "leads" },
+  { href: "/reminders", label: "Reminders", icon: Bell, permModule: "reminders" },
+  { href: "/teams", label: "Teams", icon: UsersRound, permModule: "teams" },
+  { href: "/courses", label: "Courses", icon: BookOpen, permModule: "courses" },
   { href: "/reports", label: "Reports", icon: BarChart2, permModule: "reports" },
   { href: "/users", label: "Users", icon: Users, permModule: "users" },
   { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
@@ -53,22 +59,37 @@ interface NavLinksProps {
 function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   const pathname = usePathname();
   const { hasPermission, user } = useAuthStore();
-
-  // Fetch "new" leads count for the current user — shown as a badge on /leads
   const userId = user?._id ?? "";
-
-  if (typeof window === "undefined") return null;
-
   const { data: myStats } = useUserLeadStats(userId);
   const newLeadsCount = myStats?.assigned ?? 0;
-  
+  const { data: reminderCount = 0 } = useMyReminderCount();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!userId || typeof window === "undefined") return;
+    const { accessToken } = useAuthStore.getState();
+    if (!accessToken) return;
+    const socket = getSocket(accessToken);
+
+    function handleNotification(payload: { data?: { type?: string } }) {
+      if (payload?.data?.type === "lead_assigned") {
+        queryClient.invalidateQueries({ queryKey: ["leads", "stats", userId] });
+      }
+    }
+
+    socket.on("notification", handleNotification);
+    return () => { socket.off("notification", handleNotification); };
+  }, [userId, queryClient]);
+
+  if (typeof window === "undefined") return null;
 
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
         const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
-        const showBadge = href === "/leads" && newLeadsCount > 0;
+        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : 0;
+        const showBadge = badgeCount > 0;
 
         const linkEl = (
           <Link
@@ -98,7 +119,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                   animate={{ scale: 1 }}
                   className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-900 text-[8px] font-bold text-white"
                 >
-                  {newLeadsCount > 9 ? "9+" : newLeadsCount}
+                  {badgeCount > 9 ? "9+" : badgeCount}
                 </motion.span>
               )}
             </span>
@@ -118,14 +139,9 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className={cn(
-                        "ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
-                        isActive
-                          ? "bg-red-900 text-white"
-                          : "bg-red-900 text-white",
-                      )}
+                      className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold bg-red-900 text-white"
                     >
-                      {newLeadsCount > 99 ? "99+" : newLeadsCount}
+                      {badgeCount > 99 ? "99+" : badgeCount}
                     </motion.span>
                   )}
                 </motion.span>
@@ -143,8 +159,8 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                 <span className="flex items-center gap-1.5">
                   {label}
                   {showBadge && (
-                    <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
-                      {newLeadsCount}
+                    <span className="rounded-full bg-red-900 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      {badgeCount}
                     </span>
                   )}
                 </span>

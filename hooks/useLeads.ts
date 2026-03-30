@@ -104,6 +104,7 @@ export const useUpdateLead = () => {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: LEADS_KEY });
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.id] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
       toast.success("Lead updated successfully");
     },
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to update lead")),
@@ -120,6 +121,7 @@ export const useUpdateLeadStatus = () => {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: LEADS_KEY });
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.id] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
       toast.success("Status updated");
     },
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to update status")),
@@ -284,6 +286,7 @@ export const useAddLeadNote = () => {
       return response.data.data!;
     },
     onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: LEADS_KEY });
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
       toast.success("Note added");
     },
@@ -299,6 +302,7 @@ export const useUpdateLeadNote = () => {
       return response.data.data!;
     },
     onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: LEADS_KEY });
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
       toast.success("Note updated");
     },
@@ -313,6 +317,7 @@ export const useDeleteLeadNote = () => {
       await api.delete(`/leads/${leadId}/notes/${noteId}`);
     },
     onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: LEADS_KEY });
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
       toast.success("Note deleted");
     },

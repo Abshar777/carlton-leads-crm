@@ -45,6 +45,7 @@ const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
   { value: "interested", label: "Interested" },
   { value: "cnc", label: "CNC" },
   { value: "booking", label: "Booking" },
+  { value: "partialbooking", label: "Partial Booking" },
   { value: "closed", label: "Closed" },
   { value: "rejected", label: "Rejected" },
 ];
@@ -57,6 +58,7 @@ const STATUS_COLORS: Record<LeadStatus, string> = {
   rejected: "bg-red-500/15 text-red-400 border-red-500/30",
   cnc: "bg-slate-500/15 text-slate-400 border-slate-500/30",
   booking: "bg-teal-500/15 text-teal-400 border-teal-500/30",
+  partialbooking: "bg-pink-500/15 text-pink-400 border-pink-500/30",
   interested: "bg-violet-500/15 text-violet-400 border-violet-500/30",
 };
 
@@ -68,6 +70,7 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   rejected: "Rejected",
   cnc: "CNC",
   booking: "Booking",
+  partialbooking: "Partial Booking",
   interested: "Interested",
 };
 

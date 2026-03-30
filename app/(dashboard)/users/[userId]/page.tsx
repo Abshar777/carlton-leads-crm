@@ -34,6 +34,7 @@ const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: str
   rejected: { label: "Rejected", color: "bg-red-500/15 text-red-400 border-red-500/30", dot: "bg-red-400" },
   cnc: { label: "CNC", color: "bg-slate-500/15 text-slate-400 border-slate-500/30", dot: "bg-slate-400" },
   booking: { label: "Booking", color: "bg-teal-500/15 text-teal-400 border-teal-500/30", dot: "bg-teal-400" },
+  partialbooking: { label: "Partial Booking", color: "bg-pink-500/15 text-pink-400 border-pink-500/30", dot: "bg-pink-400" },
   interested: { label: "Interested", color: "bg-violet-500/15 text-violet-400 border-violet-500/30", dot: "bg-violet-400" },
 };
 
@@ -197,6 +198,16 @@ export default function UserDetailPage() {
       border: "border-teal-500/20",
       activeRing: "ring-teal-400/40",
       filterKey: "booking",
+    },
+    {
+      title: "Partial Booking",
+      value: stats?.partialbooking ?? 0,
+      icon: BookMarked,
+      color: "text-pink-400",
+      bg: "bg-pink-500/10",
+      border: "border-pink-500/20",
+      activeRing: "ring-pink-400/40",
+      filterKey: "partialbooking",
     },
     {
       title: "CNC",

@@ -5,6 +5,7 @@ export type LeadStatus =
   | "interested"
   | "cnc"
   | "booking"
+  | "partialbooking"
   | "closed"
   | "rejected";
 
@@ -48,9 +49,10 @@ export interface TimelinePoint {
   followup:  number;
   interested:number;
   cnc:       number;
-  booking:   number;
-  closed:    number;
-  rejected:  number;
+  booking:        number;
+  partialbooking: number;
+  closed:         number;
+  rejected:       number;
 }
 
 // ── User Rankings ─────────────────────────────────────────────────────────────
@@ -68,6 +70,7 @@ export interface UserRankItem {
   interested:     number;
   cnc:            number;
   booking:        number;
+  partialbooking: number;
   closed:         number;
   rejected:       number;
   conversionRate: number;
@@ -82,12 +85,14 @@ export interface TeamRankItem {
   description?:   string;
   memberCount:    number;
   total:          number;
+  totalPayments:  number;
   new:            number;
   assigned:       number;
   followup:       number;
   interested:     number;
   cnc:            number;
   booking:        number;
+  partialbooking: number;
   closed:         number;
   rejected:       number;
   conversionRate: number;
@@ -114,6 +119,7 @@ export interface TeamSplitSummaryItem {
   interested:     number;
   cnc:            number;
   booking:        number;
+  partialbooking: number;
   closed:         number;
   rejected:       number;
   conversionRate: number;

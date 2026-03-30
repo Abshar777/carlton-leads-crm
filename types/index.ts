@@ -17,6 +17,7 @@ export const CRM_MODULES = [
   "leads",
   "teams",
   "courses",
+  "reminders",
   "reports",
   "settings",
 ] as const;
@@ -27,12 +28,12 @@ export const MODULE_LABELS: Record<CrmModule, string> = {
   dashboard: "Dashboard",
   users: "Users",
   roles: "Roles & Permissions",
-  teams: "Teams",
   leads: "Leads",
+  teams: "Teams",
+  courses: "Courses",
+  reminders: "Reminders",
   reports: "Reports",
   settings: "Settings",
-  courses: "Courses",
-
 };
 
 export type PermissionsMap = Partial<Record<CrmModule, ModulePermissions>>;

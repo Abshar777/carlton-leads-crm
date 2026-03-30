@@ -25,6 +25,19 @@ export function getSocket(token: string): Socket {
     reconnectionDelay: 2000,
   });
 
+  socket.on("connect", () => {
+    console.log("[Socket] ✅ Connected — id:", socket?.id);
+  });
+  socket.on("connect_error", (err) => {
+    console.warn("[Socket] ❌ Connect error:", err.message);
+  });
+  socket.on("disconnect", (reason) => {
+    console.log("[Socket] 🔌 Disconnected:", reason);
+  });
+  socket.on("notification", (payload) => {
+    console.log("[Socket] 🔔 notification event received:", payload);
+  });
+
   return socket;
 }
 

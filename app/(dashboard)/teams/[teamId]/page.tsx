@@ -103,13 +103,15 @@ import {
   useTransferLead,
   useTeamUpdates,
   usePostTeamMessage,
+  useToggleMemberActive,
   type TeamUpdatesFilters,
 } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useTeamSocket } from "@/hooks/useTeamSocket";
-import { formatDate, getInitials } from "@/lib/utils";
+import { cn, formatDate, getInitials } from "@/lib/utils";
 import { TeamDialog } from "@/components/teams/TeamDialog";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
+import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
 import type { Lead, LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
@@ -127,6 +129,7 @@ interface TeamDashboardData {
     unassigned: number;
     cnc: number;
     booking: number;
+    partialbooking: number;
     interested: number;
   };
   memberRankings: Array<{
@@ -138,7 +141,9 @@ interface TeamDashboardData {
     rejected: number;
     cnc: number;
     booking: number;
+    partialbooking: number;
     interested: number;
+    totalPayments: number;
     closureRate: number;
   }>;
 }
@@ -218,6 +223,13 @@ const STATUS_CONFIG: Record<
     dot: "bg-teal-400",
     bar: "bg-teal-500",
     text: "text-teal-400",
+  },
+  partialbooking: {
+    label: "Partial Booking",
+    color: "bg-pink-500/15 text-pink-400 border-pink-500/30",
+    dot: "bg-pink-400",
+    bar: "bg-pink-500",
+    text: "text-pink-400",
   },
   interested: {
     label: "Interested",
@@ -323,12 +335,16 @@ function DashboardTab({
   isLeaderOrAdmin,
   onAutoAssign,
   assigning,
+  onToggleMemberActive,
+  togglingMember,
 }: {
   teamId: string;
   team: Team;
   isLeaderOrAdmin: boolean;
   onAutoAssign: () => void;
   assigning: boolean;
+  onToggleMemberActive: (memberId: string) => void;
+  togglingMember: boolean;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: dashData, isLoading } = (useTeamDashboard as any)(teamId) as {
@@ -339,6 +355,10 @@ function DashboardTab({
   const dist = dashData?.statusDistribution;
   const rankings = dashData?.memberRankings ?? [];
   const total = dist?.total ?? 0;
+  const inactiveMemberIds = useMemo(
+    () => new Set(team.inactiveMembers ?? []),
+    [team.inactiveMembers],
+  );
 
   const statCards = [
     {
@@ -385,6 +405,7 @@ function DashboardTab({
     { key: "interested", label: "Interested" },
     { key: "cnc", label: "CNC" },
     { key: "booking", label: "Booking" },
+    { key: "partialbooking", label: "Partial Booking" },
     { key: "closed", label: "Closed" },
     { key: "rejected", label: "Rejected" },
   ];
@@ -393,7 +414,7 @@ function DashboardTab({
   const medalBgs = ["bg-yellow-400/10", "bg-slate-400/10", "bg-amber-600/10"];
 
   const sortedRankings = useMemo(
-    () => [...rankings].sort((a, b) => b.closed - a.closed),
+    () => [...rankings].sort((a, b) => (b.totalPayments ?? 0) - (a.totalPayments ?? 0)),
     [rankings]
   );
 
@@ -579,8 +600,8 @@ function DashboardTab({
                     <div className="flex items-center gap-1 shrink-0 ml-auto">
                       {[
                         { label: "Total", value: member.total, cls: "text-foreground", show: "always" },
-                        { label: "Active", value: member.assigned + member.followup + (member.cnc ?? 0) + (member.booking ?? 0) + (member.interested ?? 0), cls: "text-amber-400", show: "sm" },
-                        { label: "Closed", value: member.closed, cls: "text-green-400", show: "always" },
+                        { label: "Closed", value: member.closed, cls: "text-green-400", show: "sm" },
+                        { label: "Revenue", value: `₹${((member.totalPayments ?? 0)).toLocaleString("en-IN")}`, cls: "text-emerald-400", show: "always" },
                         { label: "Rejected", value: member.rejected, cls: "text-red-400", show: "sm" },
                       ].map(({ label, value, cls, show }) => (
                         <div
@@ -591,6 +612,23 @@ function DashboardTab({
                           <span className="text-[10px] text-muted-foreground">{label}</span>
                         </div>
                       ))}
+                      {/* Active / Inactive toggle — leaders & admins only */}
+                      {isLeaderOrAdmin && (
+                        <button
+                          type="button"
+                          disabled={togglingMember}
+                          onClick={() => onToggleMemberActive(member.user._id)}
+                          title={inactiveMemberIds.has(member.user._id) ? "Mark active for auto-assignment" : "Mark inactive (skip auto-assignment)"}
+                          className={cn(
+                            "ml-1 flex flex-col items-center rounded px-1.5 py-1 text-[10px] font-semibold transition-all border",
+                            inactiveMemberIds.has(member.user._id)
+                              ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                              : "border-green-500/40 bg-green-500/10 text-green-400 hover:bg-green-500/20",
+                          )}
+                        >
+                          {inactiveMemberIds.has(member.user._id) ? "Inactive" : "Active"}
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -611,14 +649,22 @@ function MembersTab({
   isLoading,
   isLeaderOrAdmin = false,
   onEditMembers,
+  onToggleMemberActive,
+  togglingMember,
 }: {
   team: Team;
   memberStats: TeamMemberStat[] | undefined;
   isLoading: boolean;
   isLeaderOrAdmin?: boolean;
   onEditMembers?: () => void;
+  onToggleMemberActive?: (memberId: string) => void;
+  togglingMember?: boolean;
 }) {
   const leaderIds = new Set((team.leaders ?? []).map((l) => l._id));
+  const inactiveMemberIds = useMemo(
+    () => new Set(team.inactiveMembers ?? []),
+    [team.inactiveMembers],
+  );
 
   return (
     <div className="space-y-4">
@@ -660,6 +706,7 @@ function MembersTab({
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-left">Member</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden sm:table-cell">Role</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Total</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center text-emerald-500">Revenue</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">Assigned</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">Follow Up</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Interested</th>
@@ -667,12 +714,15 @@ function MembersTab({
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden xl:table-cell">Booking</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Closed</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Rejected</th>
-                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Closure Rate</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Conv%</th>
+                    {isLeaderOrAdmin && (
+                      <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Auto-assign</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
                   {[...memberStats]
-                    .sort((a, b) => b.closed - a.closed)
+                    .sort((a, b) => (b.totalPayments ?? 0) - (a.totalPayments ?? 0))
                     .map((stat, idx) => {
                       const isLeader = leaderIds.has(stat.user._id);
                       const closureRate =
@@ -730,6 +780,11 @@ function MembersTab({
                           <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <span className="text-sm font-semibold">{stat.total}</span>
                           </td>
+                          <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
+                            <span className="text-sm font-bold text-emerald-400">
+                              ₹{((stat.totalPayments ?? 0)).toLocaleString("en-IN")}
+                            </span>
+                          </td>
                           <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden md:table-cell">
                             <span className="text-sm text-amber-400">{stat.assigned}</span>
                           </td>
@@ -754,6 +809,23 @@ function MembersTab({
                           <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <ClosureRateBadge rate={closureRate} />
                           </td>
+                          {isLeaderOrAdmin && (
+                            <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
+                              <button
+                                type="button"
+                                disabled={togglingMember}
+                                onClick={() => onToggleMemberActive?.(stat.user._id)}
+                                className={cn(
+                                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold border transition-all",
+                                  inactiveMemberIds.has(stat.user._id)
+                                    ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                                    : "border-green-500/40 bg-green-500/10 text-green-400 hover:bg-green-500/20",
+                                )}
+                              >
+                                {inactiveMemberIds.has(stat.user._id) ? "Inactive" : "Active"}
+                              </button>
+                            </td>
+                          )}
                         </motion.tr>
                       );
                     })}
@@ -890,6 +962,11 @@ function LeadsTab({
         ...(team?.leaders ?? []),
         ...(team?.members ?? []),
       ].filter((u, i, arr) => arr.findIndex((x) => x._id === u._id) === i),
+    [team]
+  );
+
+  const leaderIds = useMemo(
+    () => new Set((team?.leaders ?? []).map((l) => l._id)),
     [team]
   );
 
@@ -1285,12 +1362,20 @@ function LeadsTab({
                                       <SelectContent>
                                         {allMembers.map((m) => (
                                           <SelectItem key={m._id} value={m._id}>
-                                            {m.name}
-                                            {m.designation && (
-                                              <span className="text-muted-foreground ml-1.5 text-xs">
-                                                · {m.designation}
-                                              </span>
-                                            )}
+                                            <span className="flex items-center gap-1.5">
+                                              {leaderIds.has(m._id) && (
+                                                <Crown className="h-3 w-3 text-yellow-400 shrink-0" />
+                                              )}
+                                              {m.name}
+                                              {leaderIds.has(m._id) && (
+                                                <span className="text-xs text-yellow-500/80">(Leader)</span>
+                                              )}
+                                              {!leaderIds.has(m._id) && m.designation && (
+                                                <span className="text-muted-foreground text-xs">
+                                                  · {m.designation}
+                                                </span>
+                                              )}
+                                            </span>
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -1457,7 +1542,17 @@ function LeadsTab({
             </SelectTrigger>
             <SelectContent>
               {allMembers.map((m) => (
-                <SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>
+                <SelectItem key={m._id} value={m._id}>
+                  <span className="flex items-center gap-1.5">
+                    {leaderIds.has(m._id) && (
+                      <Crown className="h-3 w-3 text-yellow-400 shrink-0" />
+                    )}
+                    {m.name}
+                    {leaderIds.has(m._id) && (
+                      <span className="text-xs text-yellow-500/80">(Leader)</span>
+                    )}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -2366,6 +2461,7 @@ export default function TeamDetailPage() {
   const { data: memberStats, isLoading: loadingStats } = useTeamMemberStats(teamId);
   const { mutate: autoAssign, isPending: assigning } = useAutoAssignTeamLeads(teamId);
   const { mutate: deleteTeam, isPending: deleting } = useDeleteTeam();
+  const { mutate: toggleMemberActive, isPending: togglingMember } = useToggleMemberActive(teamId);
 
   // ── Access control ───────────────────────────────────────────────────────────
   const isSuperAdmin =
@@ -2541,6 +2637,11 @@ export default function TeamDetailPage() {
 
               {/* Action buttons */}
               <div className="flex items-center gap-2 pb-1 flex-wrap shrink-0">
+                 <ExportPdfDialog
+                  type="team"
+                  entityId={teamId}
+                  entityName={team.name}
+                />
                 {/* {isLeaderOrAdmin && (
                   <Button
                     variant="outline"
@@ -2557,13 +2658,7 @@ export default function TeamDetailPage() {
                     Auto-assign
                   </Button>
                 )}
-                {isLeaderOrAdmin && (
-                  <ExportPdfDialog
-                    type="team"
-                    entityId={teamId}
-                    entityName={team.name}
-                  />
-                )}
+               
                 {isAdmin && (
                   <Button
                     variant="outline"
@@ -2665,6 +2760,8 @@ export default function TeamDetailPage() {
                 isLeaderOrAdmin={!!isLeaderOrAdmin}
                 onAutoAssign={handleAutoAssign}
                 assigning={assigning}
+                onToggleMemberActive={toggleMemberActive}
+                togglingMember={togglingMember}
               />
             </motion.div>
           )}
@@ -2683,6 +2780,8 @@ export default function TeamDetailPage() {
                 isLoading={loadingStats}
                 isLeaderOrAdmin={!!isLeaderOrAdmin}
                 onEditMembers={() => setEditMembersOpen(true)}
+                onToggleMemberActive={toggleMemberActive}
+                togglingMember={togglingMember}
               />
             </motion.div>
           )}
@@ -2730,6 +2829,11 @@ export default function TeamDetailPage() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* AI Team Assistant */}
+      {/* <div className="mt-6 px-4 sm:px-6 pb-6 max-w-2xl">
+        <AiChatPanel contextType="team" contextId={teamId} />
+      </div> */}
 
       {/* Edit members dialog — reuses TeamDialog pre-filled with current team */}
       <TeamDialog

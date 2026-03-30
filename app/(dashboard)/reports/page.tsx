@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
+import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import {
   useReportOverview,
   useReportTimeline,
@@ -43,13 +44,14 @@ const STATUS_META: Record<
   followup:   { label: "Follow Up", color: "#f97316", bar: "bg-orange-500", dot: "bg-orange-400" },
   interested: { label: "Interested",color: "#8b5cf6", bar: "bg-violet-500", dot: "bg-violet-400" },
   cnc:        { label: "CNC",       color: "#64748b", bar: "bg-slate-500",  dot: "bg-slate-400"  },
-  booking:    { label: "Booking",   color: "#14b8a6", bar: "bg-teal-500",   dot: "bg-teal-400"   },
-  closed:     { label: "Closed",    color: "#22c55e", bar: "bg-green-500",  dot: "bg-green-400"  },
-  rejected:   { label: "Rejected",  color: "#ef4444", bar: "bg-red-500",    dot: "bg-red-400"    },
+  booking:        { label: "Booking",         color: "#14b8a6", bar: "bg-teal-500",  dot: "bg-teal-400"  },
+  partialbooking: { label: "Partial Booking", color: "#ec4899", bar: "bg-pink-500",  dot: "bg-pink-400"  },
+  closed:         { label: "Closed",          color: "#22c55e", bar: "bg-green-500", dot: "bg-green-400" },
+  rejected:       { label: "Rejected",        color: "#ef4444", bar: "bg-red-500",   dot: "bg-red-400"   },
 };
 
 const ALL_STATUSES: LeadStatus[] = [
-  "new","assigned","followup","interested","cnc","booking","closed","rejected",
+  "new","assigned","followup","interested","cnc","booking","partialbooking","closed","rejected",
 ];
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -516,14 +518,14 @@ function OverviewTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
                   ? <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
                   : !teamRanks.data?.length ? <Empty />
                   : (
-                    <table className="w-full text-xs min-w-[480px]">
+                    <table className="w-full text-xs min-w-[520px]">
                       <thead>
                         <tr className="border-b border-border/50">
                           <th className="pb-2 text-left font-medium text-muted-foreground w-8">#</th>
                           <th className="pb-2 text-left font-medium text-muted-foreground">Team</th>
                           <th className="pb-2 text-right font-medium text-muted-foreground">Members</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground">Total</th>
-                          <th className="pb-2 text-right font-medium text-muted-foreground text-green-500">Closed</th>
+                          <th className="pb-2 text-right font-medium text-muted-foreground">Leads</th>
+                          <th className="pb-2 text-right font-medium text-emerald-500">Revenue</th>
                           <th className="pb-2 text-right font-medium text-muted-foreground">Conv%</th>
                           <th className="pb-2 text-left font-medium text-muted-foreground pl-3 hidden sm:table-cell">Breakdown</th>
                         </tr>
@@ -535,7 +537,11 @@ function OverviewTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
                             <td className="py-2.5 pr-3"><p className="font-semibold text-foreground truncate max-w-[140px]">{t.name}</p></td>
                             <td className="py-2.5 text-right tabular-nums text-muted-foreground">{t.memberCount}</td>
                             <td className="py-2.5 text-right font-semibold tabular-nums">{t.total}</td>
-                            <td className="py-2.5 text-right"><span className="font-bold text-green-500 tabular-nums">{t.closed}</span></td>
+                            <td className="py-2.5 text-right">
+                              <span className="font-bold text-emerald-500 tabular-nums">
+                                ₹{(t.totalPayments ?? 0).toLocaleString("en-IN")}
+                              </span>
+                            </td>
                             <td className="py-2.5 text-right">
                               <span className={cn("font-semibold tabular-nums", t.conversionRate>=50?"text-green-500":t.conversionRate>=25?"text-yellow-500":"text-muted-foreground")}>
                                 {t.conversionRate}%
@@ -1024,7 +1030,7 @@ export default function ReportsPage() {
       </div>
 
       {/* ── Tab content ───────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-6 max-w-[1600px] mx-auto">
+      <div className="px-4 sm:px-6 py-6 max-w-[1600px] mx-auto space-y-6">
         <AnimatePresence mode="wait">
           {activeTab === "overview" ? (
             <motion.div
@@ -1048,6 +1054,11 @@ export default function ReportsPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* AI Analytics Assistant */}
+        {/* <div className="max-w-2xl">
+          <AiChatPanel contextType="report" contextId="global" />
+        </div> */}
       </div>
     </div>
   );

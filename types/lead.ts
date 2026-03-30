@@ -2,7 +2,7 @@ import type { User } from "@/types";
 import type { Team } from "@/types/team";
 import type { Course } from "@/types/course";
 
-export type LeadStatus = "new" | "assigned" | "followup" | "closed" | "rejected" | "cnc" | "booking" | "interested";
+export type LeadStatus = "new" | "assigned" | "followup" | "closed" | "rejected" | "cnc" | "booking" | "partialbooking" | "interested";
 
 export type ActivityAction =
   | "lead_created"
@@ -20,6 +20,39 @@ export interface LeadNote {
   author: User | string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Payment {
+  _id: string;
+  amount: number;
+  note?: string;
+  paidAt: string;
+  addedBy: User | string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Reminder {
+  _id: string;
+  title?: string;
+  note?: string;
+  remindAt: string;
+  createdBy: User | string;
+  isDone: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ReminderWithLead extends Reminder {
+  lead: {
+    _id: string;
+    name: string;
+    phone?: string;
+    email?: string;
+    status: LeadStatus;
+    assignedTo?: User | string | null;
+    team?: { _id: string; name: string } | string | null;
+  };
 }
 
 export interface ActivityLog {
@@ -43,6 +76,8 @@ export interface Lead {
   team?: Team | string | null;
   reporter?: User | string | null;
   notes: LeadNote[];
+  reminders: Reminder[];
+  payments: Payment[];
   activityLogs: ActivityLog[];
   createdAt: string;
   updatedAt: string;
@@ -72,6 +107,7 @@ export interface LeadStats {
   rejected: number;
   cnc: number;
   booking: number;
+  partialbooking: number;
   interested: number;
 }
 

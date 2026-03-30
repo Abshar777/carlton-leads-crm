@@ -335,3 +335,26 @@ export const usePostTeamMessage = (teamId: string) => {
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to send message")),
   });
 };
+
+// ── Toggle member active/inactive for auto-assignment (team-scoped) ───────────
+export const useToggleMemberActive = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberId: string) => {
+      const res = await api.patch<ApiResponse<{ memberId: string; isActive: boolean }>>(
+        `/teams/${teamId}/members/${memberId}/toggle-active`,
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data.isActive
+          ? "Member activated for auto-assignment"
+          : "Member deactivated — won't receive auto-assigned leads",
+      );
+      queryClient.invalidateQueries({ queryKey: [...TEAMS_KEY, teamId] });
+      queryClient.invalidateQueries({ queryKey: [...TEAMS_KEY, teamId, "dashboard"] });
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to toggle member status")),
+  });
+};

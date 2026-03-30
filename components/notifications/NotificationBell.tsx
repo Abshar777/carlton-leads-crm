@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getSocket } from "@/lib/socket";
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePushNotification } from "@/hooks/usePushNotification";
+import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,23 @@ export function NotificationBell() {
         read: false,
       };
       setNotifications((prev) => [notif, ...prev].slice(0, 50));
-      showFlash(notif);
+      // Show sonner toast
+      toast(notif.title, {
+        description: notif.body,
+        duration: 5000,
+        action: notif.url ? {
+          label: "View",
+          onClick: () => {
+            window.location.href = notif.url!;
+          },
+        } : undefined,
+        icon: (() => {
+          const cfg = TYPE_CONFIG[notif.type] ?? DEFAULT_TYPE;
+          const Icon = cfg.icon;
+          // Return a JSX element
+          return <Icon className={`h-4 w-4 ${cfg.color}`} />;
+        })(),
+      });
     };
 
     socket.on("notification", handler);
@@ -327,81 +344,3 @@ export function NotificationBell() {
   );
 }
 
-// ── Flash toast (shown for 4 seconds) ────────────────────────────────────────
-
-let flashContainer: HTMLDivElement | null = null;
-
-function showFlash(notif: AppNotification) {
-  if (typeof window === "undefined") return;
-
-  if (!flashContainer) {
-    flashContainer = document.createElement("div");
-    flashContainer.style.cssText = `
-      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-      display: flex; flex-direction: column; gap: 10px;
-      pointer-events: none;
-    `;
-    document.body.appendChild(flashContainer);
-  }
-
-  const cfg = TYPE_CONFIG[notif.type] ?? DEFAULT_TYPE;
-
-  const toast = document.createElement("div");
-  toast.style.cssText = `
-    display: flex; align-items: flex-start; gap: 10px;
-    background: hsl(var(--card) / 0.95);
-    backdrop-filter: blur(12px);
-    border: 1px solid hsl(var(--border) / 0.6);
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    max-width: 320px;
-    pointer-events: auto;
-    cursor: pointer;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    transform: translateX(120%);
-    opacity: 0;
-  `;
-
-  toast.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;flex-shrink:0;background:hsl(var(--muted))">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#94a3b8">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-    </div>
-    <div style="flex:1;min-width:0;">
-      <p style="font-size:13px;font-weight:600;color:hsl(var(--foreground));margin:0;line-height:1.3;">${escapeHtml(notif.title)}</p>
-      <p style="font-size:11px;color:hsl(var(--muted-foreground));margin:4px 0 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(notif.body)}</p>
-    </div>
-  `;
-
-  if (notif.url) {
-    toast.onclick = () => { window.location.href = notif.url!; };
-  }
-
-  flashContainer.appendChild(toast);
-
-  // Slide in
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      toast.style.transform = "translateX(0)";
-      toast.style.opacity = "1";
-    });
-  });
-
-  // Slide out and remove
-  setTimeout(() => {
-    toast.style.transform = "translateX(120%)";
-    toast.style.opacity = "0";
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
