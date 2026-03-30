@@ -36,6 +36,7 @@ export interface TeamMemberStat {
   booking: number;
   partialbooking: number;
   interested: number;
+  totalPayments: number;
 }
 
 export interface TeamAutoAssignResult {
