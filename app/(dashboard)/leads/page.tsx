@@ -293,11 +293,11 @@ export default function LeadsPage() {
             <>
               <Button variant="outline" onClick={() => router.push("/leads/upload")} className="gap-2">
                 <Upload className="h-4 w-4" />
-                Upload Leads
+                <span className="hidden sm:inline">Upload Leads</span>
               </Button>
               <Button onClick={handleCreate} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Add Lead
+                <span className="hidden sm:inline">Add Lead</span>
               </Button>
             </>
           )}
@@ -548,200 +548,275 @@ export default function LeadsPage() {
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      <th className="pl-4 pr-2 py-3 w-10">
-                        <Checkbox
-                          checked={leads.length > 0 && leads.every((l) => selectedIds.has(l._id))}
-                          onCheckedChange={() => toggleAll(leads.map((l) => l._id))}
-                          aria-label="Select all"
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left">Name</th>
-                      <th className="px-4 py-3 text-left">Contact</th>
-                      <th className="px-4 py-3 text-left hidden md:table-cell">Source</th>
-                      <th className="px-4 py-3 text-left hidden xl:table-cell">Course</th>
-                      <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Team</th>
-                      <th className="px-4 py-3 text-left hidden lg:table-cell">Assigned To</th>
-                      <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
-                      <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    <AnimatePresence>
-                      {leads.map((lead, i) => (
-                        <motion.tr
-                          key={lead._id}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 8 }}
-                          transition={{ delay: i * 0.025 }}
-                          className={`group hover:bg-muted/20 transition-colors ${selectedIds.has(lead._id) ? "bg-primary/5" : ""}`}
-                        >
-                          {/* Checkbox */}
-                          <td className="pl-4 pr-2 py-4">
-                            <Checkbox
-                              checked={selectedIds.has(lead._id)}
-                              onCheckedChange={() => toggleId(lead._id)}
-                              onClick={(e) => e.stopPropagation()}
-                              aria-label="Select lead"
-                            />
-                          </td>
-
-                          {/* Name */}
-                          <td className="px-4 py-4">
-                            <p className="font-medium text-sm">{lead.name}</p>
-                          </td>
-
-                          {/* Contact */}
-                          <td className="px-4 py-4">
-                            <div className="space-y-0.5">
-                              {lead.email && <p className="text-sm text-muted-foreground">{lead.email}</p>}
-                              {lead.phone && <p className="text-xs text-muted-foreground/70">{lead.phone}</p>}
-                              {!lead.email && !lead.phone && <span className="text-sm text-muted-foreground/50">—</span>}
+              <>
+                {/* ── Mobile card list (< sm) ─────────────────────────────────── */}
+                <div className="sm:hidden divide-y divide-border">
+                  {/* Select-all row */}
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/20">
+                    <Checkbox
+                      checked={leads.length > 0 && leads.every((l) => selectedIds.has(l._id))}
+                      onCheckedChange={() => toggleAll(leads.map((l) => l._id))}
+                      aria-label="Select all"
+                    />
+                    <span className="text-xs text-muted-foreground font-medium">Select all on this page</span>
+                  </div>
+                  <AnimatePresence>
+                    {leads.map((lead, i) => (
+                      <motion.div
+                        key={lead._id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ delay: i * 0.025 }}
+                        className={`px-4 py-3 transition-colors ${selectedIds.has(lead._id) ? "bg-primary/5" : ""}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedIds.has(lead._id)}
+                            onCheckedChange={() => toggleId(lead._id)}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Select lead"
+                            className="mt-0.5 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            {/* Name + status */}
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <p className="font-medium text-sm truncate">{lead.name}</p>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  disabled={getUserId(lead.assignedTo as User | string | null) !== user?._id && !isAdmin}
+                                  asChild
+                                >
+                                  <button className="flex items-center gap-0.5 shrink-0">
+                                    <StatusBadge status={lead.status} />
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
+                                    <DropdownMenuItem
+                                      key={s}
+                                      onClick={() => handleStatusChange(lead, s)}
+                                      className={lead.status === s ? "font-semibold" : ""}
+                                    >
+                                      <StatusBadge status={s} />
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                          </td>
-
-                          {/* Source */}
-                          <td className="px-4 py-4 hidden md:table-cell">
-                            <span className="text-sm text-muted-foreground capitalize">{lead.source ?? "—"}</span>
-                          </td>
-
-                          {/* Course */}
-                          <td className="px-4 py-4 hidden xl:table-cell">
-                            {lead.course ? (
-                              <span className="text-sm text-muted-foreground">
-                                {typeof lead.course === "object" ? lead.course.name : lead.course}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-muted-foreground/40">—</span>
-                            )}
-                          </td>
-
-                          {/* Status — inline dropdown */}
-                          <td className="px-4 py-4">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                disabled={getUserId(lead.assignedTo as User | string | null) !== user?._id && !isAdmin}
-                                asChild
-                              >
-                                <button className="flex items-center gap-1 group/status">
-                                  <StatusBadge status={lead.status} />
-                                  <ChevronDown className="h-3 w-3 text-muted-foreground opacity-0 group-hover/status:opacity-100 transition-opacity" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start">
-                                {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
-                                  <DropdownMenuItem
-                                    key={s}
-                                    onClick={() => handleStatusChange(lead, s)}
-                                    className={lead.status === s ? "font-semibold" : ""}
-                                  >
-                                    <StatusBadge status={s} />
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-
-                          {/* Team */}
-                          <td className="px-4 py-4 hidden lg:table-cell">
-                            {lead.team ? (
-                              <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                                {typeof lead.team === "object" ? lead.team.name : lead.team}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/50">—</span>
-                            )}
-                          </td>
-
-                          {/* Assigned To */}
-                          <td className="px-4 py-4 hidden lg:table-cell">
-                            <span className="text-sm text-muted-foreground">
-                              {getUserName(lead.assignedTo as User | string | null)}
-                            </span>
-                          </td>
-
-                          {/* Reporter */}
-                          <td className="px-4 py-4 hidden xl:table-cell">
-                            <span className="text-sm text-muted-foreground">
-                              {getUserName(lead.reporter as User | string | null)}
-                            </span>
-                          </td>
-
-                          {/* Created At */}
-                          <td className="px-4 py-4 hidden xl:table-cell">
-                            <span className="text-sm text-muted-foreground">{formatDate(lead.createdAt)}</span>
-                          </td>
-
+                            {/* Contact */}
+                            {lead.email && <p className="text-xs text-muted-foreground mt-0.5 truncate">{lead.email}</p>}
+                            {lead.phone && <p className="text-xs text-muted-foreground/70">{lead.phone}</p>}
+                            {/* Meta row */}
+                            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                              {lead.team && (
+                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                                  {typeof lead.team === "object" ? lead.team.name : lead.team}
+                                </span>
+                              )}
+                              {lead.assignedTo && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {getUserName(lead.assignedTo as User | string | null)}
+                                </span>
+                              )}
+                              {lead.source && (
+                                <span className="text-[11px] text-muted-foreground/60 capitalize">{lead.source}</span>
+                              )}
+                            </div>
+                          </div>
                           {/* Actions */}
-                          <td className="px-4 py-4">
-                            <div className="flex items-center justify-end gap-1">
-                              <Link href={`/leads/${lead._id}`}>
-                                <Button
-                                  variant="ghost" size="icon"
-                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
-                                  title="View Detail"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                              {canEdit && (
-                                <Button
-                                  variant="ghost" size="icon"
-                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => handleEdit(lead)}
-                                  title="Edit"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Link href={`/leads/${lead._id}`}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" title="View">
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            {canEdit && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lead)} title="Edit">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(lead)} title="Delete">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+
+                {/* ── Desktop table (≥ sm) ────────────────────────────────────── */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <th className="pl-4 pr-2 py-3 w-10">
+                          <Checkbox
+                            checked={leads.length > 0 && leads.every((l) => selectedIds.has(l._id))}
+                            onCheckedChange={() => toggleAll(leads.map((l) => l._id))}
+                            aria-label="Select all"
+                          />
+                        </th>
+                        <th className="px-4 py-3 text-left">Name</th>
+                        <th className="px-4 py-3 text-left">Contact</th>
+                        <th className="px-4 py-3 text-left hidden md:table-cell">Source</th>
+                        <th className="px-4 py-3 text-left hidden xl:table-cell">Course</th>
+                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 text-left hidden lg:table-cell">Team</th>
+                        <th className="px-4 py-3 text-left hidden lg:table-cell">Assigned To</th>
+                        <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
+                        <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      <AnimatePresence>
+                        {leads.map((lead, i) => (
+                          <motion.tr
+                            key={lead._id}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 8 }}
+                            transition={{ delay: i * 0.025 }}
+                            className={`group hover:bg-muted/20 transition-colors ${selectedIds.has(lead._id) ? "bg-primary/5" : ""}`}
+                          >
+                            <td className="pl-4 pr-2 py-4">
+                              <Checkbox
+                                checked={selectedIds.has(lead._id)}
+                                onCheckedChange={() => toggleId(lead._id)}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label="Select lead"
+                              />
+                            </td>
+                            <td className="px-4 py-4">
+                              <p className="font-medium text-sm">{lead.name}</p>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="space-y-0.5">
+                                {lead.email && <p className="text-sm text-muted-foreground">{lead.email}</p>}
+                                {lead.phone && <p className="text-xs text-muted-foreground/70">{lead.phone}</p>}
+                                {!lead.email && !lead.phone && <span className="text-sm text-muted-foreground/50">—</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 hidden md:table-cell">
+                              <span className="text-sm text-muted-foreground capitalize">{lead.source ?? "—"}</span>
+                            </td>
+                            <td className="px-4 py-4 hidden xl:table-cell">
+                              {lead.course ? (
+                                <span className="text-sm text-muted-foreground">
+                                  {typeof lead.course === "object" ? lead.course.name : lead.course}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-muted-foreground/40">—</span>
                               )}
-                              {/* {isAdmin && (
-                                <Button
-                                  variant="ghost" size="icon"
-                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-400"
-                                  onClick={() => handleAssign(lead)}
-                                  title="Assign"
+                            </td>
+                            <td className="px-4 py-4">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  disabled={getUserId(lead.assignedTo as User | string | null) !== user?._id && !isAdmin}
+                                  asChild
                                 >
-                                  <UserCheck className="h-4 w-4" />
-                                </Button>
-                              )} */}
-                              {canDelete && (
-                                <Button
-                                  variant="ghost" size="icon"
-                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                                  onClick={() => handleDelete(lead)}
-                                  title="Delete"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                  <button className="flex items-center gap-1 group/status">
+                                    <StatusBadge status={lead.status} />
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground opacity-0 group-hover/status:opacity-100 transition-opacity" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
+                                    <DropdownMenuItem
+                                      key={s}
+                                      onClick={() => handleStatusChange(lead, s)}
+                                      className={lead.status === s ? "font-semibold" : ""}
+                                    >
+                                      <StatusBadge status={s} />
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                            <td className="px-4 py-4 hidden lg:table-cell">
+                              {lead.team ? (
+                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                  {typeof lead.team === "object" ? lead.team.name : lead.team}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground/50">—</span>
                               )}
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td className="px-4 py-4 hidden lg:table-cell">
+                              <span className="text-sm text-muted-foreground">
+                                {getUserName(lead.assignedTo as User | string | null)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 hidden xl:table-cell">
+                              <span className="text-sm text-muted-foreground">
+                                {getUserName(lead.reporter as User | string | null)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 hidden xl:table-cell">
+                              <span className="text-sm text-muted-foreground">{formatDate(lead.createdAt)}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center justify-end gap-1">
+                                <Link href={`/leads/${lead._id}`}>
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary"
+                                    title="View Detail"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                                {canEdit && (
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleEdit(lead)}
+                                    title="Edit"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {canDelete && (
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                                    onClick={() => handleDelete(lead)}
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {/* ── Pagination ──────────────────────────────────────────────────── */}
             {pagination && pagination.totalPages >= 1 && (
-              <div className="flex items-center justify-between border-t border-border px-6 py-4">
-                <p className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between border-t border-border px-4 sm:px-6 py-3 sm:py-4 gap-2 flex-wrap">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {pagination.total === 0 ? "No leads" : (
                     <>
-                      Showing{" "}
+                      <span className="hidden sm:inline">Showing </span>
                       <span className="font-medium text-foreground">
                         {(pagination.page - 1) * pagination.limit + 1}–
                         {Math.min(pagination.page * pagination.limit, pagination.total)}
-                      </span>{" "}
-                      of <span className="font-medium text-foreground">{pagination.total}</span> leads
+                      </span>
+                      <span className="hidden sm:inline"> of </span>
+                      <span className="sm:hidden"> / </span>
+                      <span className="font-medium text-foreground">{pagination.total}</span>
+                      <span className="hidden sm:inline"> leads</span>
                     </>
                   )}
                 </p>
@@ -890,13 +965,14 @@ export default function LeadsPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
+            className="fixed bottom-4 sm:bottom-6 left-1/4 sm:left-1/2 z-50 -translate-x-1/2  sm:w-auto max-w-lg"
           >
-            <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-2xl px-4 py-3">
-              <div className="flex items-center gap-2 pr-3 border-r border-border">
+            <div className="flex items-center gap-1 sm:gap-2 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-2xl px-3 sm:px-4 py-2.5 sm:py-3">
+              <div className="flex items-center gap-1.5 pr-2.5 sm:pr-3 border-r border-border shrink-0">
                 <CheckSquare className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground whitespace-nowrap">
-                  {selectedIds.size} selected
+                <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                  {selectedIds.size}
+                  <span className="hidden sm:inline"> selected</span>
                 </span>
               </div>
 
@@ -904,11 +980,11 @@ export default function LeadsPage() {
               {canEdit && (
                 <Button
                   variant="ghost" size="sm"
-                  className="gap-1.5 h-8 text-xs text-foreground hover:bg-muted"
+                  className="gap-1 h-8 text-xs px-2 sm:px-3 text-foreground hover:bg-muted"
                   onClick={() => setBulkStatusOpen(true)}
                 >
-                  <Tags className="h-3.5 w-3.5" />
-                  Status
+                  <Tags className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Status</span>
                 </Button>
               )}
 
@@ -916,11 +992,11 @@ export default function LeadsPage() {
               {(isSuperAdmin || isTeamLeader) && (
                 <Button
                   variant="ghost" size="sm"
-                  className="gap-1.5 h-8 text-xs text-foreground hover:bg-muted"
+                  className="gap-1 h-8 text-xs px-2 sm:px-3 text-foreground hover:bg-muted"
                   onClick={() => setBulkTeamOpen(true)}
                 >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
-                  Assign Team
+                  <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Assign Team</span>
                 </Button>
               )}
 
@@ -928,11 +1004,11 @@ export default function LeadsPage() {
               {canDelete && (
                 <Button
                   variant="ghost" size="sm"
-                  className="gap-1.5 h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="gap-1 h-8 text-xs px-2 sm:px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => setBulkDeleteOpen(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
+                  <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               )}
 

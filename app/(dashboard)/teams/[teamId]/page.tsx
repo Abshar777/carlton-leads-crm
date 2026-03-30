@@ -572,9 +572,13 @@ function DashboardTab({
 
                     {/* Info */}
                     <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-none">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <Link
+                        href={`/users/${member.user._id}`}
+                        className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline underline-offset-2 transition-colors inline-flex items-center gap-1"
+                      >
                         {member.user.name}
-                      </p>
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </Link>
                       {member.user.designation && (
                         <p className="text-xs text-muted-foreground truncate">
                           {member.user.designation}
@@ -749,9 +753,13 @@ function MembersTab({
                               </Avatar>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <p className="text-sm font-medium text-foreground truncate">
+                                  <Link
+                                    href={`/users/${stat.user._id}`}
+                                    className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline underline-offset-2 transition-colors inline-flex items-center gap-1"
+                                  >
                                     {stat.user.name}
-                                  </p>
+                                    <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                                  </Link>
                                   {isLeader && (
                                     <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                                   )}
@@ -1659,9 +1667,9 @@ function LeadsTab({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
+            className="fixed bottom-4 sm:bottom-6 sm:left-1/2 z-50 -translate-x-1/2 w-[calc(100vw-2rem)] sm:w-auto max-w-lg"
           >
-            <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-2xl px-3 sm:px-4 py-2.5 sm:py-3">
+            <div className="flex items-center gap-1 sm:gap-2 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md shadow-2xl px-3 sm:px-4 py-2.5 sm:py-3">
               <div className="flex items-center gap-1.5 pr-2.5 sm:pr-3 border-r border-border shrink-0">
                 <CheckSquare className="h-4 w-4 text-primary" />
                 <span className="text-xs sm:text-sm font-semibold whitespace-nowrap">
