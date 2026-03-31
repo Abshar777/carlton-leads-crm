@@ -403,16 +403,18 @@ export const useTeamMember = (teamId: string, memberId: string) =>
 export const useTeamMemberLeads = (
   teamId: string,
   memberId: string,
-  filters?: { page?: number; limit?: number; status?: string; search?: string },
+  filters?: { page?: number; limit?: number; status?: string; search?: string; dateFrom?: string; dateTo?: string },
 ) =>
   useQuery({
     queryKey: [...TEAMS_KEY, teamId, "members", memberId, "leads", filters],
     queryFn: async () => {
       const params: Record<string, string> = {};
-      if (filters?.page)   params.page   = String(filters.page);
-      if (filters?.limit)  params.limit  = String(filters.limit);
-      if (filters?.status) params.status = filters.status;
-      if (filters?.search) params.search = filters.search;
+      if (filters?.page)     params.page     = String(filters.page);
+      if (filters?.limit)    params.limit    = String(filters.limit);
+      if (filters?.status)   params.status   = filters.status;
+      if (filters?.search)   params.search   = filters.search;
+      if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
+      if (filters?.dateTo)   params.dateTo   = filters.dateTo;
       const res = await api.get<ApiResponse<Lead[]>>(
         `/teams/${teamId}/members/${memberId}/leads`,
         { params },

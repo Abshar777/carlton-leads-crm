@@ -55,10 +55,12 @@ export const useUserLeads = (userId: string, filters?: LeadFilters) => {
     queryKey: [...LEADS_KEY, "user", userId, filters],
     queryFn: async () => {
       const params: Record<string, string> = {};
-      if (filters?.page) params.page = String(filters.page);
-      if (filters?.limit) params.limit = String(filters.limit);
-      if (filters?.status) params.status = filters.status;
-      if (filters?.search) params.search = filters.search;
+      if (filters?.page)     params.page     = String(filters.page);
+      if (filters?.limit)    params.limit    = String(filters.limit);
+      if (filters?.status)   params.status   = filters.status;
+      if (filters?.search)   params.search   = filters.search;
+      if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
+      if (filters?.dateTo)   params.dateTo   = filters.dateTo;
       const response = await api.get<ApiResponse<Lead[]>>(`/users/${userId}/leads`, { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },

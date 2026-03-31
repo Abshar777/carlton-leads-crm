@@ -7,6 +7,7 @@ import {
   CalendarDays, Filter, CheckSquare, Square, Tags, ArrowRightLeft, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
+import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -185,6 +186,15 @@ export default function LeadsPage() {
     setPage(1);
   }
 
+  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  function applyToday() {
+    const today = todayISO();
+    if (isTodayActive) { setDateFrom(""); setDateTo(""); }
+    else { setDateFrom(today); setDateTo(today); }
+    setPage(1);
+  }
+
   const filters = useMemo(() => ({
     page,
     limit,
@@ -335,8 +345,9 @@ export default function LeadsPage() {
                 )}
               </div>
 
-              {/* Right side — filter toggle + clear */}
+              {/* Right side — Today + filter toggle + clear */}
               <div className="flex items-center gap-2 flex-wrap">
+                <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
                 <Button
                   variant={showFilters ? "secondary" : "outline"}
                   size="sm"
@@ -460,11 +471,36 @@ export default function LeadsPage() {
                     )}
 
                     {/* Date Range */}
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                         <CalendarDays className="h-3 w-3" />
                         Date Range (Created)
                       </p>
+                      {/* Quick period buttons */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["today", "week", "month", "year"] as const).map((p) => {
+                          const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
+                          const getRangeFor = (period: string) => {
+                            const now = new Date(); const t = now.toISOString().slice(0,10);
+                            if (period === "today") return { f: t, t };
+                            if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: m.toISOString().slice(0,10), t }; }
+                            if (period === "month") return { f: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10), t };
+                            return { f: new Date(now.getFullYear(),0,1).toISOString().slice(0,10), t };
+                          };
+                          const range = getRangeFor(p);
+                          const isActive = dateFrom === range.f && dateTo === range.t;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => { if (isActive) { setDateFrom(""); setDateTo(""); } else { setDateFrom(range.f); setDateTo(range.t); } setPage(1); }}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
+                            >
+                              {labels[p]}
+                            </button>
+                          );
+                        })}
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <Input
                           type="date"

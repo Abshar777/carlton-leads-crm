@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -966,10 +966,60 @@ export default function ReportsPage() {
     return getQuickRange(quickPeriod) as { from: string; to: string };
   }, [quickPeriod, customFrom, customTo]);
 
+  // ── Smart-hide header on mobile scroll ─────────────────────────────────────
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY  = useRef(0);
+  const SCROLL_THRESHOLD = 6; // px — prevents jitter on tiny movements
+
+  useEffect(() => {
+    // The dashboard's scroll container is the <main> element
+    const scrollEl = document.querySelector("main") as HTMLElement | null;
+    if (!scrollEl) return;
+
+    function handleScroll() {
+      // Desktop: always visible
+      if (window.innerWidth >= 640) {
+        setHeaderVisible(true);
+        lastScrollY.current = scrollEl!.scrollTop;
+        return;
+      }
+
+      const currentY = scrollEl!.scrollTop;
+      const delta    = currentY - lastScrollY.current;
+
+      if (Math.abs(delta) < SCROLL_THRESHOLD) return;
+
+      if (delta > 0 && currentY > 60) {
+        // Scrolling DOWN and not near top → hide
+        setHeaderVisible(false);
+      } else {
+        // Scrolling UP or near top → show
+        setHeaderVisible(true);
+      }
+
+      lastScrollY.current = currentY;
+    }
+
+    function handleResize() {
+      if (window.innerWidth >= 640) setHeaderVisible(true);
+    }
+
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => {
+      scrollEl.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* ── Sticky header ─────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+      {/* ── Sticky header (auto-hides on mobile scroll-down) ──────────────── */}
+      <motion.div
+        className="sticky top-[-1.9rem] z-10 border-b border-border/50 bg-background/80 backdrop-blur-sm"
+        animate={{ y: headerVisible ? 0 : "-150%" }}
+        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
         <div className="px-4 sm:px-6 py-4 space-y-4">
           {/* Title row */}
           <div className="flex items-center justify-between gap-3">
@@ -1027,7 +1077,7 @@ export default function ReportsPage() {
             setCustomTo={setCustomTo}
           />
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Tab content ───────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-6 max-w-[1600px] mx-auto space-y-6">
