@@ -84,6 +84,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
+import {
   useTeam,
   useTeamLeads,
   useTeamMemberStats,
@@ -1586,38 +1594,47 @@ function LeadsTab({
         </CardContent>
       </Card>
 
-      {/* ── Bulk: Assign to Member dialog ─────────────────────────────────────── */}
-      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Assign to Member</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Assign <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s) to:
-          </p>
-          <Select value={bulkMemberId} onValueChange={setBulkMemberId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a member" />
-            </SelectTrigger>
-            <SelectContent>
-              {allMembers.map((m) => (
-                <SelectItem key={m._id} value={m._id}>
-                  <span className="flex items-center gap-1.5">
-                    {leaderIds.has(m._id) && (
-                      <Crown className="h-3 w-3 text-yellow-400 shrink-0" />
-                    )}
-                    {m.name}
-                    {leaderIds.has(m._id) && (
-                      <span className="text-xs text-yellow-500/80">(Leader)</span>
-                    )}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setBulkAssignOpen(false)}>Cancel</Button>
+      {/* ── Bulk: Assign to Member ────────────────────────────────────────────── */}
+      <ResponsiveDialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
+              <UserCheck2 className="h-4 w-4 text-primary" />
+              Assign to Member
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Assigning{" "}
+              <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s) to a team member.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 sm:px-0 py-2 space-y-3">
+            <Select value={bulkMemberId} onValueChange={setBulkMemberId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a member" />
+              </SelectTrigger>
+              <SelectContent>
+                {allMembers.map((m) => (
+                  <SelectItem key={m._id} value={m._id}>
+                    <span className="flex items-center gap-1.5">
+                      {leaderIds.has(m._id) && (
+                        <Crown className="h-3 w-3 text-yellow-400 shrink-0" />
+                      )}
+                      {m.name}
+                      {leaderIds.has(m._id) && (
+                        <span className="text-xs text-yellow-500/80">(Leader)</span>
+                      )}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ResponsiveDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBulkAssignOpen(false)}>Cancel</Button>
             <Button
+              size="sm"
               disabled={!bulkMemberId || bulkAssignMutation.isPending}
               onClick={() => {
                 if (!bulkMemberId) return;
@@ -1627,36 +1644,45 @@ function LeadsTab({
                 );
               }}
             >
-              {bulkAssignMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {bulkAssignMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Assign
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
-      {/* ── Bulk: Transfer dialog ─────────────────────────────────────────────── */}
-      <Dialog open={bulkTransferOpen} onOpenChange={setBulkTransferOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Transfer Leads</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Transfer <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s) to another team.
-            Current member assignment will be cleared.
-          </p>
-          <Select value={bulkNewTeamId} onValueChange={setBulkNewTeamId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select target team" />
-            </SelectTrigger>
-            <SelectContent>
-              {otherTeams.map((t: Team) => (
-                <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setBulkTransferOpen(false)}>Cancel</Button>
+      {/* ── Bulk: Transfer ────────────────────────────────────────────────────── */}
+      <ResponsiveDialog open={bulkTransferOpen} onOpenChange={setBulkTransferOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4 text-primary" />
+              Transfer Leads
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Transferring{" "}
+              <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s) to another team.
+              Current member assignment will be cleared.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 sm:px-0 py-2 space-y-3">
+            <Select value={bulkNewTeamId} onValueChange={setBulkNewTeamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select target team" />
+              </SelectTrigger>
+              <SelectContent>
+                {otherTeams.map((t: Team) => (
+                  <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ResponsiveDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBulkTransferOpen(false)}>Cancel</Button>
             <Button
+              size="sm"
               disabled={!bulkNewTeamId || bulkTransferMutation.isPending}
               onClick={() => {
                 if (!bulkNewTeamId) return;
@@ -1666,35 +1692,44 @@ function LeadsTab({
                 );
               }}
             >
-              {bulkTransferMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {bulkTransferMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Transfer
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
-      {/* ── Bulk: Status dialog ───────────────────────────────────────────────── */}
-      <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Change Status</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Change status for <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s)
-          </p>
-          <Select value={bulkStatus} onValueChange={setBulkStatus}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map((s) => (
-                <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setBulkStatusOpen(false)}>Cancel</Button>
+      {/* ── Bulk: Change Status ───────────────────────────────────────────────── */}
+      <ResponsiveDialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
+              <Tags className="h-4 w-4 text-primary" />
+              Change Status
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Updating status for{" "}
+              <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s)
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 sm:px-0 py-2 space-y-3">
+            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map((s) => (
+                  <SelectItem key={s} value={s}>{STATUS_CONFIG[s].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ResponsiveDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBulkStatusOpen(false)}>Cancel</Button>
             <Button
+              size="sm"
               disabled={bulkStatusMutation.isPending}
               onClick={() => {
                 bulkStatusMutation.mutate(
@@ -1703,12 +1738,12 @@ function LeadsTab({
                 );
               }}
             >
-              {bulkStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {bulkStatusMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Apply
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       {/* ── Floating Bulk Action Bar ──────────────────────────────────────────── */}
       <AnimatePresence>

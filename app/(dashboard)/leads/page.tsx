@@ -16,12 +16,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadDialog } from "@/components/leads/LeadDialog";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
@@ -901,28 +902,39 @@ export default function LeadsPage() {
       <DeleteLeadDialog open={deleteOpen} onOpenChange={setDeleteOpen} lead={selectedLead} />
       <AssignLeadDialog open={assignOpen} onOpenChange={setAssignOpen} lead={selectedLead} />
 
-      {/* ── Bulk: Change Status dialog ────────────────────────────────────────── */}
-      <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Change Status</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Change status for <span className="font-semibold text-foreground">{selectedIds.size}</span> selected lead(s)
-          </p>
-          <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as LeadStatus)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
-                <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBulkStatusOpen(false)}>Cancel</Button>
+      {/* ── Bulk: Change Status ───────────────────────────────────────────────── */}
+      <ResponsiveDialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
+              <Tags className="h-4 w-4 text-primary" />
+              Change Status
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Updating status for{" "}
+              <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s)
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 sm:px-0 py-2 space-y-3">
+            <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as LeadStatus)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
+                  <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ResponsiveDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBulkStatusOpen(false)}>
+              Cancel
+            </Button>
             <Button
+              size="sm"
               disabled={bulkUpdateStatus.isPending}
               onClick={() => {
                 bulkUpdateStatus.mutate(
@@ -931,36 +943,47 @@ export default function LeadsPage() {
                 );
               }}
             >
-              {bulkUpdateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {bulkUpdateStatus.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Apply
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
-      {/* ── Bulk: Assign to Team dialog ──────────────────────────────────────── */}
-      <Dialog open={bulkTeamOpen} onOpenChange={setBulkTeamOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Assign to Team</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Assign <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s) to a team.
-            Current member assignment will be cleared.
-          </p>
-          <Select value={bulkTeamId} onValueChange={setBulkTeamId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a team" />
-            </SelectTrigger>
-            <SelectContent>
-              {(teamsData?.data ?? []).map((t) => (
-                <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBulkTeamOpen(false)}>Cancel</Button>
+      {/* ── Bulk: Assign to Team ──────────────────────────────────────────────── */}
+      <ResponsiveDialog open={bulkTeamOpen} onOpenChange={setBulkTeamOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4 text-primary" />
+              Assign to Team
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Assigning{" "}
+              <span className="font-semibold text-foreground">{selectedIds.size}</span> lead(s) to a team.
+              Current member assignment will be cleared.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 sm:px-0 py-2 space-y-3">
+            <Select value={bulkTeamId} onValueChange={setBulkTeamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a team" />
+              </SelectTrigger>
+              <SelectContent>
+                {(teamsData?.data ?? []).map((t) => (
+                  <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ResponsiveDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBulkTeamOpen(false)}>
+              Cancel
+            </Button>
             <Button
+              size="sm"
               disabled={!bulkTeamId || bulkAssignTeam.isPending}
               onClick={() => {
                 if (!bulkTeamId) return;
@@ -970,41 +993,47 @@ export default function LeadsPage() {
                 );
               }}
             >
-              {bulkAssignTeam.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {bulkAssignTeam.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Assign
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
-      {/* ── Bulk: Delete confirm ─────────────────────────────────────────────── */}
-      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+      {/* ── Bulk: Delete confirm ──────────────────────────────────────────────── */}
+      <ResponsiveDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
               Delete {selectedIds.size} Lead(s)?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action permanently deletes the selected leads and all their notes and activity logs. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              This permanently deletes the selected leads and all their notes and activity logs.
+              This action <span className="font-semibold text-foreground">cannot be undone</span>.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <ResponsiveDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBulkDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={bulkDeleteLeads.isPending}
               onClick={() => {
                 bulkDeleteLeads.mutate(Array.from(selectedIds), {
                   onSuccess: () => { setBulkDeleteOpen(false); setSelectedIds(new Set()); },
                 });
               }}
             >
-              {bulkDeleteLeads.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2 inline" /> : null}
+              {bulkDeleteLeads.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       <AnimatePresence>
