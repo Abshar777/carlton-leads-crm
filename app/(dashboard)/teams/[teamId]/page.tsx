@@ -872,6 +872,7 @@ function LeadsTab({
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
   const [transferLeadId, setTransferLeadId] = useState<string | null>(null);
@@ -952,7 +953,7 @@ function LeadsTab({
     dateTo: dateTo || undefined,
     unassignedOnly,
     page,
-    limit: 10,
+    limit,
   });
 
   const { data: allTeamsResult } = useTeams();
@@ -1496,40 +1497,54 @@ function LeadsTab({
           )}
 
           {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
+          {pagination && pagination.totalPages >= 1 && (
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-border px-4 sm:px-6 py-4">
-              <p className="text-sm text-muted-foreground text-center sm:text-left">
-                Showing{" "}
-                <span className="font-medium text-foreground">
-                  {(pagination.page - 1) * pagination.limit + 1}–
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of{" "}
-                <span className="font-medium text-foreground">{pagination.total}</span> leads
-              </p>
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="outline" size="sm"
-                  className="gap-1"
-                  disabled={!pagination.hasPrevPage || isFetching}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Prev</span>
-                </Button>
-                <span className="text-sm font-medium px-1 tabular-nums">
-                  {pagination.page} / {pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline" size="sm"
-                  className="gap-1"
-                  disabled={!pagination.hasNextPage || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center justify-center sm:justify-start gap-3">
+                <p className="text-sm text-muted-foreground text-center sm:text-left">
+                  Showing{" "}
+                  <span className="font-medium text-foreground">
+                    {(pagination.page - 1) * pagination.limit + 1}–
+                    {Math.min(pagination.page * pagination.limit, pagination.total)}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium text-foreground">{pagination.total}</span> leads
+                </p>
+                <Select value={String(limit)} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                  <SelectTrigger className="h-7 w-[70px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((n) => (
+                      <SelectItem key={n} value={String(n)} className="text-xs">{n} / page</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline" size="sm"
+                    className="gap-1"
+                    disabled={!pagination.hasPrevPage || isFetching}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Prev</span>
+                  </Button>
+                  <span className="text-sm font-medium px-1 tabular-nums">
+                    {pagination.page} / {pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="outline" size="sm"
+                    className="gap-1"
+                    disabled={!pagination.hasNextPage || isFetching}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

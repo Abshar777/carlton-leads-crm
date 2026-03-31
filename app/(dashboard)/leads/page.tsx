@@ -119,6 +119,7 @@ export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [status, setStatus] = useState<string>("all");
   const [assignedTo, setAssignedTo] = useState<string>("all");
   const [reporter, setReporter] = useState<string>("all");
@@ -186,7 +187,7 @@ export default function LeadsPage() {
 
   const filters = useMemo(() => ({
     page,
-    limit: 10,
+    limit,
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
     ...(status !== "all" ? { status } : {}),
     ...(assignedTo !== "all" ? { assignedTo } : {}),
@@ -195,7 +196,7 @@ export default function LeadsPage() {
     ...(teamId !== "all" ? { team: teamId } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
-  }), [page, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo]);
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
@@ -805,21 +806,33 @@ export default function LeadsPage() {
             {/* ── Pagination ──────────────────────────────────────────────────── */}
             {pagination && pagination.totalPages >= 1 && (
               <div className="flex items-center justify-between border-t border-border px-4 sm:px-6 py-3 sm:py-4 gap-2 flex-wrap">
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  {pagination.total === 0 ? "No leads" : (
-                    <>
-                      <span className="hidden sm:inline">Showing </span>
-                      <span className="font-medium text-foreground">
-                        {(pagination.page - 1) * pagination.limit + 1}–
-                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                      </span>
-                      <span className="hidden sm:inline"> of </span>
-                      <span className="sm:hidden"> / </span>
-                      <span className="font-medium text-foreground">{pagination.total}</span>
-                      <span className="hidden sm:inline"> leads</span>
-                    </>
-                  )}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {pagination.total === 0 ? "No leads" : (
+                      <>
+                        <span className="hidden sm:inline">Showing </span>
+                        <span className="font-medium text-foreground">
+                          {(pagination.page - 1) * pagination.limit + 1}–
+                          {Math.min(pagination.page * pagination.limit, pagination.total)}
+                        </span>
+                        <span className="hidden sm:inline"> of </span>
+                        <span className="sm:hidden"> / </span>
+                        <span className="font-medium text-foreground">{pagination.total}</span>
+                        <span className="hidden sm:inline"> leads</span>
+                      </>
+                    )}
+                  </p>
+                  <Select value={String(limit)} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                    <SelectTrigger className="h-7 w-[70px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => (
+                        <SelectItem key={n} value={String(n)} className="text-xs">{n} / page</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <Button

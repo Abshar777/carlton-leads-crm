@@ -77,6 +77,7 @@ export default function ProfilePage() {
   const userId  = storedUser?._id ?? "";
 
   const [page,         setPage]         = useState(1);
+  const [limit,        setLimit]        = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search,       setSearch]       = useState("");
   const [searchInput,  setSearchInput]  = useState("");
@@ -85,7 +86,7 @@ export default function ProfilePage() {
   const { data: statsData, isLoading: statsLoading } = useUserLeadStats(userId);
   const { data: leadsData, isLoading: leadsLoading, isFetching } = useUserLeads(userId, {
     page,
-    limit:  10,
+    limit,
     status: statusFilter !== "all" ? statusFilter : undefined,
     search: search || undefined,
   });
@@ -384,33 +385,47 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border px-6 py-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing{" "}
-                  <span className="font-medium text-foreground">
-                    {(pagination.page - 1) * pagination.limit + 1}–
-                    {Math.min(pagination.page * pagination.limit, pagination.total)}
-                  </span>{" "}
-                  of <span className="font-medium text-foreground">{pagination.total}</span> leads
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline" size="icon" className="h-8 w-8"
-                    disabled={!pagination.hasPrevPage || isFetching}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm font-medium px-1">{pagination.page} / {pagination.totalPages}</span>
-                  <Button
-                    variant="outline" size="icon" className="h-8 w-8"
-                    disabled={!pagination.hasNextPage || isFetching}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+            {pagination && pagination.totalPages >= 1 && (
+              <div className="flex items-center justify-between border-t border-border px-6 py-4 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-medium text-foreground">
+                      {(pagination.page - 1) * pagination.limit + 1}–
+                      {Math.min(pagination.page * pagination.limit, pagination.total)}
+                    </span>{" "}
+                    of <span className="font-medium text-foreground">{pagination.total}</span> leads
+                  </p>
+                  <Select value={String(limit)} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                    <SelectTrigger className="h-7 w-[70px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => (
+                        <SelectItem key={n} value={String(n)} className="text-xs">{n} / page</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline" size="icon" className="h-8 w-8"
+                      disabled={!pagination.hasPrevPage || isFetching}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium px-1">{pagination.page} / {pagination.totalPages}</span>
+                    <Button
+                      variant="outline" size="icon" className="h-8 w-8"
+                      disabled={!pagination.hasNextPage || isFetching}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
