@@ -1,13 +1,13 @@
 "use client";
 import { Loader2, AlertTriangle } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { useDeleteTeam } from "@/hooks/useTeams";
 import type { Team } from "@/types/team";
@@ -27,22 +27,22 @@ export function DeleteTeamDialog({ open, onOpenChange, team }: DeleteTeamDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-sm">
+        <ResponsiveDialogHeader>
+          <div className="flex items-center gap-3 px-4 sm:px-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
               <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
-            <DialogTitle>Delete Team</DialogTitle>
+            <ResponsiveDialogTitle>Delete Team</ResponsiveDialogTitle>
           </div>
-          <DialogDescription className="pt-2">
+          <ResponsiveDialogDescription className="pt-2 px-4 sm:px-0">
             Are you sure you want to delete{" "}
             <span className="font-semibold text-foreground">{team?.name}</span>? All leads
             assigned to this team will be unlinked. This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -50,9 +50,9 @@ export function DeleteTeamDialog({ open, onOpenChange, team }: DeleteTeamDialogP
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Delete Team
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

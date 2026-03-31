@@ -2,8 +2,12 @@
 import { useState } from "react";
 import { Loader2, Shuffle } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -39,13 +43,13 @@ export function AssignLeadDialog({ open, onOpenChange, lead }: AssignLeadDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setSelectedUser(""); onOpenChange(v); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Assign Lead</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={(v) => { setSelectedUser(""); onOpenChange(v); }}>
+      <ResponsiveDialogContent desktopClassName="max-w-sm">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Assign Lead</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 px-4 sm:px-0">
           <div className="space-y-1.5">
             <Label>Assign to User</Label>
             <Select value={selectedUser} onValueChange={setSelectedUser}>
@@ -84,7 +88,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead }: AssignLeadDialogP
           </Button>
         </div>
 
-        <DialogFooter>
+        <ResponsiveDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -92,8 +96,8 @@ export function AssignLeadDialog({ open, onOpenChange, lead }: AssignLeadDialogP
             {assigning && <Loader2 className="h-4 w-4 animate-spin" />}
             Assign
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

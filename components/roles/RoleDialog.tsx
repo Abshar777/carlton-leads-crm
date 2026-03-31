@@ -4,8 +4,13 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,16 +83,16 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Role" : "Create New Role"}</DialogTitle>
-          <DialogDescription>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{isEditing ? "Edit Role" : "Create New Role"}</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             Configure role name and set granular permissions for each module.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 px-4 sm:px-0">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Role Name */}
             <div className="space-y-1.5">
@@ -135,7 +140,7 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
             />
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -143,9 +148,9 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Role"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

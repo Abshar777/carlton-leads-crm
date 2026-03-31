@@ -1,9 +1,14 @@
 "use client";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
+import { Button } from "@/components/ui/button";
 import { useDeleteUser } from "@/hooks/useUsers";
 import type { User } from "@/types";
 
@@ -22,27 +27,35 @@ export function DeleteUserDialog({ open, onOpenChange, user }: DeleteUserDialogP
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete User</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete <strong className="text-foreground">{user?.name}</strong>?
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-sm">
+        <ResponsiveDialogHeader>
+          <div className="flex items-center gap-3 px-4 sm:px-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+            <ResponsiveDialogTitle>Delete User</ResponsiveDialogTitle>
+          </div>
+          <ResponsiveDialogDescription className="pt-2 px-4 sm:px-0">
+            Are you sure you want to delete{" "}
+            <strong className="text-foreground">{user?.name}</strong>?
             This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
             onClick={handleDelete}
             disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Delete User
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

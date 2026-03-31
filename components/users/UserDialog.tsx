@@ -4,8 +4,12 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,7 +72,6 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
 
   const onSubmit = (data: CreateUserFormValues) => {
     const payload = { ...data };
-    // Remove empty password on update
     if (isEditing && !payload.password) {
       delete (payload as Partial<CreateUserFormValues>).password;
     }
@@ -84,13 +87,13 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit User" : "Create New User"}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-lg">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{isEditing ? "Edit User" : "Create New User"}</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-4 sm:px-0">
           <div className="grid grid-cols-2 gap-4">
             {/* Name */}
             <div className="col-span-2 space-y-1.5">
@@ -140,19 +143,13 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                 name="role"
                 control={control}
                 render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={rolesLoading}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange} disabled={rolesLoading}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
                       {roles.map((role) => (
-                        <SelectItem key={role._id} value={role._id}>
-                          {role.roleName}
-                        </SelectItem>
+                        <SelectItem key={role._id} value={role._id}>{role.roleName}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -188,7 +185,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
             </div>
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -196,9 +193,9 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create User"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

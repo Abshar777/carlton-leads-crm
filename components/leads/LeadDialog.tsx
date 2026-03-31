@@ -4,8 +4,12 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +22,11 @@ import { useAllCourses } from "@/hooks/useCourses";
 import type { Lead } from "@/types/lead";
 
 const SOURCES = [
-  { value: "website",  label: "Website" },
-  { value: "referral", label: "Referral" },
-  { value: "social",   label: "Social Media" },
-  { value: "direct",   label: "Direct" },
-  { value: "other",    label: "Other" },
+  { value: "website",   label: "Website" },
+  { value: "referral",  label: "Referral" },
+  { value: "social",    label: "Social Media" },
+  { value: "direct",    label: "Direct" },
+  { value: "other",     label: "Other" },
 ];
 
 interface LeadDialogProps {
@@ -84,13 +88,13 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Lead" : "Create New Lead"}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-lg">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{isEditing ? "Edit Lead" : "Create New Lead"}</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-4 sm:px-0">
           <div className="grid grid-cols-2 gap-4">
             {/* Name */}
             <div className="col-span-2 space-y-1.5">
@@ -146,7 +150,6 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
                       <SelectValue placeholder="Select course" />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* <SelectItem key="none" value="none">None</SelectItem> */}
                       {allCourses.map((c) => (
                         <SelectItem key={c._id} value={c._id || ""}>{c.name || ""}</SelectItem>
                       ))}
@@ -157,16 +160,16 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
             </div>
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               {isEditing ? "Save Changes" : "Create Lead"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

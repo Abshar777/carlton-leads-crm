@@ -1,15 +1,14 @@
 "use client";
 import { Loader2, Trash2 } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
+import { Button } from "@/components/ui/button";
 import { useDeleteCourse } from "@/hooks/useCourses";
 import type { Course } from "@/types/course";
 
@@ -28,34 +27,36 @@ export function DeleteCourseDialog({ open, onOpenChange, course }: DeleteCourseD
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-sm">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2 px-4 sm:px-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
               <Trash2 className="h-4 w-4 text-destructive" />
             </div>
             Delete Course
-          </AlertDialogTitle>
-          <AlertDialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="px-4 sm:px-0">
             Are you sure you want to delete{" "}
             <span className="font-semibold text-foreground">{course?.name}</span>?
             {" "}This action cannot be undone. Leads assigned to this course will not be affected.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
             onClick={handleDelete}
             disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
             Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

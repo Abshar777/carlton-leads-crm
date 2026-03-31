@@ -5,12 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Search, X, Check, UsersRound } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,7 +51,6 @@ function UserPicker({
   onChange: (ids: string[]) => void;
   allUsers: User[];
   disabledIds: string[];
-  /** userId → teamName for users already in another team */
   userTeamMap?: Record<string, string>;
 }) {
   const [search, setSearch] = useState("");
@@ -80,11 +79,10 @@ function UserPicker({
     <div className="space-y-2">
       <Label>{label}</Label>
 
-      {/* Selected chips */}
       {selectedUsers.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedUsers.map((u) => (
-            <Badge  key={u._id} variant="secondary" className="gap-1 pr-1">
+            <Badge key={u._id} variant="secondary" className="gap-1 pr-1">
               {u.name}
               {userTeamMap[u._id] && (
                 <span className="ml-0.5 text-[10px] text-amber-500">({userTeamMap[u._id]})</span>
@@ -101,7 +99,6 @@ function UserPicker({
         </div>
       )}
 
-      {/* Search + list */}
       <div className="border rounded-md">
         <div className="flex items-center border-b px-3">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -117,10 +114,9 @@ function UserPicker({
             <p className="py-4 text-center text-sm text-muted-foreground">No users found</p>
           ) : (
             filtered.map((u) => {
-              const isSelected  = selected.includes(u._id);
+              const isSelected   = selected.includes(u._id);
               const existsInTeam = userTeamMap[u._id];
-              const isDisabled  = disabledIds.includes(u._id) || !!existsInTeam;
-              console.log(!!existsInTeam,existsInTeam,"existsInTeam")
+              const isDisabled   = disabledIds.includes(u._id) || !!existsInTeam;
               return (
                 <button
                   key={u._id}
@@ -170,11 +166,9 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
   const { data: usersResult } = useUsers({ limit: "200", status: "active" });
   const allUsers: User[] = usersResult?.data ?? [];
 
-  // Fetch all teams so we can show "already in team" badges
-  const { data: teamsResult } = useTeams({ limit: "200" } as any);
+  const { data: teamsResult } = useTeams({ limit: "200" } as never);
   const allTeams = teamsResult?.data ?? [];
 
-  // Build userId → teamName map, excluding the team currently being edited
   const userTeamMap = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
     for (const t of allTeams) {
@@ -232,13 +226,13 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Team" : "Create Team"}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{isEdit ? "Edit Team" : "Create Team"}</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-4 sm:px-0">
           {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="name">Team Name *</Label>
@@ -302,7 +296,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
             )}
           />
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -310,10 +304,10 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEdit ? "Save Changes" : "Create Team"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 
