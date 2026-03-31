@@ -226,8 +226,8 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
   };
 
   return (
-    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent desktopClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog  open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent height="calc(92dvh - 60px)" desktopClassName="max-w-lg max-h-[90vh] overflow-y-auto">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>{isEdit ? "Edit Team" : "Create Team"}</ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
