@@ -573,7 +573,7 @@ function DashboardTab({
                     {/* Info */}
                     <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-none">
                       <Link
-                        href={`/users/${member.user._id}`}
+                        href={`/teams/${team._id}/members/${member.user._id}`}
                         className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline underline-offset-2 transition-colors inline-flex items-center gap-1"
                       >
                         {member.user.name}
@@ -754,7 +754,7 @@ function MembersTab({
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
                                   <Link
-                                    href={`/users/${stat.user._id}`}
+                                    href={`/teams/${team._id}/members/${stat.user._id}`}
                                     className="text-sm font-medium text-foreground truncate hover:text-primary hover:underline underline-offset-2 transition-colors inline-flex items-center gap-1"
                                   >
                                     {stat.user.name}

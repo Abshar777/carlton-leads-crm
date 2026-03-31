@@ -358,3 +358,66 @@ export const useToggleMemberActive = (teamId: string) => {
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to toggle member status")),
   });
 };
+
+// ─── Team Member by ID (for team leaders — no users permission required) ──────
+
+export interface TeamMemberDetail {
+  member: {
+    _id: string;
+    name: string;
+    email: string;
+    designation: string | null;
+    status: string;
+    role: { roleName: string } | string | null;
+    createdAt: string;
+  };
+  team: { _id: string; name: string };
+  isLeader: boolean;
+  stats: {
+    total: number;
+    assigned: number;
+    followup: number;
+    closed: number;
+    rejected: number;
+    cnc: number;
+    booking: number;
+    partialbooking: number;
+    interested: number;
+    totalPayments: number;
+    closureRate: number;
+  };
+}
+
+export const useTeamMember = (teamId: string, memberId: string) =>
+  useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "members", memberId],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TeamMemberDetail>>(
+        `/teams/${teamId}/members/${memberId}`,
+      );
+      return res.data.data!;
+    },
+    enabled: !!teamId && !!memberId,
+  });
+
+export const useTeamMemberLeads = (
+  teamId: string,
+  memberId: string,
+  filters?: { page?: number; limit?: number; status?: string; search?: string },
+) =>
+  useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "members", memberId, "leads", filters],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (filters?.page)   params.page   = String(filters.page);
+      if (filters?.limit)  params.limit  = String(filters.limit);
+      if (filters?.status) params.status = filters.status;
+      if (filters?.search) params.search = filters.search;
+      const res = await api.get<ApiResponse<Lead[]>>(
+        `/teams/${teamId}/members/${memberId}/leads`,
+        { params },
+      );
+      return { data: res.data.data ?? [], pagination: res.data.pagination };
+    },
+    enabled: !!teamId && !!memberId,
+  });
