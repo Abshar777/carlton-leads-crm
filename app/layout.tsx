@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { Toaster } from "sonner";
+import NextTopLoader from "nextjs-toploader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,6 +48,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="Carlton CRM" />
       </head>
       <body className={inter.className}>
+        <NextTopLoader
+          color="#3b82f6"
+          shadow="0 0 10px #3b82f6, 0 0 5px #3b82f6"
+          height={3}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+        />
         <QueryProvider>
           {children}
           <Toaster
