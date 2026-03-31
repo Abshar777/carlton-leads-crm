@@ -5,11 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Loader2, Calendar, Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogFooter,
+} from "@/components/ui/responsive-dialog";
 import { cn } from "@/lib/utils";
 import api from "@/lib/axios";
 
@@ -20,9 +21,9 @@ type QuickPeriod = "today" | "week" | "month" | "year" | "custom";
 interface ExportPdfDialogProps {
   /** "overall" → /reports/export/pdf, "team" → /teams/:id/export-pdf, "user" → /users/:id/export-pdf */
   type: "overall" | "team" | "user";
-  entityId?: string;     // teamId or userId (not needed for "overall")
-  entityName?: string;   // display name shown in the dialog title
-  trigger?: React.ReactNode; // custom trigger button; if omitted a default button is shown
+  entityId?: string;
+  entityName?: string;
+  trigger?: React.ReactNode;
 }
 
 // ── Period helpers ─────────────────────────────────────────────────────────────
@@ -137,18 +138,18 @@ export function ExportPdfDialog({
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+        <ResponsiveDialogContent desktopClassName="max-w-sm">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10">
                 <FileText className="h-4 w-4 text-red-500" />
               </div>
               {dialogTitle}
-            </DialogTitle>
-          </DialogHeader>
+            </ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
 
-          <div className="space-y-4 pt-1">
+          <div className="space-y-4 pt-1 px-4 sm:px-0">
             {/* Period picker */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -190,7 +191,7 @@ export function ExportPdfDialog({
                         type="date"
                         value={customFrom}
                         onChange={(e) => { setCustomFrom(e.target.value); setError(""); }}
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 [color-scheme:dark]"
                       />
                     </div>
                     <div className="flex items-center gap-2">
@@ -200,7 +201,7 @@ export function ExportPdfDialog({
                         type="date"
                         value={customTo}
                         onChange={(e) => { setCustomTo(e.target.value); setError(""); }}
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 [color-scheme:dark]"
                       />
                     </div>
                   </div>
@@ -224,33 +225,32 @@ export function ExportPdfDialog({
                 <X className="h-3 w-3" /> {error}
               </p>
             )}
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 gap-2 bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleDownload}
-                disabled={downloading}
-              >
-                {downloading
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : <Download className="h-3.5 w-3.5" />
-                }
-                {downloading ? "Generating…" : "Download PDF"}
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          <ResponsiveDialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 sm:flex-none gap-2 bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDownload}
+              disabled={downloading}
+            >
+              {downloading
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <Download className="h-3.5 w-3.5" />
+              }
+              {downloading ? "Generating…" : "Download PDF"}
+            </Button>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   );
 }

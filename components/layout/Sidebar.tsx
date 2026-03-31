@@ -26,11 +26,9 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+} from "@/components/ui/drawer";
 import { useAuthStore } from "@/lib/store/authStore";
 import { toast } from "sonner";
 import { useUserLeadStats } from "@/hooks/useLeads";
@@ -241,17 +239,15 @@ function MobileDrawer() {
   const { mobileDrawerOpen, setMobileDrawerOpen } = useUiStore();
 
   return (
-    <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
-      <SheetContent
-        side="left"
-        className="w-72 p-0 flex flex-col bg-sidebar border-r border-sidebar-border"
-        hideClose
+    <Drawer
+      direction="left"
+      open={mobileDrawerOpen}
+      onOpenChange={setMobileDrawerOpen}
+    >
+      <DrawerContent
+        hideHandle
+        className="inset-x-auto inset-y-0 left-0 right-auto mt-0 h-full w-72 rounded-none rounded-r-xl border-l-0 border-r border-sidebar-border bg-sidebar pwa-safe-top flex flex-col"
       >
-        {/* Accessible title (visually hidden by SheetHeader sr-only) */}
-        <SheetHeader className="sr-only">
-          <SheetTitle>Navigation</SheetTitle>
-        </SheetHeader>
-
         {/* Logo row + close button */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4 shrink-0">
           <div className="flex items-center gap-3">
@@ -275,8 +271,8 @@ function MobileDrawer() {
         <TooltipProvider delayDuration={0}>
           <NavLinks onNavigate={() => setMobileDrawerOpen(false)} />
         </TooltipProvider>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
