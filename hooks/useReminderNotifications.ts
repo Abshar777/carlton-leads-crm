@@ -14,8 +14,26 @@ function requestBrowserPermission() {
 
 function fireBrowserNotification(title: string, body: string) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
-  if (Notification.permission === "granted") {
+  if (Notification.permission !== "granted") return;
+
+  // Android Chrome (and some mobile browsers) forbid `new Notification()` and
+  // require ServiceWorkerRegistration.showNotification() instead.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        reg.showNotification(title, { body, icon: "/favicon.ico" });
+      })
+      .catch(() => {
+        // SW not ready — silently skip (toast already shown)
+      });
+    return;
+  }
+
+  // Desktop fallback: new Notification() is fine
+  try {
     new Notification(title, { body, icon: "/favicon.ico" });
+  } catch {
+    // Unsupported — silently ignore
   }
 }
 
