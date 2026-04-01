@@ -38,9 +38,10 @@ function getReminderState(remindAt: string, isDone: boolean): ReminderState {
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
-  });
+  }) + " IST";
 }
 
 function formatRelative(iso: string) {
@@ -56,10 +57,15 @@ function formatRelative(iso: string) {
   return `${days}d ${suf}`;
 }
 
-function toDatetimeLocal(iso: string) {
-  const d   = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function toDatetimeLocal(iso: string): string {
+  return new Date(iso)
+    .toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" })
+    .slice(0, 16)
+    .replace(" ", "T");
+}
+
+function nowIST(): string {
+  return toDatetimeLocal(new Date().toISOString());
 }
 
 // ── State config ──────────────────────────────────────────────────────────────
@@ -87,9 +93,18 @@ function EditForm({
   onCancel: () => void;
   saving: boolean;
 }) {
-  const [title,    setTitle]    = useState(reminder.title ?? "");
-  const [note,     setNote]     = useState(reminder.note  ?? "");
-  const [remindAt, setRemindAt] = useState(toDatetimeLocal(reminder.remindAt));
+  const [title,     setTitle]     = useState(reminder.title ?? "");
+  const [note,      setNote]      = useState(reminder.note  ?? "");
+  const [remindAt,  setRemindAt]  = useState(toDatetimeLocal(reminder.remindAt));
+  const [timeError, setTimeError] = useState("");
+
+  function handleSave() {
+    const pickedIST = new Date(`${remindAt}:00+05:30`);
+    if (isNaN(pickedIST.getTime())) { setTimeError("Invalid date/time"); return; }
+    if (pickedIST.getTime() <= Date.now() - 60_000) { setTimeError("Please choose a future time (IST)"); return; }
+    setTimeError("");
+    onSave({ title: title || undefined, note: note || undefined, remindAt: pickedIST.toISOString() });
+  }
 
   return (
     <motion.div
@@ -115,26 +130,23 @@ function EditForm({
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <AlarmClock className="h-3 w-3" /> Remind at
+            <span className="ml-auto text-[10px] text-muted-foreground/60">IST (UTC+5:30)</span>
           </p>
           <Input
             type="datetime-local"
             value={remindAt}
-            onChange={(e) => setRemindAt(e.target.value)}
+            min={nowIST()}
+            onChange={(e) => { setRemindAt(e.target.value); setTimeError(""); }}
             className="h-8 text-sm"
           />
+          {timeError && <p className="text-xs text-red-400">{timeError}</p>}
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>Cancel</Button>
           <Button
             size="sm"
             disabled={!remindAt || saving}
-            onClick={() =>
-              onSave({
-                title:    title || undefined,
-                note:     note  || undefined,
-                remindAt: new Date(remindAt).toISOString(),
-              })
-            }
+            onClick={handleSave}
           >
             {saving ? "Saving…" : "Save"}
           </Button>
