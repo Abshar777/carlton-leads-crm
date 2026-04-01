@@ -8,6 +8,11 @@ import type {
   Team, TeamFilters, TeamMemberStat, TeamAutoAssignResult,
   TeamDashboard, TeamLog, TeamUpdateItem,
 } from "@/types/team";
+import type {
+  RevenuePeriod,
+  TeamRevenueOverview,
+  TeamRevenueTimelineReport,
+} from "@/types/reports";
 
 const TEAMS_KEY = ["teams"] as const;
 
@@ -422,4 +427,43 @@ export const useTeamMemberLeads = (
       return { data: res.data.data ?? [], pagination: res.data.pagination };
     },
     enabled: !!teamId && !!memberId,
+  });
+
+// ── Team Revenue ──────────────────────────────────────────────────────────────
+
+export const useTeamRevenue = (teamId: string, dateFrom: string, dateTo: string) =>
+  useQuery<TeamRevenueOverview>({
+    queryKey: [...TEAMS_KEY, teamId, "revenue", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const res = await api.get<ApiResponse<TeamRevenueOverview>>(
+        `/teams/${teamId}/revenue?${params}`,
+      );
+      return res.data.data!;
+    },
+    enabled: !!teamId,
+    staleTime: 60_000,
+  });
+
+export const useTeamRevenueTimeline = (
+  teamId: string,
+  period: RevenuePeriod,
+  dateFrom: string,
+  dateTo: string,
+) =>
+  useQuery<TeamRevenueTimelineReport>({
+    queryKey: [...TEAMS_KEY, teamId, "revenue", "timeline", period, dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period });
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const res = await api.get<ApiResponse<TeamRevenueTimelineReport>>(
+        `/teams/${teamId}/revenue/timeline?${params}`,
+      );
+      return res.data.data!;
+    },
+    enabled: !!teamId,
+    staleTime: 60_000,
   });

@@ -8,6 +8,10 @@ import type {
   TimelinePeriod,
   TeamSplitReport,
   SplitPeriod,
+  RevenuePeriod,
+  RevenueOverview,
+  RevenueTimelineReport,
+  RevenueTeamDetail,
 } from "@/types/reports";
 
 interface ApiResponse<T> {
@@ -107,6 +111,64 @@ export function useReportTeamSplit(
       if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<TeamSplitReport>>(
         `/reports/team-split?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── Revenue Overview ──────────────────────────────────────────────────────────
+
+export function useRevenueOverview(dateFrom: string, dateTo: string) {
+  return useQuery<RevenueOverview>({
+    queryKey: ["reports", "revenue", "overview", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<RevenueOverview>>(
+        `/reports/revenue/overview?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── Revenue Timeline ──────────────────────────────────────────────────────────
+
+export function useRevenueTimeline(
+  period: RevenuePeriod,
+  dateFrom: string,
+  dateTo: string,
+) {
+  return useQuery<RevenueTimelineReport>({
+    queryKey: ["reports", "revenue", "timeline", period, dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period });
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<RevenueTimelineReport>>(
+        `/reports/revenue/timeline?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ── Revenue Teams (with member breakdown) ─────────────────────────────────────
+
+export function useRevenueTeams(dateFrom: string, dateTo: string) {
+  return useQuery<RevenueTeamDetail[]>({
+    queryKey: ["reports", "revenue", "teams", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<RevenueTeamDetail[]>>(
+        `/reports/revenue/teams?${params}`,
       );
       return data.data;
     },

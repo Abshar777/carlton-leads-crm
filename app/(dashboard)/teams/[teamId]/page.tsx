@@ -5,6 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  AreaChart, Area, CartesianGrid, XAxis, YAxis,
+  Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
+} from "recharts";
+import {
   ArrowLeft,
   Loader2,
   Shuffle,
@@ -50,6 +54,10 @@ import {
   ArrowUpDown,
   FileEdit,
   Zap,
+  IndianRupee,
+  ChevronDown,
+  ChevronUp,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,8 +121,11 @@ import {
   useTeamUpdates,
   usePostTeamMessage,
   useToggleMemberActive,
+  useTeamRevenue,
+  useTeamRevenueTimeline,
   type TeamUpdatesFilters,
 } from "@/hooks/useTeams";
+import type { RevenuePeriod, TeamRevenueMember } from "@/types/reports";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useTeamSocket } from "@/hooks/useTeamSocket";
 import { cn, formatDate, getInitials } from "@/lib/utils";
@@ -170,12 +181,13 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "logs" | "updates";
+type TabId = "dashboard" | "members" | "leads" | "logs" | "updates" | "revenue";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
   { id: "members",   label: "Members"   },
   { id: "leads",     label: "Leads"     },
+  { id: "revenue",   label: "Revenue"   },
   { id: "updates",   label: "Updates"   },
   { id: "logs",      label: "Logs"      },
 ];
@@ -332,6 +344,79 @@ function SkeletonRow() {
         <div className="h-2.5 w-24 rounded bg-muted" />
       </div>
       <div className="h-3 w-16 rounded bg-muted" />
+    </div>
+  );
+}
+
+// ─── Revenue helpers (shared within this file) ───────────────────────────────
+
+const MEMBER_PALETTE = [
+  "#6366f1","#22c55e","#f97316","#14b8a6","#eab308","#ef4444",
+  "#8b5cf6","#3b82f6","#ec4899","#84cc16","#06b6d4","#f43f5e",
+];
+
+function fmtINR(n: number): string {
+  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(1)}Cr`;
+  if (n >= 1_00_000)    return `₹${(n / 1_00_000).toFixed(1)}L`;
+  if (n >= 1_000)       return `₹${(n / 1_000).toFixed(1)}K`;
+  return `₹${n}`;
+}
+
+function fullINR(n: number): string {
+  return `₹${n.toLocaleString("en-IN")}`;
+}
+
+type RevQuickPeriod = "today" | "week" | "month" | "quarter" | "year" | "custom";
+
+function getRevRange(p: RevQuickPeriod): { from: string; to: string } {
+  const now   = new Date();
+  const today = now.toISOString().slice(0, 10);
+  switch (p) {
+    case "today":   return { from: today, to: today };
+    case "week": {
+      const mon = new Date(now);
+      mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      return { from: mon.toISOString().slice(0, 10), to: today };
+    }
+    case "month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: first.toISOString().slice(0, 10), to: today };
+    }
+    case "quarter": {
+      const first = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+      return { from: first.toISOString().slice(0, 10), to: today };
+    }
+    case "year":
+      return { from: new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10), to: today };
+    default: return { from: "", to: "" };
+  }
+}
+
+function RevTooltip({ active, payload, label }: {
+  active?:  boolean;
+  payload?: Array<{ name: string; value: number; color: string }>;
+  label?:   string;
+}) {
+  if (!active || !payload?.length) return null;
+  const total = payload.reduce((s, p) => s + (p.value ?? 0), 0);
+  return (
+    <div className="rounded-xl border border-border bg-card/95 backdrop-blur-sm p-3 shadow-xl text-xs max-w-[220px]">
+      <p className="font-semibold text-foreground mb-2 truncate">{label}</p>
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-muted-foreground truncate">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color }} />
+            <span className="truncate">{p.name}</span>
+          </span>
+          <span className="font-bold text-foreground shrink-0">{fullINR(p.value ?? 0)}</span>
+        </div>
+      ))}
+      {payload.length > 1 && (
+        <div className="mt-2 pt-2 border-t border-border/50 flex justify-between">
+          <span className="text-muted-foreground">Total</span>
+          <span className="font-bold">{fullINR(total)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1962,6 +2047,429 @@ function LogsTab({ teamId }: { teamId: string }) {
   );
 }
 
+// ─── Revenue Tab ─────────────────────────────────────────────────────────────
+
+function TeamRevenueTab({ teamId }: { teamId: string }) {
+  const [quickPeriod, setQuickPeriod] = useState<RevQuickPeriod>("month");
+  const [customFrom,  setCustomFrom]  = useState("");
+  const [customTo,    setCustomTo]    = useState("");
+  const [revPeriod,   setRevPeriod]   = useState<RevenuePeriod>("monthly");
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
+
+  const { from: dateFrom, to: dateTo } = useMemo(() => {
+    if (quickPeriod === "custom") return { from: customFrom, to: customTo };
+    return getRevRange(quickPeriod) as { from: string; to: string };
+  }, [quickPeriod, customFrom, customTo]);
+
+  const overview = useTeamRevenue(teamId, dateFrom, dateTo);
+  const timeline = useTeamRevenueTimeline(teamId, revPeriod, dateFrom, dateTo);
+
+  const ovData     = overview.data;
+  const tlData     = timeline.data;
+  const tlMembers  = tlData?.members  ?? [];
+  const tlTimeline = tlData?.timeline ?? [];
+
+  const quickBtns: { id: RevQuickPeriod; label: string }[] = [
+    { id: "today",   label: "Today"   },
+    { id: "week",    label: "Week"    },
+    { id: "month",   label: "Month"   },
+    { id: "quarter", label: "Quarter" },
+    { id: "year",    label: "Year"    },
+    { id: "custom",  label: "Custom"  },
+  ];
+
+  const periodBtns: { id: RevenuePeriod; label: string }[] = [
+    { id: "daily",   label: "D" },
+    { id: "weekly",  label: "W" },
+    { id: "monthly", label: "M" },
+    { id: "yearly",  label: "Y" },
+  ];
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Date Filter ────────────────────────────────────────────────────── */}
+      <Card className="border-border/50 bg-card/60">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {quickBtns.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => setQuickPeriod(b.id)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+                  quickPeriod === b.id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                )}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+          <AnimatePresence>
+            {quickPeriod === "custom" && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+
+      {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Total Revenue */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0 }}>
+          <Card className="relative overflow-hidden border-border/50 bg-card/80 hover:shadow-lg transition-shadow">
+            <div className="absolute inset-0 opacity-5 bg-gradient-to-br from-emerald-500 to-emerald-600" />
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total Revenue</p>
+                  {overview.isLoading
+                    ? <div className="h-7 w-20 rounded-lg bg-muted/50 animate-pulse mt-1" />
+                    : <p className="text-2xl font-bold text-foreground tabular-nums">{fmtINR(ovData?.totalRevenue ?? 0)}</p>
+                  }
+                  {!overview.isLoading && <p className="text-xs text-muted-foreground">{ovData?.paymentCount ?? 0} payments</p>}
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ml-2 bg-gradient-to-br from-emerald-500 to-emerald-600">
+                  <IndianRupee className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Top Earner */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.06 }}>
+          <Card className="relative overflow-hidden border-border/50 bg-card/80 hover:shadow-lg transition-shadow">
+            <div className="absolute inset-0 opacity-5 bg-gradient-to-br from-yellow-500 to-yellow-600" />
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Top Earner</p>
+                  {overview.isLoading
+                    ? <div className="h-7 w-24 rounded-lg bg-muted/50 animate-pulse mt-1" />
+                    : <p className="text-xl font-bold text-foreground truncate">{ovData?.topMember?.name ?? "—"}</p>
+                  }
+                  {!overview.isLoading && ovData?.topMember && (
+                    <p className="text-xs text-muted-foreground">{fullINR(ovData.topMember.revenue)}</p>
+                  )}
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ml-2 bg-gradient-to-br from-yellow-500 to-yellow-600">
+                  <Trophy className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Avg per Lead */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.12 }}>
+          <Card className="relative overflow-hidden border-border/50 bg-card/80 hover:shadow-lg transition-shadow">
+            <div className="absolute inset-0 opacity-5 bg-gradient-to-br from-blue-500 to-blue-600" />
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Avg per Lead</p>
+                  {overview.isLoading
+                    ? <div className="h-7 w-20 rounded-lg bg-muted/50 animate-pulse mt-1" />
+                    : <p className="text-2xl font-bold text-foreground tabular-nums">{fmtINR(ovData?.avgRevenuePerLead ?? 0)}</p>
+                  }
+                  {!overview.isLoading && <p className="text-xs text-muted-foreground">{ovData?.payingLeadCount ?? 0} paying leads</p>}
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ml-2 bg-gradient-to-br from-blue-500 to-blue-600">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Total Payments */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.18 }} className="col-span-2 lg:col-span-1">
+          <Card className="relative overflow-hidden border-border/50 bg-card/80 hover:shadow-lg transition-shadow">
+            <div className="absolute inset-0 opacity-5 bg-gradient-to-br from-violet-500 to-violet-600" />
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Payments</p>
+                  {overview.isLoading
+                    ? <div className="h-7 w-16 rounded-lg bg-muted/50 animate-pulse mt-1" />
+                    : <p className="text-2xl font-bold text-foreground tabular-nums">{ovData?.paymentCount ?? 0}</p>
+                  }
+                  {!overview.isLoading && <p className="text-xs text-muted-foreground">{ovData?.payingLeadCount ?? 0} leads paid</p>}
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ml-2 bg-gradient-to-br from-violet-500 to-violet-600">
+                  <Award className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* ── Revenue Timeline Chart ──────────────────────────────────────────── */}
+      <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.24 }}>
+        <Card className="border-border/50 bg-card/80">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" /> Revenue Over Time
+              </CardTitle>
+              <div className="flex rounded-lg border border-border/50 overflow-hidden self-start">
+                {periodBtns.map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => setRevPeriod(b.id)}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-medium transition-colors",
+                      revPeriod === b.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted/50",
+                    )}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {timeline.isLoading ? (
+              <div className="h-[260px] w-full animate-pulse rounded-lg bg-muted/50" />
+            ) : tlTimeline.length === 0 ? (
+              <div className="flex h-[260px] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                <IndianRupee className="h-8 w-8 opacity-20" />
+                No revenue data for this period
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={tlTimeline} margin={{ top:5, right:10, left:10, bottom:0 }}>
+                  <defs>
+                    {(tlMembers.length > 0 ? tlMembers : ["Total"]).map((m, i) => (
+                      <linearGradient key={m} id={`trg-${i}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={MEMBER_PALETTE[i % MEMBER_PALETTE.length]} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={MEMBER_PALETTE[i % MEMBER_PALETTE.length]} stopOpacity={0.02} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                  <XAxis dataKey="label" tick={{ fontSize:10, fill:"hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize:10, fill:"hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={(v: number) => fmtINR(v)} width={58} />
+                  <RechartsTooltip content={<RevTooltip />} />
+                  {tlMembers.length > 1 && (
+                    <Legend wrapperStyle={{ fontSize:"11px", paddingTop:"8px" }} formatter={(v) => <span style={{ color:"hsl(var(--foreground))" }}>{v}</span>} />
+                  )}
+                  {tlMembers.length === 0 ? (
+                    <Area type="monotone" dataKey="total" name="Total Revenue" stroke={MEMBER_PALETTE[0]} strokeWidth={2} fill="url(#trg-0)" dot={false} activeDot={{ r:4, strokeWidth:0 }} />
+                  ) : tlMembers.map((m, i) => (
+                    <Area key={m} type="monotone" dataKey={m} name={m} stroke={MEMBER_PALETTE[i % MEMBER_PALETTE.length]} strokeWidth={2} fill={`url(#trg-${i})`} dot={false} activeDot={{ r:4, strokeWidth:0 }} />
+                  ))}
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* ── Member Revenue Breakdown + Top 3 ──────────────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+        {/* Member Rankings */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}>
+          <Card className="border-border/50 bg-card/80">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Member Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {overview.isLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3].map((i) => <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />)}
+                </div>
+              ) : !(ovData?.memberBreakdown?.length) ? (
+                <div className="flex h-[160px] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <IndianRupee className="h-8 w-8 opacity-20" />
+                  No member revenue data
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {ovData!.memberBreakdown.map((m: TeamRevenueMember, i: number) => {
+                    const color    = MEMBER_PALETTE[i % MEMBER_PALETTE.length];
+                    const maxRev   = ovData!.memberBreakdown[0]?.revenue ?? 1;
+                    const barPct   = maxRev > 0 ? (m.revenue / maxRev) * 100 : 0;
+                    const isExpanded = expandedMember === String(m.userId);
+                    return (
+                      <motion.div key={String(m.userId)} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.04*i }}>
+                        <button
+                          onClick={() => setExpandedMember(isExpanded ? null : String(m.userId))}
+                          className="w-full text-left rounded-xl border border-border/50 p-3 hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Rank */}
+                            <span className="shrink-0">
+                              {i === 0 ? <span className="text-base">🥇</span>
+                               : i === 1 ? <span className="text-base">🥈</span>
+                               : i === 2 ? <span className="text-base">🥉</span>
+                               : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{m.rank}</span>}
+                            </span>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-xs font-bold" style={{ background: color }}>
+                              {m.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">{m.name}</p>
+                                  {m.designation && <p className="text-[10px] text-muted-foreground truncate">{m.designation}</p>}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 ml-2">
+                                  <span className="text-xs font-bold text-emerald-500 tabular-nums">{fullINR(m.revenue)}</span>
+                                  {isExpanded
+                                    ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                                    : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                  }
+                                </div>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                                <motion.div className="h-full rounded-full" style={{ background: color }}
+                                  initial={{ width: 0 }} animate={{ width: `${barPct}%` }}
+                                  transition={{ delay: 0.1 + 0.04*i, duration: 0.5, ease: "easeOut" }} />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                                {m.paymentCount} payments · {m.leadCount} leads · {m.pct}% of total
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Expanded detail */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-1 ml-4 pl-3 border-l-2 border-border/40 py-2 space-y-1.5">
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                  <div className="rounded-lg bg-muted/30 p-2">
+                                    <p className="text-sm font-bold text-emerald-500 tabular-nums">{fullINR(m.revenue)}</p>
+                                    <p className="text-[10px] text-muted-foreground">Total Revenue</p>
+                                  </div>
+                                  <div className="rounded-lg bg-muted/30 p-2">
+                                    <p className="text-sm font-bold text-foreground tabular-nums">{m.paymentCount}</p>
+                                    <p className="text-[10px] text-muted-foreground">Payments</p>
+                                  </div>
+                                  <div className="rounded-lg bg-muted/30 p-2">
+                                    <p className="text-sm font-bold text-foreground tabular-nums">{m.leadCount}</p>
+                                    <p className="text-[10px] text-muted-foreground">Leads</p>
+                                  </div>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground text-center">
+                                  Avg per lead: <span className="font-semibold text-foreground">{m.leadCount > 0 ? fullINR(Math.round(m.revenue / m.leadCount)) : "—"}</span>
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Top 3 Podium */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.36 }}>
+          <Card className="border-border/50 bg-card/80">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-yellow-500" /> Top Revenue Earners
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {overview.isLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3].map((i) => <div key={i} className="h-20 rounded-xl bg-muted/50 animate-pulse" />)}
+                </div>
+              ) : !(ovData?.memberBreakdown?.length) ? (
+                <div className="flex h-[160px] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Trophy className="h-8 w-8 opacity-20" />
+                  No earners data
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {ovData!.memberBreakdown.slice(0, 3).map((m: TeamRevenueMember, i: number) => {
+                    const podiumGrads = [
+                      "from-yellow-500/10 to-yellow-500/5 border-yellow-500/20",
+                      "from-slate-400/10 to-slate-400/5 border-slate-400/20",
+                      "from-orange-700/10 to-orange-700/5 border-orange-700/20",
+                    ];
+                    return (
+                      <motion.div
+                        key={String(m.userId)}
+                        initial={{ opacity:0, scale:0.95 }}
+                        animate={{ opacity:1, scale:1 }}
+                        transition={{ delay:0.08*i }}
+                        className={cn("rounded-xl border bg-gradient-to-br p-4 text-center", podiumGrads[i])}
+                      >
+                        <div className="text-3xl mb-1">{["🥇","🥈","🥉"][i]}</div>
+                        <div className="flex h-10 w-10 mx-auto items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-base uppercase mb-1.5">
+                          {m.name.charAt(0)}
+                        </div>
+                        <p className="font-bold text-foreground text-sm truncate">{m.name}</p>
+                        {m.designation && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{m.designation}</p>}
+                        <div className="mt-3 grid grid-cols-2 gap-1.5 text-center">
+                          <div>
+                            <p className="text-sm font-bold text-emerald-500 tabular-nums">{fmtINR(m.revenue)}</p>
+                            <p className="text-[10px] text-muted-foreground">Revenue</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-foreground tabular-nums">{m.paymentCount}</p>
+                            <p className="text-[10px] text-muted-foreground">Payments</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── Updates Tab ──────────────────────────────────────────────────────────────
 
 const ACTION_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
@@ -2589,15 +3097,15 @@ export default function TeamDetailPage() {
 
   // If a regular member somehow lands on a restricted tab, bounce them to dashboard
   useEffect(() => {
-    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs")) {
+    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue")) {
       setActiveTab("dashboard");
     }
   }, [canSeeSensitiveTabs, activeTab]);
 
 
-  // "updates" is always visible to team members; "leads"/"logs" only for leaders/admins
+  // "updates" is always visible to team members; "leads"/"logs"/"revenue" only for leaders/admins
   const visibleTabs = TABS.filter(
-    (tab) => (tab.id !== "leads" && tab.id !== "logs") || canSeeSensitiveTabs,
+    (tab) => (tab.id !== "leads" && tab.id !== "logs" && tab.id !== "revenue") || canSeeSensitiveTabs,
   );
 
   function handleAutoAssign() {
@@ -2895,6 +3403,18 @@ export default function TeamDetailPage() {
                 onAutoAssign={handleAutoAssign}
                 assigning={assigning}
               />
+            </motion.div>
+          )}
+
+          {activeTab === "revenue" && (
+            <motion.div
+              key="revenue"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TeamRevenueTab teamId={teamId} />
             </motion.div>
           )}
 

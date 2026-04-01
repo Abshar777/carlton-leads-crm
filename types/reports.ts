@@ -131,6 +131,103 @@ export interface TeamSplitReport {
   summary:  TeamSplitSummaryItem[];    // team totals for the table
 }
 
+// ── Revenue ───────────────────────────────────────────────────────────────────
+
+export type RevenuePeriod = "daily" | "weekly" | "monthly" | "yearly";
+
+export interface RevenueTeamBrief {
+  rank:         number;
+  teamId:       string;
+  name:         string;
+  revenue:      number;
+  paymentCount: number;
+}
+
+export interface RevenueAgentItem {
+  rank:          number;
+  userId:        string;
+  name:          string;
+  email:         string;
+  designation?:  string;
+  revenue:       number;
+  paymentCount:  number;
+}
+
+export interface RevenueOverview {
+  totalRevenue:       number;
+  payingLeadCount:    number;
+  paymentCount:       number;
+  avgRevenuePerLead:  number;
+  topTeam:            { name: string; revenue: number } | null;
+  topAgent:           { name: string; revenue: number; designation?: string } | null;
+  teamBreakdown:      RevenueTeamBrief[];
+  agentBreakdown:     RevenueAgentItem[];
+}
+
+export type RevenueTimelinePoint = {
+  label: string;
+  total: number;
+  [teamName: string]: number | string;
+};
+
+export interface RevenueTimelineReport {
+  teams:    string[];
+  timeline: RevenueTimelinePoint[];
+}
+
+export interface RevenueMemberItem {
+  userId:        string;
+  name:          string;
+  designation?:  string;
+  revenue:       number;
+  paymentCount:  number;
+  leadCount:     number;
+  pct:           number;
+}
+
+export interface RevenueTeamDetail {
+  rank:         number;
+  teamId:       string;
+  name:         string;
+  revenue:      number;
+  paymentCount: number;
+  leadCount:    number;
+  members:      RevenueMemberItem[];
+}
+
+// ── Team-scoped revenue ───────────────────────────────────────────────────────
+
+export interface TeamRevenueMember {
+  rank:          number;
+  userId:        string;
+  name:          string;
+  designation?:  string;
+  revenue:       number;
+  paymentCount:  number;
+  leadCount:     number;
+  pct:           number;
+}
+
+export interface TeamRevenueOverview {
+  totalRevenue:       number;
+  payingLeadCount:    number;
+  paymentCount:       number;
+  avgRevenuePerLead:  number;
+  topMember:          { name: string; revenue: number; designation?: string } | null;
+  memberBreakdown:    TeamRevenueMember[];
+}
+
+export type TeamRevenueTimelinePoint = {
+  label: string;
+  total: number;
+  [memberName: string]: number | string;
+};
+
+export interface TeamRevenueTimelineReport {
+  members:  string[];
+  timeline: TeamRevenueTimelinePoint[];
+}
+
 // ── Filter state ──────────────────────────────────────────────────────────────
 
 export interface ReportFilters {
