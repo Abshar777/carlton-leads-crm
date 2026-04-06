@@ -80,6 +80,7 @@ export interface Lead {
   reminders: Reminder[];
   payments: Payment[];
   activityLogs: ActivityLog[];
+  callNotConnected?: number;
   createdAt: string;
   updatedAt: string;
 }

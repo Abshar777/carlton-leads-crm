@@ -326,3 +326,22 @@ export const useDeleteLeadNote = () => {
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to delete note")),
   });
 };
+
+// ─── Call Not Connected ───────────────────────────────────────────────────────
+
+export const useUpdateCallNotConnected = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadId, action }: { leadId: string; action: "increment" | "decrement" }) => {
+      const response = await api.patch<ApiResponse<{ callNotConnected: number }>>(
+        `/leads/${leadId}/call-not-connected`,
+        { action },
+      );
+      return response.data.data!;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to update call count")),
+  });
+};
