@@ -220,6 +220,9 @@ export default function DashboardPage() {
                           <span className="text-[10px] text-muted-foreground">
                             {team.memberCount} members · {team.total} leads
                           </span>
+                          <span className="text-[10px] text-violet-400 font-medium">
+                            {team.thisMonth ?? 0} this month
+                          </span>
                           <span className="text-[10px] text-green-500">
                             {team.closed} closed · {team.conversionRate}% conv
                           </span>

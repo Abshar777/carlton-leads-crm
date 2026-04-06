@@ -111,6 +111,7 @@ export interface TeamRankItem {
   callback:       number;
   whatsapp:       number;
   student:        number;
+  thisMonth:      number;
   conversionRate: number;
 }
 

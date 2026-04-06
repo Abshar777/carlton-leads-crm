@@ -142,6 +142,7 @@ import type { User } from "@/types";
 interface TeamDashboardData {
   statusDistribution: {
     total: number;
+    thisMonth: number;
     new: number;
     assigned: number;
     followup: number;
@@ -383,6 +384,22 @@ function RevTooltip({ active, payload, label }: {
 
 // ─── Dashboard Tab ────────────────────────────────────────────────────────────
 
+type DashFilterPreset = "all" | "month" | "year" | "custom";
+
+function getDashDates(preset: DashFilterPreset): { dateFrom: string; dateTo: string } {
+  const now    = new Date();
+  const pad    = (n: number) => String(n).padStart(2, "0");
+  const today  = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  if (preset === "month") {
+    const from = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    return { dateFrom: from, dateTo: today };
+  }
+  if (preset === "year") {
+    return { dateFrom: `${now.getFullYear()}-01-01`, dateTo: today };
+  }
+  return { dateFrom: "", dateTo: "" };
+}
+
 function DashboardTab({
   teamId,
   team,
@@ -400,8 +417,17 @@ function DashboardTab({
   onToggleMemberActive: (memberId: string) => void;
   togglingMember: boolean;
 }) {
+  const [filterPreset, setFilterPreset] = useState<DashFilterPreset>("all");
+  const [customFrom,   setCustomFrom]   = useState("");
+  const [customTo,     setCustomTo]     = useState("");
+
+  const { dateFrom, dateTo } = useMemo(() => {
+    if (filterPreset === "custom") return { dateFrom: customFrom, dateTo: customTo };
+    return getDashDates(filterPreset);
+  }, [filterPreset, customFrom, customTo]);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: dashData, isLoading } = (useTeamDashboard as any)(teamId) as {
+  const { data: dashData, isLoading } = (useTeamDashboard as any)(teamId, dateFrom || undefined, dateTo || undefined) as {
     data: TeamDashboardData | undefined;
     isLoading: boolean;
   };
@@ -422,6 +448,14 @@ function DashboardTab({
       color: "text-primary",
       bg: "bg-primary/10",
       border: "border-primary/20",
+    },
+    {
+      title: "This Month",
+      value: dist?.thisMonth ?? 0,
+      icon: CalendarDays,
+      color: "text-violet-400",
+      bg: "bg-violet-500/10",
+      border: "border-violet-500/20",
     },
     {
       title: "Unassigned",
@@ -479,8 +513,8 @@ function DashboardTab({
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[0, 1, 2, 3].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
           ))}
         </div>
@@ -490,34 +524,90 @@ function DashboardTab({
     );
   }
 
+  const PRESETS: { key: DashFilterPreset; label: string }[] = [
+    { key: "all",    label: "All Time"    },
+    { key: "month",  label: "This Month"  },
+    { key: "year",   label: "This Year"   },
+    { key: "custom", label: "Custom"      },
+  ];
+
+  const filterLabel = filterPreset === "month"
+    ? "This Month"
+    : filterPreset === "year"
+    ? "This Year"
+    : filterPreset === "custom" && (customFrom || customTo)
+    ? `${customFrom || "…"} → ${customTo || "…"}`
+    : "All Time";
+
   return (
     <div className="space-y-6">
-      {/* Header row */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header row with date filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5 flex-wrap min-w-0">
           <h2 className="text-lg font-semibold text-foreground truncate">{team.name}</h2>
-          <Badge
-            variant={team.status === "active" ? "default" : "secondary"}
-            className="capitalize shrink-0"
-          >
+          <Badge variant={team.status === "active" ? "default" : "secondary"} className="capitalize shrink-0">
             {team.status}
           </Badge>
+          {filterPreset !== "all" && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+            >
+              <CalendarDays className="h-3 w-3" />
+              {filterLabel}
+            </motion.span>
+          )}
         </div>
-        {/* {isLeaderOrAdmin && (
-          <Button
-            size="sm"
-            onClick={onAutoAssign}
-            disabled={assigning}
-            className="gap-2"
-          >
-            {assigning ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Shuffle className="h-3.5 w-3.5" />
+
+        {/* Date filter toggles */}
+        <div className="flex flex-col gap-2 sm:items-end">
+          <div className="flex items-center gap-1 flex-wrap">
+            {PRESETS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilterPreset(key)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  filterPreset === key
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom date pickers */}
+          <AnimatePresence>
+            {filterPreset === "custom" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2 overflow-hidden"
+              >
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={customTo || undefined}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground [color-scheme:dark]"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom || undefined}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground [color-scheme:dark]"
+                />
+              </motion.div>
             )}
-            Auto-assign Leads
-          </Button>
-        )} */}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -525,7 +615,7 @@ function DashboardTab({
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"
       >
         {statCards.map((card) => (
           <motion.div key={card.title} variants={itemVariants}>
@@ -553,6 +643,7 @@ function DashboardTab({
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
               Status Distribution
+              <span className="ml-auto text-xs font-normal text-muted-foreground">{filterLabel}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -588,6 +679,7 @@ function DashboardTab({
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Trophy className="h-4 w-4 text-amber-400" />
               Top Performers
+              <span className="ml-auto text-xs font-normal text-muted-foreground">{filterLabel}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">

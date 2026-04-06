@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { Toaster } from "sonner";
 import NextTopLoader from "nextjs-toploader";
 
@@ -39,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* iOS standalone splash / status bar */}
         <meta name="mobile-web-app-capable" content="yes" />
@@ -48,30 +49,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="Carlton CRM" />
       </head>
       <body className={inter.className}>
-        <NextTopLoader
-          color="#3b82f6"
-          shadow="0 0 10px #3b82f6, 0 0 5px #3b82f6"
-          height={3}
-          showSpinner={false}
-          easing="ease"
-          speed={200}
-        />
-        <QueryProvider>
-          {children}
-          <Toaster
-            theme="dark"
-            position="bottom-right"
-            richColors
-            closeButton
-            toastOptions={{
-              style: {
-                background: "hsl(222.2 84% 4.9%)",
-                border: "1px solid hsl(217.2 32.6% 17.5%)",
-                color: "hsl(210 40% 98%)",
-              },
-            }}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextTopLoader
+            color="#3b82f6"
+            shadow="0 0 10px #3b82f6, 0 0 5px #3b82f6"
+            height={3}
+            showSpinner={false}
+            easing="ease"
+            speed={200}
           />
-        </QueryProvider>
+          <QueryProvider>
+            {children}
+            <Toaster
+              theme="system"
+              position="bottom-right"
+              richColors
+              closeButton
+            />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

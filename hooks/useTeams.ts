@@ -266,11 +266,14 @@ export const useBulkUpdateTeamLeadsStatus = (teamId: string) => {
   });
 };
 
-export const useTeamDashboard = (teamId: string) => {
+export const useTeamDashboard = (teamId: string, dateFrom?: string, dateTo?: string) => {
   return useQuery({
-    queryKey: [...TEAMS_KEY, teamId, "dashboard"],
+    queryKey: [...TEAMS_KEY, teamId, "dashboard", dateFrom, dateTo],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<TeamDashboard>>(`/teams/${teamId}/dashboard`);
+      const params: Record<string, string> = {};
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo)   params.dateTo   = dateTo;
+      const res = await api.get<ApiResponse<TeamDashboard>>(`/teams/${teamId}/dashboard`, { params });
       return res.data.data!;
     },
     enabled: !!teamId,

@@ -13,6 +13,7 @@ export interface Team {
     teamId: string;
     total: number;
     unassigned: number;
+    thisMonth: number;
   };
   createdAt: string;
   updatedAt: string;

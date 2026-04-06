@@ -157,7 +157,7 @@ function AdminTeamsList() {
                   </CardHeader>
                   <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
                     <div className="space-y-3">
-                      <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="grid grid-cols-4 gap-2 text-center">
                         <div className="rounded-md bg-muted/50 p-2">
                           <p className="text-lg font-bold">{team.leaders?.length ?? 0}</p>
                           <p className="text-xs text-muted-foreground">Leaders</p>
@@ -168,7 +168,11 @@ function AdminTeamsList() {
                         </div>
                         <div className="rounded-md bg-muted/50 p-2">
                           <p className="text-lg font-bold">{team.leadStats?.total ?? 0}</p>
-                          <p className="text-xs text-muted-foreground">Leads</p>
+                          <p className="text-xs text-muted-foreground">Total</p>
+                        </div>
+                        <div className="rounded-md bg-primary/10 border border-primary/20 p-2">
+                          <p className="text-lg font-bold text-primary">{team.leadStats?.thisMonth ?? 0}</p>
+                          <p className="text-xs text-primary/70">This Month</p>
                         </div>
                       </div>
                       {/* Leaders */}

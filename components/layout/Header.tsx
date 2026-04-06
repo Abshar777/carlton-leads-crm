@@ -15,6 +15,7 @@ import { getInitials } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
 import Link from "next/link";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 interface HeaderProps {
   title?: string;
@@ -43,8 +44,9 @@ export function Header({ title }: HeaderProps) {
         )}
       </div>
 
-      {/* Right side — notifications + user menu */}
+      {/* Right side — theme toggle + notifications + user menu */}
       <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
