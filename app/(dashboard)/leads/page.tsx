@@ -668,6 +668,11 @@ export default function LeadsPage() {
                               {lead.assignedTo && (
                                 <span className="text-[11px] text-muted-foreground">
                                   {getUserName(lead.assignedTo as User | string | null)}
+                                  {lead.assignedAt && (
+                                    <span className="ml-1 text-muted-foreground/50">
+                                      · {new Date(lead.assignedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true })}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                               {lead.source && (
@@ -718,6 +723,7 @@ export default function LeadsPage() {
                         <th className="px-4 py-3 text-left">Status</th>
                         <th className="px-4 py-3 text-left hidden lg:table-cell">Team</th>
                         <th className="px-4 py-3 text-left hidden lg:table-cell">Assigned To</th>
+                        <th className="px-4 py-3 text-left hidden xl:table-cell">Assigned At</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
                         <th className="px-4 py-3 text-right">Actions</th>
@@ -801,6 +807,20 @@ export default function LeadsPage() {
                               <span className="text-sm text-muted-foreground">
                                 {getUserName(lead.assignedTo as User | string | null)}
                               </span>
+                            </td>
+                            <td className="px-4 py-4 hidden xl:table-cell">
+                              {lead.assignedAt ? (
+                                <div className="space-y-0.5">
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(lead.assignedAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" })}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground/60">
+                                    {new Date(lead.assignedAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true })} IST
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground/40">—</span>
+                              )}
                             </td>
                             <td className="px-4 py-4 hidden xl:table-cell">
                               <span className="text-sm text-muted-foreground">

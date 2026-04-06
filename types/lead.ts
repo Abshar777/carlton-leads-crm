@@ -73,6 +73,7 @@ export interface Lead {
   status: LeadStatus;
   course?: Course | string | null;
   assignedTo?: User | string | null;
+  assignedAt?: string | null;
   team?: Team | string | null;
   reporter?: User | string | null;
   notes: LeadNote[];
