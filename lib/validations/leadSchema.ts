@@ -1,14 +1,22 @@
 import { z } from "zod";
 
-export const createLeadSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().min(1, "Phone is required").max(20, "Phone too long"),
+// Base fields shared by create + update
+const baseLeadFields = z.object({
+  name:   z.string().min(1, "Name is required").max(100, "Name too long"),
+  email:  z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone:  z.string().min(1, "Phone is required").max(20, "Phone too long"),
   source: z.string().optional(),
   course: z.string().optional().nullable(),
 });
 
-export const updateLeadSchema = createLeadSchema.partial();
+// Create — adds optional team + assignedTo
+export const createLeadSchema = baseLeadFields.extend({
+  team:       z.string().optional().nullable(),
+  assignedTo: z.string().optional().nullable(),
+});
+
+// Edit — all fields optional, no team/assignedTo (managed via separate endpoints)
+export const updateLeadSchema = baseLeadFields.partial();
 
 export const uploadLeadSchema = z.object({
   file: z
