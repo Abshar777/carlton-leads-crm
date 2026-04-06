@@ -36,6 +36,10 @@ export interface TeamMemberStat {
   booking: number;
   partialbooking: number;
   interested: number;
+  rnr: number;
+  callback: number;
+  whatsapp: number;
+  student: number;
   totalPayments: number;
 }
 
@@ -56,6 +60,10 @@ export interface TeamMemberRanking {
   booking: number;
   partialbooking: number;
   interested: number;
+  rnr: number;
+  callback: number;
+  whatsapp: number;
+  student: number;
   totalPayments: number;
   closureRate: number;
 }
@@ -73,8 +81,34 @@ export interface TeamDashboard {
     booking: number;
     partialbooking: number;
     interested: number;
+    rnr: number;
+    callback: number;
+    whatsapp: number;
+    student: number;
   };
   memberRankings: TeamMemberRanking[];
+}
+
+// ── Team Reminder ─────────────────────────────────────────────────────────────
+export interface TeamReminderItem {
+  reminder: {
+    _id: string;
+    title?: string;
+    note?: string;
+    remindAt: string;
+    isDone: boolean;
+    createdBy?: { _id: string; name: string } | string;
+    notifiedAt?: string;
+    warnedAt?: string;
+    createdAt?: string;
+  };
+  lead: {
+    _id: string;
+    name: string;
+    phone?: string;
+    status: import("@/types/lead").LeadStatus;
+    assignedTo?: { _id: string; name: string; email: string; designation?: string } | null;
+  };
 }
 
 export interface TeamLog {

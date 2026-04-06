@@ -1307,3 +1307,14 @@ Copy the template at the top of this file and add under the correct module secti
 
 **Endpoint count**: 71
 *(Increment every time you add an endpoint)*
+
+---
+
+## useTeamReminders (added 2026-04-06)
+
+**File:** `hooks/useTeams.ts`
+**Query key:** `["teams", teamId, "reminders", filters]`
+**Endpoint:** `GET /api/v1/teams/:id/reminders`
+**Params:** `memberId`, `isDone`, `search`, `page`, `limit`
+**Response:** `{ data: TeamReminderItem[], pagination }`
+**Used by:** `TeamRemindersTab`

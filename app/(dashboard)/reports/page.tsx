@@ -45,19 +45,24 @@ const STATUS_META: Record<
   LeadStatus,
   { label: string; color: string; bar: string; dot: string }
 > = {
-  new:        { label: "New",       color: "#3b82f6", bar: "bg-blue-500",   dot: "bg-blue-400"   },
-  assigned:   { label: "Assigned",  color: "#eab308", bar: "bg-yellow-500", dot: "bg-yellow-400" },
-  followup:   { label: "Follow Up", color: "#f97316", bar: "bg-orange-500", dot: "bg-orange-400" },
-  interested: { label: "Interested",color: "#8b5cf6", bar: "bg-violet-500", dot: "bg-violet-400" },
-  cnc:        { label: "CNC",       color: "#64748b", bar: "bg-slate-500",  dot: "bg-slate-400"  },
-  booking:        { label: "Booking",         color: "#14b8a6", bar: "bg-teal-500",  dot: "bg-teal-400"  },
-  partialbooking: { label: "Partial Booking", color: "#ec4899", bar: "bg-pink-500",  dot: "bg-pink-400"  },
-  closed:         { label: "Closed",          color: "#22c55e", bar: "bg-green-500", dot: "bg-green-400" },
-  rejected:       { label: "Rejected",        color: "#ef4444", bar: "bg-red-500",   dot: "bg-red-400"   },
+  new:            { label: "New",             color: "#3b82f6", bar: "bg-blue-500",    dot: "bg-blue-400"    },
+  assigned:       { label: "Assigned",        color: "#eab308", bar: "bg-yellow-500",  dot: "bg-yellow-400"  },
+  followup:       { label: "Follow Up",       color: "#f97316", bar: "bg-orange-500",  dot: "bg-orange-400"  },
+  interested:     { label: "Interested",      color: "#8b5cf6", bar: "bg-violet-500",  dot: "bg-violet-400"  },
+  cnc:            { label: "CNC",             color: "#64748b", bar: "bg-slate-500",   dot: "bg-slate-400"   },
+  booking:        { label: "Booking",         color: "#14b8a6", bar: "bg-teal-500",    dot: "bg-teal-400"    },
+  partialbooking: { label: "Partial Booking", color: "#ec4899", bar: "bg-pink-500",    dot: "bg-pink-400"    },
+  closed:         { label: "Closed",          color: "#22c55e", bar: "bg-green-500",   dot: "bg-green-400"   },
+  rejected:       { label: "Rejected",        color: "#ef4444", bar: "bg-red-500",     dot: "bg-red-400"     },
+  rnr:            { label: "RNR",             color: "#f59e0b", bar: "bg-amber-500",   dot: "bg-amber-400"   },
+  callback:       { label: "Call Back",       color: "#0ea5e9", bar: "bg-sky-500",     dot: "bg-sky-400"     },
+  whatsapp:       { label: "WhatsApp",        color: "#25d366", bar: "bg-emerald-500", dot: "bg-emerald-400" },
+  student:        { label: "Student",         color: "#6366f1", bar: "bg-indigo-500",  dot: "bg-indigo-400"  },
 };
 
 const ALL_STATUSES: LeadStatus[] = [
   "new","assigned","followup","interested","cnc","booking","partialbooking","closed","rejected",
+  "rnr","callback","whatsapp","student",
 ];
 
 const SOURCE_COLORS: Record<string, string> = {

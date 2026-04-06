@@ -130,6 +130,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useTeamSocket } from "@/hooks/useTeamSocket";
 import { cn, formatDate, getInitials } from "@/lib/utils";
 import { TeamDialog } from "@/components/teams/TeamDialog";
+import TeamRemindersTab from "@/components/teams/TeamRemindersTab";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
@@ -151,6 +152,10 @@ interface TeamDashboardData {
     booking: number;
     partialbooking: number;
     interested: number;
+    rnr: number;
+    callback: number;
+    whatsapp: number;
+    student: number;
   };
   memberRankings: Array<{
     user: Pick<User, "_id" | "name" | "email" | "designation">;
@@ -163,6 +168,10 @@ interface TeamDashboardData {
     booking: number;
     partialbooking: number;
     interested: number;
+    rnr: number;
+    callback: number;
+    whatsapp: number;
+    student: number;
     totalPayments: number;
     closureRate: number;
   }>;
@@ -181,84 +190,35 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "logs" | "updates" | "revenue";
+type TabId = "dashboard" | "members" | "leads" | "logs" | "updates" | "revenue" | "reminders";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "members",   label: "Members"   },
-  { id: "leads",     label: "Leads"     },
-  { id: "revenue",   label: "Revenue"   },
-  { id: "updates",   label: "Updates"   },
-  { id: "logs",      label: "Logs"      },
+  { id: "dashboard",  label: "Dashboard"  },
+  { id: "members",    label: "Members"    },
+  { id: "leads",      label: "Leads"      },
+  { id: "reminders",  label: "Reminders"  },
+  { id: "revenue",    label: "Revenue"    },
+  { id: "updates",    label: "Updates"    },
+  { id: "logs",       label: "Logs"       },
 ];
 
 const STATUS_CONFIG: Record<
   LeadStatus,
   { label: string; color: string; dot: string; bar: string; text: string }
 > = {
-  new: {
-    label: "New",
-    color: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-    dot: "bg-blue-400",
-    bar: "bg-blue-500",
-    text: "text-blue-400",
-  },
-  assigned: {
-    label: "Assigned",
-    color: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-    dot: "bg-amber-400",
-    bar: "bg-amber-500",
-    text: "text-amber-400",
-  },
-  followup: {
-    label: "Follow Up",
-    color: "bg-purple-500/15 text-purple-400 border-purple-500/30",
-    dot: "bg-purple-400",
-    bar: "bg-purple-500",
-    text: "text-purple-400",
-  },
-  closed: {
-    label: "Closed",
-    color: "bg-green-500/15 text-green-400 border-green-500/30",
-    dot: "bg-green-400",
-    bar: "bg-green-500",
-    text: "text-green-400",
-  },
-  rejected: {
-    label: "Rejected",
-    color: "bg-red-500/15 text-red-400 border-red-500/30",
-    dot: "bg-red-400",
-    bar: "bg-red-500",
-    text: "text-red-400",
-  },
-  cnc: {
-    label: "CNC",
-    color: "bg-slate-500/15 text-slate-400 border-slate-500/30",
-    dot: "bg-slate-400",
-    bar: "bg-slate-500",
-    text: "text-slate-400",
-  },
-  booking: {
-    label: "Booking",
-    color: "bg-teal-500/15 text-teal-400 border-teal-500/30",
-    dot: "bg-teal-400",
-    bar: "bg-teal-500",
-    text: "text-teal-400",
-  },
-  partialbooking: {
-    label: "Partial Booking",
-    color: "bg-pink-500/15 text-pink-400 border-pink-500/30",
-    dot: "bg-pink-400",
-    bar: "bg-pink-500",
-    text: "text-pink-400",
-  },
-  interested: {
-    label: "Interested",
-    color: "bg-violet-500/15 text-violet-400 border-violet-500/30",
-    dot: "bg-violet-400",
-    bar: "bg-violet-500",
-    text: "text-violet-400",
-  },
+  new:            { label: "New",             color: "bg-blue-500/15 text-blue-400 border-blue-500/30",          dot: "bg-blue-400",    bar: "bg-blue-500",    text: "text-blue-400"    },
+  assigned:       { label: "Assigned",        color: "bg-amber-500/15 text-amber-400 border-amber-500/30",       dot: "bg-amber-400",   bar: "bg-amber-500",   text: "text-amber-400"   },
+  followup:       { label: "Follow Up",       color: "bg-purple-500/15 text-purple-400 border-purple-500/30",    dot: "bg-purple-400",  bar: "bg-purple-500",  text: "text-purple-400"  },
+  closed:         { label: "Closed",          color: "bg-green-500/15 text-green-400 border-green-500/30",       dot: "bg-green-400",   bar: "bg-green-500",   text: "text-green-400"   },
+  rejected:       { label: "Rejected",        color: "bg-red-500/15 text-red-400 border-red-500/30",             dot: "bg-red-400",     bar: "bg-red-500",     text: "text-red-400"     },
+  cnc:            { label: "CNC",             color: "bg-slate-500/15 text-slate-400 border-slate-500/30",       dot: "bg-slate-400",   bar: "bg-slate-500",   text: "text-slate-400"   },
+  booking:        { label: "Booking",         color: "bg-teal-500/15 text-teal-400 border-teal-500/30",          dot: "bg-teal-400",    bar: "bg-teal-500",    text: "text-teal-400"    },
+  partialbooking: { label: "Partial Booking", color: "bg-pink-500/15 text-pink-400 border-pink-500/30",          dot: "bg-pink-400",    bar: "bg-pink-500",    text: "text-pink-400"    },
+  interested:     { label: "Interested",      color: "bg-violet-500/15 text-violet-400 border-violet-500/30",    dot: "bg-violet-400",  bar: "bg-violet-500",  text: "text-violet-400"  },
+  rnr:            { label: "RNR",             color: "bg-amber-500/15 text-amber-400 border-amber-500/30",       dot: "bg-amber-400",   bar: "bg-amber-500",   text: "text-amber-400"   },
+  callback:       { label: "Call Back",       color: "bg-sky-500/15 text-sky-400 border-sky-500/30",             dot: "bg-sky-400",     bar: "bg-sky-500",     text: "text-sky-400"     },
+  whatsapp:       { label: "WhatsApp",        color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400", bar: "bg-emerald-500", text: "text-emerald-400" },
+  student:        { label: "Student",         color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",    dot: "bg-indigo-400",  bar: "bg-indigo-500",  text: "text-indigo-400"  },
 };
 
 const LOG_ACTION_CONFIG: Record<
@@ -493,15 +453,19 @@ function DashboardTab({
   ];
 
   const statusBars: Array<{ key: LeadStatus; label: string }> = [
-    { key: "new", label: "New" },
-    { key: "assigned", label: "Assigned" },
-    { key: "followup", label: "Follow Up" },
-    { key: "interested", label: "Interested" },
-    { key: "cnc", label: "CNC" },
-    { key: "booking", label: "Booking" },
-    { key: "partialbooking", label: "Partial Booking" },
-    { key: "closed", label: "Closed" },
-    { key: "rejected", label: "Rejected" },
+    { key: "new",           label: "New"             },
+    { key: "assigned",      label: "Assigned"        },
+    { key: "followup",      label: "Follow Up"       },
+    { key: "interested",    label: "Interested"      },
+    { key: "cnc",           label: "CNC"             },
+    { key: "booking",       label: "Booking"         },
+    { key: "partialbooking",label: "Partial Booking" },
+    { key: "closed",        label: "Closed"          },
+    { key: "rejected",      label: "Rejected"        },
+    { key: "rnr",           label: "RNR"             },
+    { key: "callback",      label: "Call Back"       },
+    { key: "whatsapp",      label: "WhatsApp"        },
+    { key: "student",       label: "Student"         },
   ];
 
   const medalColors = ["text-yellow-400", "text-slate-400", "text-amber-600"];
@@ -3097,15 +3061,15 @@ export default function TeamDetailPage() {
 
   // If a regular member somehow lands on a restricted tab, bounce them to dashboard
   useEffect(() => {
-    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue")) {
+    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue" || activeTab === "reminders")) {
       setActiveTab("dashboard");
     }
   }, [canSeeSensitiveTabs, activeTab]);
 
 
-  // "updates" is always visible to team members; "leads"/"logs"/"revenue" only for leaders/admins
+  // "updates" is always visible to team members; "leads"/"logs"/"revenue"/"reminders" only for leaders/admins
   const visibleTabs = TABS.filter(
-    (tab) => (tab.id !== "leads" && tab.id !== "logs" && tab.id !== "revenue") || canSeeSensitiveTabs,
+    (tab) => (tab.id !== "leads" && tab.id !== "logs" && tab.id !== "revenue" && tab.id !== "reminders") || canSeeSensitiveTabs,
   );
 
   function handleAutoAssign() {
@@ -3380,7 +3344,7 @@ export default function TeamDetailPage() {
                 team={team}
                 memberStats={memberStats}
                 isLoading={loadingStats}
-                isLeaderOrAdmin={!!isLeaderOrAdmin}
+                isLeaderOrAdmin={!!canSeeSensitiveTabs}
                 onEditMembers={() => setEditMembersOpen(true)}
                 onToggleMemberActive={toggleMemberActive}
                 togglingMember={togglingMember}
@@ -3402,6 +3366,24 @@ export default function TeamDetailPage() {
                 isLeaderOrAdmin={!!isLeaderOrAdmin}
                 onAutoAssign={handleAutoAssign}
                 assigning={assigning}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === "reminders" && (
+            <motion.div
+              key="reminders"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TeamRemindersTab
+                teamId={teamId}
+                members={[
+                  ...(team?.leaders ?? []).map((u: User) => ({ _id: u._id, name: u.name })),
+                  ...(team?.members ?? []).map((u: User) => ({ _id: u._id, name: u.name })),
+                ].filter((u, i, a) => a.findIndex((x) => x._id === u._id) === i)}
               />
             </motion.div>
           )}

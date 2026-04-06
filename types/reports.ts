@@ -7,7 +7,11 @@ export type LeadStatus =
   | "booking"
   | "partialbooking"
   | "closed"
-  | "rejected";
+  | "rejected"
+  | "rnr"
+  | "callback"
+  | "whatsapp"
+  | "student";
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +57,10 @@ export interface TimelinePoint {
   partialbooking: number;
   closed:         number;
   rejected:       number;
+  rnr:            number;
+  callback:       number;
+  whatsapp:       number;
+  student:        number;
 }
 
 // ── User Rankings ─────────────────────────────────────────────────────────────
@@ -73,6 +81,10 @@ export interface UserRankItem {
   partialbooking: number;
   closed:         number;
   rejected:       number;
+  rnr:            number;
+  callback:       number;
+  whatsapp:       number;
+  student:        number;
   conversionRate: number;
 }
 
@@ -95,6 +107,10 @@ export interface TeamRankItem {
   partialbooking: number;
   closed:         number;
   rejected:       number;
+  rnr:            number;
+  callback:       number;
+  whatsapp:       number;
+  student:        number;
   conversionRate: number;
 }
 
@@ -122,6 +138,10 @@ export interface TeamSplitSummaryItem {
   partialbooking: number;
   closed:         number;
   rejected:       number;
+  rnr:            number;
+  callback:       number;
+  whatsapp:       number;
+  student:        number;
   conversionRate: number;
 }
 

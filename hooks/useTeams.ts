@@ -2,11 +2,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "@/lib/axios";
-import type { ApiResponse } from "@/types";
+import type { ApiResponse, PaginationMeta } from "@/types";
 import type { Lead, LeadFilters } from "@/types/lead";
 import type {
   Team, TeamFilters, TeamMemberStat, TeamAutoAssignResult,
-  TeamDashboard, TeamLog, TeamUpdateItem,
+  TeamDashboard, TeamLog, TeamUpdateItem, TeamReminderItem,
 } from "@/types/team";
 import type {
   RevenuePeriod,
@@ -388,6 +388,10 @@ export interface TeamMemberDetail {
     booking: number;
     partialbooking: number;
     interested: number;
+    rnr: number;
+    callback: number;
+    whatsapp: number;
+    student: number;
     totalPayments: number;
     closureRate: number;
   };
@@ -466,4 +470,51 @@ export const useTeamRevenueTimeline = (
     },
     enabled: !!teamId,
     staleTime: 60_000,
+  });
+
+// ── Team Reminders ────────────────────────────────────────────────────────────
+
+export interface TeamRemindersFilters {
+  memberId?: string;
+  isDone?: "true" | "false" | "";
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const useTeamReminders = (teamId: string, filters: TeamRemindersFilters = {}) =>
+  useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "reminders", filters],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (filters.memberId)            params.memberId = filters.memberId;
+      if (filters.isDone !== undefined && filters.isDone !== "") params.isDone = filters.isDone;
+      if (filters.search)              params.search   = filters.search;
+      if (filters.page)                params.page     = String(filters.page);
+      if (filters.limit)               params.limit    = String(filters.limit);
+
+      // Backend returns { reminders: TeamReminderItem[], pagination: {...} } inside data
+      const res = await api.get<ApiResponse<{ reminders: TeamReminderItem[]; pagination: PaginationMeta }>>(
+        `/teams/${teamId}/reminders`,
+        { params },
+      );
+
+      // sendSuccess wraps the service return as res.data.data = { reminders, pagination }
+      const payload = res.data.data as unknown as
+        | { reminders?: TeamReminderItem[]; pagination?: PaginationMeta }
+        | TeamReminderItem[]
+        | undefined;
+
+      const reminders: TeamReminderItem[] = Array.isArray(payload)
+        ? payload
+        : (payload as { reminders?: TeamReminderItem[] })?.reminders ?? [];
+
+      const pagination = Array.isArray(payload)
+        ? res.data.pagination
+        : (payload as { pagination?: PaginationMeta })?.pagination ?? res.data.pagination;
+
+      return { data: reminders, pagination };
+    },
+    enabled: !!teamId,
+    staleTime: 30_000,
   });

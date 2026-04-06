@@ -28,15 +28,19 @@ import type { LeadStatus } from "@/types/lead";
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: string }> = {
-  new:            { label: "New",             color: "bg-blue-500/15 text-blue-400 border-blue-500/30",     dot: "bg-blue-400"   },
-  assigned:       { label: "Assigned",        color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30", dot: "bg-yellow-400" },
-  followup:       { label: "Follow Up",       color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
-  closed:         { label: "Closed",          color: "bg-green-500/15 text-green-400 border-green-500/30",   dot: "bg-green-400"  },
-  rejected:       { label: "Rejected",        color: "bg-red-500/15 text-red-400 border-red-500/30",         dot: "bg-red-400"    },
-  cnc:            { label: "CNC",             color: "bg-slate-500/15 text-slate-400 border-slate-500/30",   dot: "bg-slate-400"  },
-  booking:        { label: "Booking",         color: "bg-teal-500/15 text-teal-400 border-teal-500/30",      dot: "bg-teal-400"   },
-  partialbooking: { label: "Partial Booking", color: "bg-pink-500/15 text-pink-400 border-pink-500/30",      dot: "bg-pink-400"   },
-  interested:     { label: "Interested",      color: "bg-violet-500/15 text-violet-400 border-violet-500/30", dot: "bg-violet-400" },
+  new:            { label: "New",             color: "bg-blue-500/15 text-blue-400 border-blue-500/30",          dot: "bg-blue-400"    },
+  assigned:       { label: "Assigned",        color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",    dot: "bg-yellow-400"  },
+  followup:       { label: "Follow Up",       color: "bg-orange-500/15 text-orange-400 border-orange-500/30",    dot: "bg-orange-400"  },
+  closed:         { label: "Closed",          color: "bg-green-500/15 text-green-400 border-green-500/30",       dot: "bg-green-400"   },
+  rejected:       { label: "Rejected",        color: "bg-red-500/15 text-red-400 border-red-500/30",             dot: "bg-red-400"     },
+  cnc:            { label: "CNC",             color: "bg-slate-500/15 text-slate-400 border-slate-500/30",       dot: "bg-slate-400"   },
+  booking:        { label: "Booking",         color: "bg-teal-500/15 text-teal-400 border-teal-500/30",          dot: "bg-teal-400"    },
+  partialbooking: { label: "Partial Booking", color: "bg-pink-500/15 text-pink-400 border-pink-500/30",          dot: "bg-pink-400"    },
+  interested:     { label: "Interested",      color: "bg-violet-500/15 text-violet-400 border-violet-500/30",    dot: "bg-violet-400"  },
+  rnr:            { label: "RNR",             color: "bg-amber-500/15 text-amber-400 border-amber-500/30",       dot: "bg-amber-400"   },
+  callback:       { label: "Call Back",       color: "bg-sky-500/15 text-sky-400 border-sky-500/30",             dot: "bg-sky-400"     },
+  whatsapp:       { label: "WhatsApp",        color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
+  student:        { label: "Student",         color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",    dot: "bg-indigo-400"  },
 };
 
 const containerVariants = {

@@ -972,3 +972,13 @@
 
 **Component count**: 24
 *(Increment every time you add a component)*
+
+---
+
+## TeamRemindersTab (added 2026-04-06)
+
+**File:** `components/teams/TeamRemindersTab.tsx`
+**Props:** `teamId: string`, `members: { _id: string; name: string }[]`
+**Used in:** `app/(dashboard)/teams/[teamId]/page.tsx` — "Reminders" tab (leader/admin only)
+**Hook:** `useTeamReminders(teamId, filters)` from `hooks/useTeams.ts`
+**Features:** Search (debounced 400ms), member filter, isDone filter (pending/done), pagination (20/page), overdue badge, Framer Motion stagger list.
