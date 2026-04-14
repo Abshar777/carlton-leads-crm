@@ -78,6 +78,7 @@ export const useTeamLeads = (teamId: string, filters?: LeadFilters & { unassigne
       if (filters?.search)         params.search         = filters.search;
       if (filters?.dateFrom)       params.dateFrom       = filters.dateFrom;
       if (filters?.dateTo)         params.dateTo         = filters.dateTo;
+      if (filters?.course)         params.course         = filters.course;
       if (filters?.unassignedOnly) params.unassignedOnly = "true";
       const res = await api.get<ApiResponse<Lead[]>>(`/teams/${teamId}/leads`, { params });
       return { data: res.data.data ?? [], pagination: res.data.pagination };

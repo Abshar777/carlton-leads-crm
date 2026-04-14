@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -131,6 +131,7 @@ import { useTeamSocket } from "@/hooks/useTeamSocket";
 import { cn, formatDate, getInitials } from "@/lib/utils";
 import { TeamDialog } from "@/components/teams/TeamDialog";
 import TeamRemindersTab from "@/components/teams/TeamRemindersTab";
+import { TeamMemberKanban } from "@/components/teams/TeamMemberKanban";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
@@ -191,12 +192,13 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "logs" | "updates" | "revenue" | "reminders";
+type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "dashboard",  label: "Dashboard"  },
   { id: "members",    label: "Members"    },
   { id: "leads",      label: "Leads"      },
+  { id: "kanban",     label: "Kanban"     },
   { id: "reminders",  label: "Reminders"  },
   { id: "revenue",    label: "Revenue"    },
   { id: "updates",    label: "Updates"    },
@@ -3105,13 +3107,25 @@ function ActivityRow({ item }: { item: TeamActivityItem }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function TeamDetailPage() {
+function TeamDetailPageContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const teamId = params.teamId as string;
 
   const { user, hasPermission } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const t = searchParams.get("tab") as TabId | null;
+    const valid: TabId[] = ["dashboard", "members", "leads", "kanban", "logs", "updates", "revenue", "reminders"];
+    return t && valid.includes(t) ? t : "dashboard";
+  });
+
+  function handleTabChange(tab: TabId) {
+    setActiveTab(tab);
+    const qs = new URLSearchParams(searchParams.toString());
+    qs.set("tab", tab);
+    router.replace(`?${qs.toString()}`, { scroll: false });
+  }
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editMembersOpen, setEditMembersOpen] = useState(false);
 
@@ -3153,7 +3167,7 @@ export default function TeamDetailPage() {
 
   // If a regular member somehow lands on a restricted tab, bounce them to dashboard
   useEffect(() => {
-    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue" || activeTab === "reminders")) {
+    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue" || activeTab === "reminders" || activeTab === "kanban")) {
       setActiveTab("dashboard");
     }
   }, [canSeeSensitiveTabs, activeTab]);
@@ -3161,7 +3175,7 @@ export default function TeamDetailPage() {
 
   // "updates" is always visible to team members; "leads"/"logs"/"revenue"/"reminders" only for leaders/admins
   const visibleTabs = TABS.filter(
-    (tab) => (tab.id !== "leads" && tab.id !== "logs" && tab.id !== "revenue" && tab.id !== "reminders") || canSeeSensitiveTabs,
+    (tab) => (tab.id !== "leads" && tab.id !== "logs" && tab.id !== "revenue" && tab.id !== "reminders" && tab.id !== "kanban") || canSeeSensitiveTabs,
   );
 
   function handleAutoAssign() {
@@ -3382,7 +3396,7 @@ export default function TeamDetailPage() {
           {visibleTabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={[
                 "relative px-3 sm:px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap shrink-0",
                 activeTab === tab.id
@@ -3462,6 +3476,23 @@ export default function TeamDetailPage() {
             </motion.div>
           )}
 
+          {activeTab === "kanban" && canSeeSensitiveTabs && (
+            <motion.div
+              key="kanban"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <TeamMemberKanban
+                teamId={teamId}
+                team={team}
+                canEdit={!!isLeaderOrAdmin}
+              />
+            </motion.div>
+          )}
+
           {activeTab === "reminders" && (
             <motion.div
               key="reminders"
@@ -3530,5 +3561,17 @@ export default function TeamDetailPage() {
         team={team}
       />
     </div>
+  );
+}
+
+export default function TeamDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <TeamDetailPageContent />
+    </Suspense>
   );
 }

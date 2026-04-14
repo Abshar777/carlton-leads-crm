@@ -1,10 +1,11 @@
 "use client";
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight,
   X, Upload, UserCheck, FileText, ChevronDown, ExternalLink,
   CalendarDays, Filter, CheckSquare, Square, Tags, ArrowRightLeft, AlertTriangle,
+  LayoutGrid, List,
 } from "lucide-react";
 import Link from "next/link";
 import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
@@ -27,13 +28,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LeadDialog } from "@/components/leads/LeadDialog";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { AssignLeadDialog } from "@/components/leads/AssignLeadDialog";
+import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { useLeads, useUpdateLeadStatus, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useUsers } from "@/hooks/useUsers";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Lead, LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
 
@@ -125,9 +127,10 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function LeadsPage() {
+function LeadsPageContent() {
   const { hasPermission, user } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ── Filter state ─────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -142,6 +145,19 @@ export default function LeadsPage() {
   const [courseId, setCourseId] = useState<string>("all");
   const [teamId, setTeamId] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
+
+  // ── View mode — synced to ?view= URL param ────────────────────────────────────
+  const [viewMode, setViewMode] = useState<"table" | "kanban">(() => {
+    const v = searchParams.get("view");
+    return v === "kanban" ? "kanban" : "table";
+  });
+
+  function changeViewMode(mode: "table" | "kanban") {
+    setViewMode(mode);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", mode);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -358,7 +374,7 @@ export default function LeadsPage() {
                 )}
               </div>
 
-              {/* Right side — Today + filter toggle + clear */}
+              {/* Right side — Today + filter toggle + view toggle + clear */}
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
                 <Button
@@ -375,6 +391,35 @@ export default function LeadsPage() {
                     </span>
                   )}
                 </Button>
+
+                {/* View mode toggle */}
+                <div className="flex items-center rounded-lg border border-border/60 bg-muted/30 p-0.5 gap-0.5">
+                  <motion.button
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => changeViewMode("table")}
+                    title="Table view"
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
+                      viewMode === "table"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => changeViewMode("kanban")}
+                    title="Kanban view"
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
+                      viewMode === "kanban"
+                        ? "bg-background text-primary shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                  </motion.button>
+                </div>
+
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={clearAllFilters} className="gap-1.5 text-muted-foreground hover:text-foreground">
                     <X className="h-3.5 w-3.5" />
@@ -578,7 +623,27 @@ export default function LeadsPage() {
             )}
           </CardHeader>
 
+          {/* ── Kanban Board ───────────────────────────────────────────────────── */}
+          {viewMode === "kanban" && (
+            <CardContent className="px-3 sm:px-4 pt-4 pb-3 overflow-hidden">
+              <KanbanBoard
+                filters={{
+                  ...(debouncedSearch ? { search: debouncedSearch } : {}),
+                  ...(status !== "all" ? { status } : {}),
+                  ...(assignedTo !== "all" ? { assignedTo } : {}),
+                  ...(reporter !== "all" ? { reporter } : {}),
+                  ...(courseId !== "all" ? { course: courseId } : {}),
+                  ...(teamId !== "all" ? { team: teamId } : {}),
+                  ...(dateFrom ? { dateFrom } : {}),
+                  ...(dateTo ? { dateTo } : {}),
+                }}
+                canEdit={canEdit}
+              />
+            </CardContent>
+          )}
+
           {/* ── Table ──────────────────────────────────────────────────────────── */}
+          {viewMode === "table" && (
           <CardContent className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
@@ -926,6 +991,7 @@ export default function LeadsPage() {
               </div>
             )}
           </CardContent>
+          )}
         </Card>
       </motion.div>
 
@@ -1137,5 +1203,17 @@ export default function LeadsPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function LeadsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <LeadsPageContent />
+    </Suspense>
   );
 }
