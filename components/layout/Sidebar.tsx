@@ -178,7 +178,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
 
 function Logo({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4 shrink-0">
+    <div className="flex h-16 items-center gap-3 border-b border-sidebar-border/10 px-4 shrink-0">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary">
         <Zap className="h-5 w-5 text-primary-foreground" />
       </div>
@@ -248,7 +248,7 @@ function UserProfileSection({ collapsed = false }: { collapsed?: boolean }) {
               </div>
             </div>
             <button className="w-full rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 active:scale-[0.98]">
-              Profile Manage
+              <Link href="/profile">Profile Manage</Link>
             </button>
           </motion.div>
         )}
@@ -270,7 +270,7 @@ function DesktopSidebar() {
         <Logo collapsed={sidebarCollapsed} />
         <NavLinks collapsed={sidebarCollapsed} />
         <UserProfileSection collapsed={sidebarCollapsed} />
-        <div className="border-t border-sidebar-border p-2 shrink-0">
+        {/* <div className="border-t border-sidebar-border p-2 shrink-0">
           <button
             onClick={toggleSidebarCollapsed}
             className="flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -281,7 +281,7 @@ function DesktopSidebar() {
               <ChevronLeft className="h-4 w-4" />
             )}
           </button>
-        </div>
+        </div> */}
       </motion.aside>
     </TooltipProvider>
   );

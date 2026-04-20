@@ -51,7 +51,7 @@ export function Header() {
       : "Dashboard");
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between   backdrop-blur-sm px-4 md:px-5">
+    <header className="flex rounded-2xl scale-[.99] h-16 shrink-0 items-center justify-between border-b border-border/10  backdrop-blur-sm px-4 md:px-5">
       {/* ── Left: toggles + breadcrumb ── */}
       <div className="flex items-center gap-2">
         {/* Mobile hamburger */}
@@ -86,10 +86,7 @@ export function Header() {
       {/* ── Right: search + bell + avatar + theme ── */}
       <div className="flex items-center gap-1.5">
         {/* Search bar — opens command palette */}
-        <button
-          onClick={() => setCommandOpen(true)}
-          className="hidden md:flex items-center gap-2 h-9 rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground hover:bg-muted/70 transition-colors min-w-[180px]"
-        >
+        <button onClick={() => setCommandOpen(true)} className="hidden md:flex items-center gap-2 h-9 rounded-lg border border-border dark:bg-muted/40 bg-background px-3 text-sm text-muted-foreground hover:dark:bg-muted/70 hover:bg-background/70 transition-colors min-w-[180px]">
           <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="flex-1 text-left text-xs">Search...</span>
           <kbd className="inline-flex items-center rounded border border-border bg-background px-1.5 py-px text-[10px] font-medium text-muted-foreground select-none">
