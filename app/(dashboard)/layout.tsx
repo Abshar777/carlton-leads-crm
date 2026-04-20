@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { useAuthStore } from "@/lib/store/authStore";
 import { navItems } from "@/components/layout/Sidebar";
 import { useReminderNotifications } from "@/hooks/useReminderNotifications";
+import { RecentPageTracker } from "@/components/shared/CommandPalette";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasPermission } = useAuthStore();
@@ -44,7 +45,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background pwa-safe-top">
+    <div className="flex h-dvh overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
+      <RecentPageTracker />
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />

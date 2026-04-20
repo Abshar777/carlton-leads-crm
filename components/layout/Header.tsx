@@ -1,5 +1,6 @@
 "use client";
-import { LogOut, User, ChevronDown, Menu } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LogOut, User, Menu, Search, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,24 +14,47 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useLogout } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { navItems } from "@/components/layout/Sidebar";
+import { CommandPalette } from "@/components/shared/CommandPalette";
 
-interface HeaderProps {
-  title?: string;
-}
-
-export function Header({ title }: HeaderProps) {
+export function Header() {
   const { user } = useAuthStore();
   const logout = useLogout();
-  const { toggleMobileDrawer } = useUiStore();
+  const { toggleMobileDrawer, toggleSidebarCollapsed } = useUiStore();
+  const pathname = usePathname();
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  // ⌘K / Ctrl+K global shortcut
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Resolve current page label from navItems
+  const currentNav = navItems.find(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+  );
+  const pageName =
+    currentNav?.label ??
+    (pathname.split("/")[1]
+      ? pathname.split("/")[1].charAt(0).toUpperCase() + pathname.split("/")[1].slice(1)
+      : "Dashboard");
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 md:px-6">
-      {/* Left side — hamburger (mobile) + optional title */}
-      <div className="flex items-center gap-3">
-        {/* Hamburger — visible only on mobile */}
+    <header className="flex h-16 shrink-0 items-center justify-between   backdrop-blur-sm px-4 md:px-5">
+      {/* ── Left: toggles + breadcrumb ── */}
+      <div className="flex items-center gap-2">
+        {/* Mobile hamburger */}
         <button
           onClick={toggleMobileDrawer}
           className="md:hidden flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -39,30 +63,53 @@ export function Header({ title }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </button>
 
-        {title && (
-          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        )}
+        {/* Desktop sidebar collapse toggle */}
+        <button
+          onClick={toggleSidebarCollapsed}
+          className="hidden md:flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        {/* Divider */}
+        <div className="hidden md:block h-5 w-px bg-border mx-1" />
+
+        {/* Breadcrumb */}
+        <nav className="hidden md:flex items-center gap-1 text-sm">
+          <span className="text-muted-foreground">Root</span>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+          <span className="font-semibold text-primary">{pageName}</span>
+        </nav>
       </div>
 
-      {/* Right side — theme toggle + notifications + user menu */}
-      <div className="ml-auto flex items-center gap-2">
-        <ThemeToggle />
+      {/* ── Right: search + bell + avatar + theme ── */}
+      <div className="flex items-center gap-1.5">
+        {/* Search bar — opens command palette */}
+        <button
+          onClick={() => setCommandOpen(true)}
+          className="hidden md:flex items-center gap-2 h-9 rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground hover:bg-muted/70 transition-colors min-w-[180px]"
+        >
+          <Search className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 text-left text-xs">Search...</span>
+          <kbd className="inline-flex items-center rounded border border-border bg-background px-1.5 py-px text-[10px] font-medium text-muted-foreground select-none">
+            ⌘K
+          </kbd>
+        </button>
+
         <NotificationBell />
+
+        <ThemeToggle />
+
+        {/* User avatar */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-accent">
+            <button className="rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-1">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                   {user ? getInitials(user.name) : "?"}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden text-left sm:block">
-                <p className="text-sm font-medium leading-none">{user?.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {typeof user?.role === "object" ? user.role.roleName : ""}
-                </p>
-              </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -88,6 +135,8 @@ export function Header({ title }: HeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </header>
   );
 }

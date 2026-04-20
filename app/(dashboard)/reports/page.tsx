@@ -1452,51 +1452,51 @@ export default function ReportsPage() {
     const scrollEl = document.querySelector("main") as HTMLElement | null;
     if (!scrollEl) return;
 
-    function handleScroll() {
-      // Desktop: always visible
-      if (window.innerWidth >= 640) {
-        setHeaderVisible(true);
-        lastScrollY.current = scrollEl!.scrollTop;
-        return;
-      }
+    // function handleScroll() {
+    //   // Desktop: always visible
+    //   if (window.innerWidth >= 640) {
+    //     setHeaderVisible(true);
+    //     lastScrollY.current = scrollEl!.scrollTop;
+    //     return;
+    //   }
 
-      const currentY = scrollEl!.scrollTop;
-      const delta    = currentY - lastScrollY.current;
+    //   const currentY = scrollEl!.scrollTop;
+    //   const delta    = currentY - lastScrollY.current;
 
-      if (Math.abs(delta) < SCROLL_THRESHOLD) return;
+    //   if (Math.abs(delta) < SCROLL_THRESHOLD) return;
 
-      if (delta > 0 && currentY > 60) {
-        // Scrolling DOWN and not near top → hide
-        setHeaderVisible(false);
-      } else {
-        // Scrolling UP or near top → show
-        setHeaderVisible(true);
-      }
+    //   if (delta > 0 && currentY > 60) {
+    //     // Scrolling DOWN and not near top → hide
+    //     setHeaderVisible(false);
+    //   } else {
+    //     // Scrolling UP or near top → show
+    //     setHeaderVisible(true);
+    //   }
 
-      lastScrollY.current = currentY;
-    }
+    //   lastScrollY.current = currentY;
+    // }
 
-    function handleResize() {
-      if (window.innerWidth >= 640) setHeaderVisible(true);
-    }
+    // function handleResize() {
+    //   if (window.innerWidth >= 640) setHeaderVisible(true);
+    // }
 
-    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleResize, { passive: true });
-    return () => {
-      scrollEl.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
+    // scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    // window.addEventListener("resize", handleResize, { passive: true });
+    // return () => {
+    //   scrollEl.removeEventListener("scroll", handleScroll);
+    //   window.removeEventListener("resize", handleResize);
+    // };
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div>
       {/* ── Sticky header (auto-hides on mobile scroll-down) ──────────────── */}
       <motion.div
-        className="sticky top-[-1.9rem] z-10 border-b border-border/50 bg-background/80 backdrop-blur-sm"
+        className=" z-10 -mx-6 px-6 border-b border-border/30"
         animate={{ y: headerVisible ? 0 : "-150%" }}
         transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <div className="px-4 sm:px-6 py-4 space-y-4">
+        <div className="py-4 space-y-4">
           {/* Title row */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -1515,35 +1515,36 @@ export default function ReportsPage() {
             <ExportPdfDialog type="overall" entityName="CRM Overall" />
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 border-b border-transparent -mb-4">
+          {/* Tabs — pill style with spring animation */}
+          <div className="flex gap-1 p-1 rounded-xl bg-muted/50 w-fit">
             {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={cn(
-                  "relative flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium transition-colors rounded-t-lg",
+                  "relative flex items-center gap-2 px-3 sm:px-4 py-1.5 text-sm font-medium transition-colors rounded-lg",
                   activeTab === id
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">{label}</span>
-                <span className="sm:hidden">{shortLabel}</span>
                 {activeTab === id && (
                   <motion.div
-                    layoutId="tab-underline"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
+                    layoutId="tab-active-pill"
+                    className="absolute inset-0 rounded-lg bg-card border border-border/50 shadow-md"
+                    transition={{ type: "spring", stiffness: 500, damping: 40, mass: 0.8 }}
                   />
                 )}
+                <Icon className="relative z-10 h-4 w-4 shrink-0" />
+                <span className="relative z-10 hidden sm:inline">{label}</span>
+                <span className="relative z-10 sm:hidden">{shortLabel}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Period selector — shared, sits below tabs */}
-        <div className="px-4 sm:px-6 py-3 border-t border-border/30 bg-background/60">
+        <div className="py-3 border-t border-border/20">
           <PeriodHeader
             quickPeriod={quickPeriod}
             setQuickPeriod={setQuickPeriod}
@@ -1556,7 +1557,7 @@ export default function ReportsPage() {
       </motion.div>
 
       {/* ── Tab content ───────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-6 max-w-[1600px] mx-auto space-y-6">
+      <div className="py-6 max-w-[1600px] mx-auto space-y-6">
         <AnimatePresence mode="wait">
           {activeTab === "overview" ? (
             <motion.div

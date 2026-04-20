@@ -47,11 +47,9 @@ export const navItems = [
   { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
 ];
 
-// ─── Shared nav link list (used in both desktop + mobile) ────────────────────
-
 interface NavLinksProps {
-  collapsed?: boolean;      // desktop-only concept
-  onNavigate?: () => void;  // called after clicking a link (mobile: close drawer)
+  collapsed?: boolean;
+  onNavigate?: () => void;
 }
 
 function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
@@ -76,7 +74,9 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
     }
 
     socket.on("notification", handleNotification);
-    return () => { socket.off("notification", handleNotification); };
+    return () => {
+      socket.off("notification", handleNotification);
+    };
   }, [userId, queryClient]);
 
   if (typeof window === "undefined") return null;
@@ -84,7 +84,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
-        const isActive = pathname === href || pathname.startsWith(`${href}/`);
+        const isActive = pathname === href || pathname.startsWith(href + "/");
         const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
         const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : 0;
         const showBadge = badgeCount > 0;
@@ -101,15 +101,22 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
               onNavigate?.();
             }}
             className={cn(
-              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
               isActive
-                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                ? "text-sidebar-primary-foreground"
                 : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
               !allowed && "opacity-50 cursor-not-allowed hidden",
             )}
           >
-            {/* Icon — with pulsing dot when collapsed and badge > 0 */}
-            <span className="relative shrink-0">
+            {isActive && (
+              <motion.div
+                layoutId="nav-active-pill"
+                className="absolute inset-0 rounded-lg bg-sidebar-primary shadow-sm"
+                transition={{ type: "spring", stiffness: 500, damping: 40, mass: 0.8 }}
+              />
+            )}
+
+            <span className="relative z-10 shrink-0">
               <Icon className="h-5 w-5" />
               {showBadge && collapsed && (
                 <motion.span
@@ -122,7 +129,6 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
               )}
             </span>
 
-            {/* Label + badge (expanded state) */}
             <AnimatePresence>
               {!collapsed && (
                 <motion.span
@@ -130,7 +136,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.15 }}
-                  className="flex flex-1 items-center justify-between whitespace-nowrap overflow-hidden"
+                  className="relative z-10 flex flex-1 items-center justify-between whitespace-nowrap overflow-hidden"
                 >
                   {label}
                   {showBadge && (
@@ -151,7 +157,6 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
         return (
           <Tooltip key={href}>
             <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
-            {/* Tooltip shows label + count when collapsed */}
             {collapsed && (
               <TooltipContent side="right">
                 <span className="flex items-center gap-1.5">
@@ -171,8 +176,6 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   );
 }
 
-// ─── Logo block (shared) ──────────────────────────────────────────────────────
-
 function Logo({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4 shrink-0">
@@ -188,9 +191,7 @@ function Logo({ collapsed = false }: { collapsed?: boolean }) {
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <p className="text-sm font-bold text-sidebar-foreground whitespace-nowrap">
-              Carlton CRM
-            </p>
+            <p className="text-sm font-bold text-sidebar-foreground whitespace-nowrap">Carlton CRM</p>
             <p className="text-xs text-muted-foreground whitespace-nowrap">Phase 4</p>
           </motion.div>
         )}
@@ -199,23 +200,76 @@ function Logo({ collapsed = false }: { collapsed?: boolean }) {
   );
 }
 
-// ─── Desktop Sidebar ──────────────────────────────────────────────────────────
+function UserProfileSection({ collapsed = false }: { collapsed?: boolean }) {
+  const { user } = useAuthStore();
+
+  const name: string = user?.name ?? "User";
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  const initials = parts.map((p) => p[0]).join("").toUpperCase() || "U";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const roleName: string = (user as any)?.role?.roleName ?? "User";
+
+  return (
+    <div className="border-t border-sidebar-border p-3 shrink-0">
+      <AnimatePresence mode="wait">
+        {collapsed ? (
+          <motion.div
+            key="avatar-only"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex justify-center py-1"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-sm">
+              {initials}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="profile-card"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.2 }}
+            className="rounded-xl border border-sidebar-border bg-sidebar-accent/40 p-3 space-y-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold shadow-sm">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight">
+                  {name}
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">
+                  {roleName}
+                </p>
+              </div>
+            </div>
+            <button className="w-full rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 active:scale-[0.98]">
+              Profile Manage
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function DesktopSidebar() {
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUiStore();
-  if (typeof window == undefined) return;
+  if (typeof window === "undefined") return null;
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside
         animate={{ width: sidebarCollapsed ? 72 : 260 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
-        className="relative hidden md:flex h-full flex-col border-r border-sidebar-border bg-sidebar overflow-hidden"
+        className="relative hidden md:flex h-full flex-col bg-sidebar overflow-hidden rounded-r-3xl shadow-[4px_0_32px_rgba(0,0,0,0.45)]"
       >
         <Logo collapsed={sidebarCollapsed} />
-
         <NavLinks collapsed={sidebarCollapsed} />
-
-        {/* Collapse toggle */}
+        <UserProfileSection collapsed={sidebarCollapsed} />
         <div className="border-t border-sidebar-border p-2 shrink-0">
           <button
             onClick={toggleSidebarCollapsed}
@@ -233,22 +287,15 @@ function DesktopSidebar() {
   );
 }
 
-// ─── Mobile Drawer ────────────────────────────────────────────────────────────
-
 function MobileDrawer() {
   const { mobileDrawerOpen, setMobileDrawerOpen } = useUiStore();
 
   return (
-    <Drawer
-      direction="left"
-      open={mobileDrawerOpen}
-      onOpenChange={setMobileDrawerOpen}
-    >
+    <Drawer direction="left" open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
       <DrawerContent
         hideHandle
         className="inset-x-auto inset-y-0 left-0 right-auto mt-0 h-full w-72 rounded-none rounded-r-xl border-l-0 border-r border-sidebar-border bg-sidebar pwa-safe-top flex flex-col"
       >
-        {/* Logo row + close button */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary">
@@ -267,16 +314,15 @@ function MobileDrawer() {
           </button>
         </div>
 
-        {/* Nav links — close drawer after navigating */}
         <TooltipProvider delayDuration={0}>
           <NavLinks onNavigate={() => setMobileDrawerOpen(false)} />
         </TooltipProvider>
+
+        <UserProfileSection />
       </DrawerContent>
     </Drawer>
   );
 }
-
-// ─── Combined export ──────────────────────────────────────────────────────────
 
 export function Sidebar() {
   return (
