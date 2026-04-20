@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Clock, CalendarClock, Check, Pencil, Trash2, AlarmClock,
@@ -390,14 +391,16 @@ function DeleteDialog({
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main page content ─────────────────────────────────────────────────────────
 
-export default function RemindersPage() {
+function RemindersPageContent() {
+  const sp     = useSearchParams();
+  const router = useRouter();
   const { data: all = [], isLoading, refetch, isFetching } = useMyReminders();
 
   const [editingId,    setEditingId]    = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; leadId: string } | null>(null);
-  const [filter,       setFilter]       = useState<"all" | "active" | "done">("active");
+  const [filter, setFilter] = useState<"all" | "active" | "done">(() => (sp.get("filter") as "all" | "active" | "done") ?? "active");
 
   const filtered = useMemo(() => {
     if (filter === "active") return all.filter((r) => !r.isDone);
@@ -416,6 +419,12 @@ export default function RemindersPage() {
 
   const activeCount  = all.filter((r) => !r.isDone).length;
   const overdueCount = all.filter((r) => !r.isDone && getReminderState(r.remindAt, false) === "overdue").length;
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filter !== "active") params.set("filter", filter);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [filter]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-10">
@@ -574,5 +583,17 @@ export default function RemindersPage() {
         onDeleted={() => setDeleteTarget(null)}
       />
     </div>
+  );
+}
+
+export default function RemindersPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <RemindersPageContent />
+    </Suspense>
   );
 }

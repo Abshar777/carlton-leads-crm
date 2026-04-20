@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -11,6 +12,7 @@ import {
   TrendingUp, Users, UsersRound, Target, Award,
   Calendar, RefreshCw, BarChart2, Activity, Layers,
   GitFork, IndianRupee, Trophy, ChevronDown, ChevronUp,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1429,18 +1431,31 @@ const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementTyp
   { id: "revenue",  label: "Revenue",        shortLabel: "Revenue",  icon: IndianRupee  },
 ];
 
-export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+function ReportsPageContent() {
+  const sp     = useSearchParams();
+  const router = useRouter();
+
+  const [activeTab, setActiveTab] = useState<Tab>(() => (sp.get("tab") as Tab) ?? "overview");
 
   // Shared period state — each tab inherits the same date range
-  const [quickPeriod, setQuickPeriod] = useState<QuickPeriod>("month");
-  const [customFrom,  setCustomFrom]  = useState("");
-  const [customTo,    setCustomTo]    = useState("");
+  const [quickPeriod, setQuickPeriod] = useState<QuickPeriod>(() => (sp.get("period") as QuickPeriod) ?? "month");
+  const [customFrom,  setCustomFrom]  = useState(() => sp.get("from") ?? "");
+  const [customTo,    setCustomTo]    = useState(() => sp.get("to") ?? "");
 
   const { from: dateFrom, to: dateTo } = useMemo(() => {
     if (quickPeriod === "custom") return { from: customFrom, to: customTo };
     return getQuickRange(quickPeriod) as { from: string; to: string };
   }, [quickPeriod, customFrom, customTo]);
+
+  // ── Sync state → URL ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeTab !== "overview") params.set("tab", activeTab);
+    if (quickPeriod !== "month") params.set("period", quickPeriod);
+    if (customFrom) params.set("from", customFrom);
+    if (customTo) params.set("to", customTo);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [activeTab, quickPeriod, customFrom, customTo]);
 
   // ── Smart-hide header on mobile scroll ─────────────────────────────────────
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -1598,5 +1613,17 @@ export default function ReportsPage() {
         </div> */}
       </div>
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <ReportsPageContent />
+    </Suspense>
   );
 }

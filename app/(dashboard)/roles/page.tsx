@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Plus, Search, Pencil, Trash2, Loader2, Shield, Lock, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,17 +39,31 @@ function PermissionSummary({ permissions }: { permissions: PermissionsMap }) {
   );
 }
 
-export default function RolesPage() {
+function RolesPageContent() {
   const { hasPermission } = useAuthStore();
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [sortField, setSortField] = useState<"createdAt" | "roleName">("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const sp     = useSearchParams();
+  const router = useRouter();
 
-  const params = useMemo(() => {
+  const [search, setSearch]       = useState(() => sp.get("q") ?? "");
+  const [page, setPage]           = useState(() => Number(sp.get("page") ?? "1"));
+  const [sortField, setSortField] = useState<"createdAt" | "roleName">(() => (sp.get("sortBy") as "createdAt" | "roleName") ?? "createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => (sp.get("sortOrder") as "asc" | "desc") ?? "desc");
+
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [dialogOpen, setDialogOpen]     = useState(false);
+  const [deleteOpen, setDeleteOpen]     = useState(false);
+
+  // ── Sync state → URL ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (page > 1) params.set("page", String(page));
+    if (sortField !== "createdAt") params.set("sortBy", sortField);
+    if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [search, page, sortField, sortOrder]);
+
+  const queryParams = useMemo(() => {
     const p: Record<string, string> = {
       page: String(page),
       limit: "10",
@@ -59,7 +74,7 @@ export default function RolesPage() {
     return p;
   }, [page, search, sortField, sortOrder]);
 
-  const { data, isLoading, isFetching } = useRoles(params);
+  const { data, isLoading, isFetching } = useRoles(queryParams);
 
   const roles = data?.data ?? [];
   const pagination = data?.pagination;
@@ -295,5 +310,17 @@ export default function RolesPage() {
         role={selectedRole}
       />
     </div>
+  );
+}
+
+export default function RolesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <RolesPageContent />
+    </Suspense>
   );
 }
