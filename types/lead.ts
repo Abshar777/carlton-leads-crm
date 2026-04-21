@@ -81,6 +81,7 @@ export interface Lead {
   payments: Payment[];
   activityLogs: ActivityLog[];
   callNotConnected?: number;
+  callCount?: number;
   createdAt: string;
   updatedAt: string;
 }

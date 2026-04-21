@@ -509,11 +509,12 @@ function LeadPreviewBody({
             }) + " IST"}
           />
         )}
-        <div className="grid grid-cols-3 gap-2 pt-1">
+        <div className="grid grid-cols-4 gap-2 pt-1">
           {[
             { icon: StickyNote, label: "Notes",     value: lead.notes?.length ?? 0,    color: "text-blue-400"   },
             { icon: Bell,       label: "Reminders", value: lead.reminders?.length ?? 0, color: "text-violet-400" },
             { icon: PhoneOff,   label: "CNC",       value: lead.callNotConnected ?? 0,  color: "text-orange-400" },
+            { icon: Phone,      label: "Calls",     value: lead.callCount ?? 0,         color: "text-sky-400"    },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} className="flex flex-col items-center gap-1 rounded-xl border border-border/40 bg-muted/20 py-2.5">
               <Icon className={`h-4 w-4 ${color}`} />
@@ -695,12 +696,20 @@ function KanbanCard({
               </button>
             </div>
           ) : (
-            cncCount > 0 && (
-              <div className="flex items-center gap-0.5 shrink-0">
-                <PhoneOff className="h-3 w-3 text-orange-400" />
-                <span className="text-[11px] font-bold text-orange-400">{cncCount}</span>
-              </div>
-            )
+            <div className="flex items-center gap-2 shrink-0">
+              {cncCount > 0 && (
+                <div className="flex items-center gap-0.5">
+                  <PhoneOff className="h-3 w-3 text-orange-400" />
+                  <span className="text-[11px] font-bold text-orange-400">{cncCount}</span>
+                </div>
+              )}
+              {(lead.callCount ?? 0) > 0 && (
+                <div className="flex items-center gap-0.5">
+                  <Phone className="h-3 w-3 text-sky-400" />
+                  <span className="text-[11px] font-bold text-sky-400">{lead.callCount}</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
