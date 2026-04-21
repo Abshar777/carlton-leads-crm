@@ -12,6 +12,8 @@ import type {
   RevenueOverview,
   RevenueTimelineReport,
   RevenueTeamDetail,
+  SourceAnalyticsItem,
+  CampaignBreakdownItem,
 } from "@/types/reports";
 
 interface ApiResponse<T> {
@@ -154,6 +156,42 @@ export function useRevenueTimeline(
       );
       return data.data;
     },
+    staleTime: 60_000,
+  });
+}
+
+// ── Source Analytics ──────────────────────────────────────────────────────────
+
+export function useSourceAnalytics(dateFrom: string, dateTo: string, teamId?: string) {
+  return useQuery<SourceAnalyticsItem[]>({
+    queryKey: ["reports", "sources", dateFrom, dateTo, teamId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      if (teamId)   params.set("team",     teamId);
+      const { data } = await api.get<ApiResponse<SourceAnalyticsItem[]>>(
+        `/reports/sources?${params}`,
+      );
+      return data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useCampaignBreakdown(source: string, dateFrom: string, dateTo: string) {
+  return useQuery<CampaignBreakdownItem[]>({
+    queryKey: ["reports", "sources", source, "campaigns", dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const { data } = await api.get<ApiResponse<CampaignBreakdownItem[]>>(
+        `/reports/sources/${encodeURIComponent(source)}/campaigns?${params}`,
+      );
+      return data.data;
+    },
+    enabled: !!source,
     staleTime: 60_000,
   });
 }

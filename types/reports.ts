@@ -249,6 +249,30 @@ export interface TeamRevenueTimelineReport {
   timeline: TeamRevenueTimelinePoint[];
 }
 
+// ── Source Analytics ──────────────────────────────────────────────────────────
+
+export interface SourceAnalyticsItem {
+  source:         string;
+  total:          number;
+  closed:         number;
+  booking:        number;
+  partialbooking: number;
+  revenue:        number;
+  conversionRate: number;
+  bookingRate:    number;
+}
+
+export interface CampaignBreakdownItem {
+  campaignId:     string;
+  total:          number;
+  closed:         number;
+  booking:        number;
+  partialbooking: number;
+  revenue:        number;
+  conversionRate: number;
+  bookingRate:    number;
+}
+
 // ── Filter state ──────────────────────────────────────────────────────────────
 
 export interface ReportFilters {
