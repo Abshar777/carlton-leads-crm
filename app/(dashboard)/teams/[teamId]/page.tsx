@@ -1468,7 +1468,100 @@ function LeadsTab({
               <p className="text-muted-foreground">No leads found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Mobile cards (< sm) */}
+              <div className="sm:hidden divide-y divide-border">
+                <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/20">
+                  <Checkbox
+                    checked={leads.length > 0 && leads.every((l) => selectedIds.has(l._id))}
+                    onCheckedChange={() => toggleAll(leads.map((l) => l._id))}
+                    aria-label="Select all"
+                  />
+                  <span className="text-xs text-muted-foreground font-medium">Select all on this page</span>
+                </div>
+                <AnimatePresence>
+                  {leads.map((lead, i) => {
+                    const assignedMember = lead.assignedTo && typeof lead.assignedTo === "object" ? (lead.assignedTo as User) : null;
+                    return (
+                      <motion.div
+                        key={lead._id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ delay: i * 0.025 }}
+                        className={`px-4 py-3 transition-colors ${selectedIds.has(lead._id) ? "bg-primary/5" : ""}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedIds.has(lead._id)}
+                            onCheckedChange={() => toggleId(lead._id)}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Select lead"
+                            className="mt-0.5 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <p className="font-medium text-sm truncate">{lead.name}</p>
+                              <StatusBadge status={lead.status} />
+                            </div>
+                            {lead.email && (
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                                <Mail className="h-3 w-3 shrink-0" />{lead.email}
+                              </p>
+                            )}
+                            {lead.phone && (
+                              <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                                <Phone className="h-3 w-3 shrink-0" />{lead.phone}
+                              </p>
+                            )}
+                            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                              {assignedMember ? (
+                                <span className="text-[11px] text-muted-foreground">{assignedMember.name}</span>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground/50 italic">Unassigned</span>
+                              )}
+                              {lead.source && (
+                                <span className="text-[11px] text-muted-foreground/60 capitalize">{lead.source}</span>
+                              )}
+                              <span className="text-[11px] text-muted-foreground/50 flex items-center gap-0.5">
+                                <Calendar className="h-2.5 w-2.5" />{formatDate(lead.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                              <Link href={`/leads/${lead._id}`}><ExternalLink className="h-4 w-4" /></Link>
+                            </Button>
+                            {canActOnLead(lead) && (
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                                onClick={() => setAssigningLeadId(lead._id)}
+                                title="Assign to member"
+                              >
+                                <UserCheck className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isLeaderOrAdmin && (
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-8 w-8 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                                onClick={() => setTransferLeadId(lead._id)}
+                                title="Transfer team"
+                              >
+                                <ArrowRightLeft className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+
+              {/* Desktop table (≥ sm) */}
+              <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -1727,7 +1820,8 @@ function LeadsTab({
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
 
           {/* Pagination */}
