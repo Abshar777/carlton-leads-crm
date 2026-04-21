@@ -1,5 +1,12 @@
 import type { User } from "@/types";
 
+export interface TeamSettings {
+  autoAssign: boolean;
+  splitMode: "round_robin" | "equal_load";
+  roundRobinIndex: number;
+  includedMembers: string[];
+}
+
 export interface Team {
   _id: string;
   name: string;
@@ -9,6 +16,7 @@ export interface Team {
   status: "active" | "inactive";
   /** Member IDs excluded from auto-assignment within this team (team-scoped) */
   inactiveMembers: string[];
+  settings?: TeamSettings;
   leadStats?: {
     teamId: string;
     total: number;

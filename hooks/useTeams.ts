@@ -6,7 +6,7 @@ import type { ApiResponse, PaginationMeta } from "@/types";
 import type { Lead, LeadFilters } from "@/types/lead";
 import type {
   Team, TeamFilters, TeamMemberStat, TeamAutoAssignResult,
-  TeamDashboard, TeamLog, TeamUpdateItem, TeamReminderItem,
+  TeamDashboard, TeamLog, TeamUpdateItem, TeamReminderItem, TeamSettings,
 } from "@/types/team";
 import type {
   RevenuePeriod,
@@ -522,3 +522,35 @@ export const useTeamReminders = (teamId: string, filters: TeamRemindersFilters =
     enabled: !!teamId,
     staleTime: 30_000,
   });
+
+// ─── Team Settings ────────────────────────────────────────────────────────────
+export const useTeamSettings = (teamId: string) => {
+  return useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "settings"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<TeamSettings>>(`/teams/${teamId}/settings`);
+      return res.data.data as TeamSettings;
+    },
+    enabled: !!teamId,
+    staleTime: 30_000,
+  });
+};
+
+export const useUpdateTeamSettings = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: { autoAssign: boolean; splitMode: "round_robin" | "equal_load"; includedMembers: string[] }) => {
+      const res = await api.patch<ApiResponse<TeamSettings>>(`/teams/${teamId}/settings`, settings);
+      return res.data.data as TeamSettings;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...TEAMS_KEY, teamId, "settings"] });
+      queryClient.invalidateQueries({ queryKey: [...TEAMS_KEY, teamId] });
+      toast.success("Team settings saved");
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to save settings";
+      toast.error(msg);
+    },
+  });
+};
