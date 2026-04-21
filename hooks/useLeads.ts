@@ -331,7 +331,6 @@ export const useDeleteLeadNote = () => {
 };
 
 // ─── Call Not Connected ───────────────────────────────────────────────────────
-
 export const useUpdateCallNotConnected = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -344,7 +343,11 @@ export const useUpdateCallNotConnected = () => {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
+      queryClient.invalidateQueries({ queryKey: LEADS_KEY ,exact:false});
     },
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to update call count")),
+  
+      
   });
 };
+

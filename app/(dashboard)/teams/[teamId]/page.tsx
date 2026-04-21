@@ -58,6 +58,8 @@ import {
   ChevronDown,
   ChevronUp,
   Award,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +68,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import {
   Select,
   SelectContent,
@@ -1014,14 +1017,17 @@ function LeadsTab({
   onAutoAssign: () => void;
   assigning: boolean;
 }) {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [reporterFilter, setReporterFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
-  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const sp = useSearchParams();
+  const router = useRouter();
+  const [search, setSearch] = useState(() => sp.get("lq") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(() => sp.get("lq") ?? "");
+  const [statusFilter, setStatusFilter] = useState<string>(() => sp.get("lstatus") ?? "all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(() => sp.get("lassignee") ?? "all");
+  const [reporterFilter, setReporterFilter] = useState<string>(() => sp.get("lreporter") ?? "all");
+  const [dateFrom, setDateFrom] = useState<string>(() => sp.get("ldateFrom") ?? "");
+  const [dateTo, setDateTo] = useState<string>(() => sp.get("ldateTo") ?? "");
+  const [unassignedOnly, setUnassignedOnly] = useState(() => sp.get("lunassigned") === "1");
+  const [viewMode, setViewMode] = useState<"table" | "kanban">(() => sp.get("lview") === "kanban" ? "kanban" : "table");
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
@@ -1031,8 +1037,12 @@ function LeadsTab({
     else { setDateFrom(today); setDateTo(today); }
     setPage(1);
   }
-  const [showFilters, setShowFilters] = useState(false);
-  const [page, setPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(() =>
+    ["lstatus", "lassignee", "lreporter", "ldateFrom", "ldateTo"].some((k) => {
+      const v = sp.get(k); return !!v && v !== "all";
+    })
+  );
+  const [page, setPage] = useState(() => Number(sp.get("lpage") ?? "1"));
   const [limit, setLimit] = useState(10);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
@@ -1066,15 +1076,34 @@ function LeadsTab({
     );
   }
 
-  // Debounce search input
-  useEffect(() => {
+  // Debounce search — event-handler based, never fires on mount
+  function handleSearchChange(val: string) {
+    setSearch(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search]);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(val);
+      setPage(1);
+    }, 400);
+  }
 
   // Clear selection when filters change
   useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, statusFilter, assigneeFilter, reporterFilter, dateFrom, dateTo, unassignedOnly]);
+
+  // Sync filters to URL (prefixed with "l" to avoid conflict with tab param)
+  useEffect(() => {
+    const params = new URLSearchParams(sp.toString());
+    if (debouncedSearch) params.set("lq", debouncedSearch); else params.delete("lq");
+    if (statusFilter !== "all") params.set("lstatus", statusFilter); else params.delete("lstatus");
+    if (assigneeFilter !== "all") params.set("lassignee", assigneeFilter); else params.delete("lassignee");
+    if (reporterFilter !== "all") params.set("lreporter", reporterFilter); else params.delete("lreporter");
+    if (dateFrom) params.set("ldateFrom", dateFrom); else params.delete("ldateFrom");
+    if (dateTo) params.set("ldateTo", dateTo); else params.delete("ldateTo");
+    if (unassignedOnly) params.set("lunassigned", "1"); else params.delete("lunassigned");
+    if (page > 1) params.set("lpage", String(page)); else params.delete("lpage");
+    if (viewMode !== "table") params.set("lview", viewMode); else params.delete("lview");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, statusFilter, assigneeFilter, reporterFilter, dateFrom, dateTo, unassignedOnly, page, viewMode]);
 
   function applyFilter(setter: (v: string) => void, value: string) {
     setter(value);
@@ -1186,11 +1215,11 @@ function LeadsTab({
                 placeholder="Search by name, email, phone…"
                 className="pl-9"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
               {search && (
                 <button
-                  onClick={() => { setSearch(""); setDebouncedSearch(""); setPage(1); }}
+                  onClick={() => { setSearch(""); setDebouncedSearch(""); setPage(1); if (debounceRef.current) clearTimeout(debounceRef.current); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -1233,6 +1262,23 @@ function LeadsTab({
                   Auto-assign
                 </Button>
               )}
+              {/* View mode toggle */}
+              <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`flex h-8 w-8 items-center justify-center transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  title="Table view"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  className={`flex h-8 w-8 items-center justify-center transition-colors ${viewMode === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  title="Kanban view"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1395,6 +1441,7 @@ function LeadsTab({
       </Card>
 
       {/* Table */}
+      {viewMode === "table" && (
       <Card className="border-border/50">
         <CardHeader className="pb-3 px-6 pt-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -1736,6 +1783,29 @@ function LeadsTab({
           )}
         </CardContent>
       </Card>
+      )}
+
+      {/* Kanban view */}
+      {viewMode === "kanban" && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <KanbanBoard
+            filters={{
+              team: teamId,
+              search: debouncedSearch || undefined,
+              status: statusFilter !== "all" ? (statusFilter as LeadStatus) : undefined,
+              assignedTo: assigneeFilter !== "all" ? assigneeFilter : undefined,
+              dateFrom: dateFrom || undefined,
+              dateTo: dateTo || undefined,
+              unassignedOnly: unassignedOnly || undefined,
+            }}
+            canEdit={!!isLeaderOrAdmin}
+          />
+        </motion.div>
+      )}
 
       {/* ── Bulk: Assign to Member ────────────────────────────────────────────── */}
       <ResponsiveDialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>

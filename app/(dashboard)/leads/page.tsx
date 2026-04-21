@@ -216,15 +216,15 @@ function LeadsPageContent() {
     });
   }, []);
 
-  // Debounce search → sends to backend
-  useEffect(() => {
+  // Debounce search — event-handler based, never fires on mount
+  function handleSearchChange(val: string) {
+    setSearch(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(search);
+      setDebouncedSearch(val);
       setPage(1);
     }, 400);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search]);
+  }
 
   // Reset page when any filter changes
   function applyFilter(setter: (v: string) => void, value: string) {
@@ -379,11 +379,11 @@ function LeadsPageContent() {
                   placeholder="Search by name, email, phone…"
                   className="pl-9"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                 />
                 {search && (
                   <button
-                    onClick={() => setSearch("")}
+                    onClick={() => { setSearch(""); setDebouncedSearch(""); setPage(1); if (debounceRef.current) clearTimeout(debounceRef.current); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-3.5 w-3.5" />

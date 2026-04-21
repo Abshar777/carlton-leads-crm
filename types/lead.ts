@@ -98,6 +98,7 @@ export interface LeadFilters {
   dateFrom?: string;
   /** YYYY-MM-DD — leads created on or before this date */
   dateTo?: string;
+  unassignedOnly?: boolean;
 }
 
 export interface LeadStats {

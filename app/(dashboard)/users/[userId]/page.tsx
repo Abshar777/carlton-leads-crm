@@ -9,6 +9,7 @@ import {
   TrendingUp, Search, Mail, Phone, Shield, Calendar,
   Activity, StickyNote, ExternalLink, PhoneMissed,
   BookMarked, Sparkles, Star, Filter, X as XIcon,
+  LayoutGrid, List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import { useUserLeads, useUserLeadStats } from "@/hooks/useLeads";
 import { formatDate, getInitials } from "@/lib/utils";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import { LeadsDateFilter, TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import type { LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
 import Link from "next/link";
@@ -91,6 +93,7 @@ export default function UserDetailPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
@@ -474,6 +477,23 @@ export default function UserDetailPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* View mode toggle */}
+                <div className="flex items-center rounded-lg border border-border overflow-hidden shrink-0">
+                  <button
+                    onClick={() => setViewMode("table")}
+                    className={`flex h-8 w-8 items-center justify-center transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    title="Table view"
+                  >
+                    <List className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("kanban")}
+                    className={`flex h-8 w-8 items-center justify-center transition-colors ${viewMode === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    title="Kanban view"
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -507,7 +527,18 @@ export default function UserDetailPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {leadsLoading ? (
+            {viewMode === "kanban" ? (
+              <KanbanBoard
+                filters={{
+                  assignedTo: userId,
+                  status: statusFilter !== "all" ? (statusFilter as LeadStatus) : undefined,
+                  search: search || undefined,
+                  dateFrom: dateFrom || undefined,
+                  dateTo: dateTo || undefined,
+                }}
+                canEdit={false}
+              />
+            ) : leadsLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
@@ -602,7 +633,7 @@ export default function UserDetailPage() {
             )}
 
             {/* Pagination */}
-            {pagination && pagination.totalPages >= 1 && (
+            {viewMode !== "kanban" && pagination && pagination.totalPages >= 1 && (
               <div className="flex items-center justify-between border-t border-border px-6 py-4 flex-wrap gap-2">
                 <div className="flex items-center gap-3">
                   <p className="text-sm text-muted-foreground">
