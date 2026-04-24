@@ -161,11 +161,22 @@ export const useDeleteLead = () => {
 export const useUploadLeads = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, teamIds }: { file: File; teamIds?: string[] }) => {
+    mutationFn: async ({
+      file,
+      teamIds,
+      memberOverrides,
+    }: {
+      file: File;
+      teamIds?: string[];
+      memberOverrides?: Record<string, string[]>;
+    }) => {
       const formData = new FormData();
       formData.append("file", file);
       if (teamIds !== undefined) {
         formData.append("teamIds", JSON.stringify(teamIds));
+      }
+      if (memberOverrides !== undefined) {
+        formData.append("memberOverrides", JSON.stringify(memberOverrides));
       }
       const response = await api.post<ApiResponse<UploadLeadsResult>>("/leads/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },

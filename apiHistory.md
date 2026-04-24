@@ -251,9 +251,12 @@ Axios instance: `frontend/lib/axios.ts` — auto-attaches `Authorization: Bearer
 - **Auth Required**: Yes
 - **Permission**: `leads:create`
 
-**Request**: `multipart/form-data` with `file` field (CSV/XLSX)
+**Request**: `multipart/form-data`
+- `file` — CSV/XLSX file (required)
+- `teamIds` — JSON string of team ID array, e.g. `'["teamId1","teamId2"]'`
+- `memberOverrides` — JSON string of `Record<string, string[]>`, maps teamId → selected member IDs, e.g. `'{"teamId1":["userId1","userId2"]}'`
 
-**Response**: `{ "data": { "created": number, "failed": number, "errors": string[] } }`
+**Response**: `{ "data": { "total": number, "created": number, "assigned": number, "invalid": number, "invalidRows": InvalidRow[] } }`
 
 **Used By**:
 | Component | Page |
@@ -261,6 +264,10 @@ Axios instance: `frontend/lib/axios.ts` — auto-attaches `Authorization: Bearer
 | `app/(dashboard)/leads/upload/page.tsx` (direct) | `app/(dashboard)/leads/upload/page.tsx` |
 
 **Notes**:
+- `memberOverrides` controls which team members participate in auto-split for this specific upload
+- Empty override array `[]` for a team → falls back to team's saved `includedMembers`
+- Malformed `memberOverrides` JSON is silently ignored (server tries JSON.parse, catches error)
+- BDE users see only their own team and only themselves in the member selector
 - `notes` field must be array `[{ content, author }]` — not a plain object (see `mistakes.md`)
 - `"No Email"` and invalid emails should be sent as `undefined`
 

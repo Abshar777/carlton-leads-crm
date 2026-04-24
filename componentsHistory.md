@@ -982,3 +982,21 @@
 **Used in:** `app/(dashboard)/teams/[teamId]/page.tsx` — "Reminders" tab (leader/admin only)
 **Hook:** `useTeamReminders(teamId, filters)` from `hooks/useTeams.ts`
 **Features:** Search (debounced 400ms), member filter, isDone filter (pending/done), pagination (20/page), overdue badge, Framer Motion stagger list.
+
+---
+
+## MemberSelector (added 2026-04-24)
+
+**File:** `app/(dashboard)/leads/upload/page.tsx` (inline sub-component)
+**Props:** `teamId: string`, `members: TeamMember[]`, `inactiveMembers: string[]`, `selected: Set<string>`, `locked?: boolean`, `lockedIds?: string[]`, `onChange: (id: string) => void`
+**Used in:** `TeamMemberSelector` → upload page
+**Purpose:** Renders member pills with checkboxes. Locked mode (BDE): members can't be deselected. Inactive members shown greyed/disabled. "All/None" quick actions for admins.
+
+---
+
+## TeamMemberSelector (added 2026-04-24)
+
+**File:** `app/(dashboard)/leads/upload/page.tsx` (inline sub-component)
+**Props:** `teams: Team[]`, `selectedTeamIds: Set<string>`, `selectedMemberIds: Record<string, Set<string>>`, `lockedTeamId?: string | null`, `lockedMemberId?: string | null`, `onToggleTeam: (id: string) => void`, `onToggleMember: (teamId: string, memberId: string) => void`, `onSetAllMembers: (teamId: string, all: boolean) => void`
+**Used in:** upload page
+**Purpose:** Vertical list of team rows, each expands to show `MemberSelector`. BDE sees only their team (locked, non-removable). Admins can toggle any team + any member. Framer Motion AnimatePresence for expand/collapse.

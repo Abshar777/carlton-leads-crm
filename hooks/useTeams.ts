@@ -39,9 +39,10 @@ export const useMyTeam = () => {
   });
 };
 
-export const useTeams = (filters?: TeamFilters) => {
+export const useTeams = (filters?: TeamFilters, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: [...TEAMS_KEY, filters],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (filters?.page)   params.page   = String(filters.page);
