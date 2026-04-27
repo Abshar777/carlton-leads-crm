@@ -379,3 +379,34 @@ export const useUpdateCallCount = () => {
   });
 };
 
+// ─── Call Log ─────────────────────────────────────────────────────────────────
+export const useAddCallLog = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      leadId,
+      outcome,
+      duration,
+      notes,
+    }: {
+      leadId: string;
+      outcome: "connected" | "not_connected" | "voicemail";
+      duration: number;
+      notes?: string;
+    }) => {
+      const response = await api.post<ApiResponse<unknown>>(`/leads/${leadId}/call-log`, {
+        outcome,
+        duration,
+        notes,
+      });
+      return response.data.data!;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.leadId] });
+      queryClient.invalidateQueries({ queryKey: LEADS_KEY, exact: false });
+      toast.success("Call logged");
+    },
+    onError: (error: unknown) => toast.error(errMsg(error, "Failed to log call")),
+  });
+};
+

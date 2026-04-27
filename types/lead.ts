@@ -80,12 +80,22 @@ export interface Lead {
   reminders: Reminder[];
   payments: Payment[];
   activityLogs: ActivityLog[];
+  callLogs: CallLog[];
   callNotConnected?: number;
   callCount?: number;
   platform?: string;
   campaign?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CallLog {
+  _id: string;
+  calledAt: string;
+  duration: number; // seconds
+  outcome: "connected" | "not_connected" | "voicemail";
+  notes?: string;
+  calledBy: User | string;
 }
 
 export interface LeadFilters {

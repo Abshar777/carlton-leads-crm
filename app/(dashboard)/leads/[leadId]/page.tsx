@@ -8,7 +8,7 @@ import {
   RefreshCw, StickyNote, Send, Pencil, Trash2, CheckCheck,
   X, ChevronDown, Activity, Clock, UserCheck, FilePlus2,
   MessageSquarePlus, PencilLine, Minus, UsersRound, ArrowRightLeft, BookOpen,
-  PhoneOff, Plus,
+  PhoneOff, Plus, PhoneCall, PhoneMissed, Voicemail, Timer, History,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,12 +30,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useLead, useUpdateLeadStatus, useAssignLead, useAddLeadNote, useUpdateLeadNote, useDeleteLeadNote, useUpdateLead, useAssignLeadToTeam, useTransferLeadToTeam, useUpdateCallNotConnected, useUpdateCallCount } from "@/hooks/useLeads";
+import { useLead, useUpdateLeadStatus, useAssignLead, useAddLeadNote, useUpdateLeadNote, useDeleteLeadNote, useUpdateLead, useAssignLeadToTeam, useTransferLeadToTeam, useUpdateCallNotConnected, useUpdateCallCount, useAddCallLog } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate, getInitials } from "@/lib/utils";
-import type { LeadStatus, LeadNote, ActivityLog, ActivityAction } from "@/types/lead";
+import type { LeadStatus, LeadNote, ActivityLog, ActivityAction, CallLog } from "@/types/lead";
 import type { Course } from "@/types/course";
 import type { User } from "@/types";
 import type { Team } from "@/types/team";
@@ -71,7 +71,146 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; color: st
   note_added: { icon: MessageSquarePlus, color: "text-green-400", bg: "bg-green-500/15" },
   note_updated: { icon: PencilLine, color: "text-cyan-400", bg: "bg-cyan-500/15" },
   note_deleted: { icon: Minus, color: "text-red-400", bg: "bg-red-500/15" },
+  call_made: { icon: PhoneCall, color: "text-emerald-400", bg: "bg-emerald-500/15" },
 };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+// ─── Call Log Sheet ───────────────────────────────────────────────────────────
+
+interface CallLogSheetProps {
+  leadId: string;
+  phone: string;
+  durationSecs: number;
+  onClose: () => void;
+}
+
+function CallLogSheet({ leadId, phone, durationSecs, onClose }: CallLogSheetProps) {
+  const [outcome, setOutcome] = useState<"connected" | "not_connected" | "voicemail">("connected");
+  const [notes, setNotes] = useState("");
+  const [manualDuration, setManualDuration] = useState(durationSecs);
+  const { mutate: addCallLog, isPending } = useAddCallLog();
+
+  const outcomes = [
+    { value: "connected",     label: "Connected",     icon: PhoneCall,  color: "text-green-400",  border: "border-green-500/40 bg-green-500/10" },
+    { value: "not_connected", label: "Not Connected", icon: PhoneMissed, color: "text-red-400",   border: "border-red-500/40 bg-red-500/10" },
+    { value: "voicemail",     label: "Voicemail",     icon: Voicemail,  color: "text-amber-400",  border: "border-amber-500/40 bg-amber-500/10" },
+  ] as const;
+
+  function handleSubmit() {
+    addCallLog(
+      { leadId, outcome, duration: manualDuration, notes: notes.trim() || undefined },
+      { onSuccess: onClose },
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 380 }}
+        className="w-full max-w-lg rounded-t-2xl bg-card border-t border-border shadow-2xl p-5 space-y-5"
+      >
+        {/* Handle */}
+        <div className="flex justify-center">
+          <div className="h-1 w-10 rounded-full bg-border" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-base font-semibold text-foreground">Log Call</p>
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono">{phone}</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Duration */}
+        <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 p-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Timer className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground mb-1">Duration (seconds)</p>
+            <input
+              type="number"
+              min={0}
+              value={manualDuration}
+              onChange={(e) => setManualDuration(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-full bg-transparent text-sm font-semibold text-foreground outline-none"
+            />
+          </div>
+          <span className="text-sm font-medium text-muted-foreground">{formatDuration(manualDuration)}</span>
+        </div>
+
+        {/* Outcome selection */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">How did the call go?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {outcomes.map((o) => {
+              const Icon = o.icon;
+              const isSelected = outcome === o.value;
+              return (
+                <motion.button
+                  key={o.value}
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setOutcome(o.value)}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all text-xs font-medium
+                    ${isSelected ? o.border : "border-border/40 bg-card text-muted-foreground hover:border-border"}`}
+                >
+                  <Icon className={`h-5 w-5 ${isSelected ? o.color : "text-muted-foreground"}`} />
+                  <span className={isSelected ? o.color : ""}>{o.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">Notes (optional)</p>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="What was discussed?"
+            maxLength={500}
+            rows={2}
+            className="w-full resize-none rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 transition-colors"
+          />
+        </div>
+
+        {/* Submit */}
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={handleSubmit}
+          disabled={isPending}
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50 transition-opacity"
+        >
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+          {isPending ? "Saving…" : "Save Call Log"}
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 const noteSchema = z.object({ content: z.string().min(1, "Note cannot be empty").max(2000) });
 type NoteForm = z.infer<typeof noteSchema>;
@@ -445,6 +584,32 @@ export default function LeadDetailPage() {
   const transferToTeam = useTransferLeadToTeam();
   const callNotConnected = useUpdateCallNotConnected();
   const callCount = useUpdateCallCount();
+  const addCallLog = useAddCallLog();
+
+  // ── Call tracking state ───────────────────────────────────────────────────
+  const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
+  const [showCallSheet, setShowCallSheet] = useState(false);
+  const [callElapsed, setCallElapsed] = useState(0);
+
+  // When user returns to the tab after a call, show the log sheet
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && callStartedAt !== null) {
+        const elapsed = Math.round((Date.now() - callStartedAt) / 1000);
+        setCallElapsed(elapsed);
+        setShowCallSheet(true);
+        setCallStartedAt(null);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [callStartedAt]);
+
+  function handleCallClick() {
+    if (!lead?.phone) return;
+    setCallStartedAt(Date.now());
+    window.location.href = `tel:${lead.phone}`;
+  }
 
   const canEdit = hasPermission("leads", "edit");
   const currentUserId = authUser?._id ?? "";
@@ -541,7 +706,30 @@ export default function LeadDetailPage() {
 
               <CardContent className="space-y-4">
                 <InfoRow icon={Mail} label="Email" value={lead.email} />
-                <InfoRow icon={Phone} label="Phone" value={lead.phone} />
+
+                {/* Phone — tap to call */}
+                {lead.phone && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-md bg-muted/50 p-1.5">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium font-mono">{lead.phone}</span>
+                        <motion.button
+                          whileTap={{ scale: 0.93 }}
+                          onClick={handleCallClick}
+                          className="flex items-center gap-1.5 rounded-lg bg-green-500/15 border border-green-500/30 px-2.5 py-1 text-xs font-semibold text-green-400 hover:bg-green-500/25 transition-colors"
+                        >
+                          <PhoneCall className="h-3.5 w-3.5" />
+                          Call
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <InfoRow icon={Globe} label="Source" value={lead.source} />
 
                 {/* Assigned To */}
@@ -923,6 +1111,69 @@ export default function LeadDetailPage() {
             reminders={lead.reminders ?? []}
             canEdit={canEdit}
           />
+
+          {/* ── Call History ──────────────────────────────────────────── */}
+          {(lead.callLogs ?? []).length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <History className="h-4 w-4 text-primary" />
+                    Call History
+                    <span className="ml-auto text-xs font-normal text-muted-foreground">
+                      {(lead.callLogs ?? []).length} call{(lead.callLogs ?? []).length !== 1 ? "s" : ""}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {[...(lead.callLogs ?? [])].reverse().map((log: CallLog, i) => {
+                    const isConnected = log.outcome === "connected";
+                    const isVoicemail = log.outcome === "voicemail";
+                    const Icon = isConnected ? PhoneCall : isVoicemail ? Voicemail : PhoneMissed;
+                    const color = isConnected ? "text-green-400" : isVoicemail ? "text-amber-400" : "text-red-400";
+                    const bg = isConnected ? "bg-green-500/10 border-green-500/20" : isVoicemail ? "bg-amber-500/10 border-amber-500/20" : "bg-red-500/10 border-red-500/20";
+                    const callerName = typeof log.calledBy === "object"
+                      ? (log.calledBy as { name: string }).name
+                      : "Unknown";
+                    return (
+                      <motion.div
+                        key={log._id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className={`flex items-start gap-3 rounded-xl border p-3 ${bg}`}
+                      >
+                        <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${bg}`}>
+                          <Icon className={`h-3.5 w-3.5 ${color}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-xs font-semibold capitalize ${color}`}>
+                              {log.outcome.replace("_", " ")}
+                            </span>
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              {formatDuration(log.duration)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            by {callerName} · {new Date(log.calledAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true })}
+                          </p>
+                          {log.notes && (
+                            <p className="text-xs text-foreground/80 mt-1 italic">&ldquo;{log.notes}&rdquo;</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* <AiChatPanel contextType="lead" contextId={lead._id} /> */}
         </motion.div>
       </div>
@@ -934,6 +1185,18 @@ export default function LeadDetailPage() {
         lead={lead}
         mode="edit"
       />
+
+      {/* Call Log Sheet */}
+      <AnimatePresence>
+        {showCallSheet && lead.phone && (
+          <CallLogSheet
+            leadId={lead._id}
+            phone={lead.phone}
+            durationSecs={callElapsed}
+            onClose={() => setShowCallSheet(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
