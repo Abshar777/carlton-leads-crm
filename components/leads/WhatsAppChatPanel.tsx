@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Send, Loader2, Wifi, WifiOff, User, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -75,13 +75,7 @@ export function WhatsAppChatPanel({ phone, leadName }: WhatsAppChatPanelProps) {
   const { mutate: sendMsg, isPending }       = useSendWAMessage(phone);
   const { mutate: markRead }                 = useMarkWARead(phone);
 
-  const [input, setInput]   = useState("");
-  const bottomRef           = useRef<HTMLDivElement>(null);
-
-  // Auto scroll
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const [input, setInput] = useState("");
 
   // Mark as read on open
   useEffect(() => {
@@ -169,7 +163,6 @@ export function WhatsAppChatPanel({ phone, leadName }: WhatsAppChatPanelProps) {
             ))}
           </>
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}

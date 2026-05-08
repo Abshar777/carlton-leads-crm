@@ -661,8 +661,9 @@ export default function WhatsAppPortalPage() {
   const [showSettings, setShowSettings]   = useState(false);
   const [isMobile, setIsMobile]           = useState(false);
 
-  const { data: waStatus }                              = useWAStatus();
-  const { data: chats = [], refetch: refetchChats }     = useWAChats();
+  const { data: waStatus }                                = useWAStatus();
+  const { data: chats = [], refetch: refetchChats }       = useWAChats();
+  const { mutate: disconnect, isPending: disconnecting }  = useDisconnectWA();
 
   const selectedChat = chats.find((c) => c.phone === selectedPhone) ?? null;
 
@@ -731,14 +732,32 @@ export default function WhatsAppPortalPage() {
                   <h1 className="font-semibold text-base">WhatsApp</h1>
                   <StatusBadge status={waStatus?.status ?? "disconnected"} />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowSettings((v) => !v)}
-                >
-                  <Settings2 size={15} />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {waStatus?.status === "connected" && (
+                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => disconnect()}
+                        disabled={disconnecting}
+                        className="h-8 text-xs gap-1.5 border-red-500/30 text-red-600 hover:bg-red-500/10"
+                      >
+                        {disconnecting
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : <WifiOff size={12} />}
+                        Disconnect
+                      </Button>
+                    </motion.div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowSettings((v) => !v)}
+                  >
+                    <Settings2 size={15} />
+                  </Button>
+                </div>
               </div>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
