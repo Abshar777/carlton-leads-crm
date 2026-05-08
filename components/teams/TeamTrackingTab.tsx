@@ -35,6 +35,22 @@ const ACTION_COLS = [
   { key: "lead_updated"   as const, label: "Updated",        color: "bg-slate-500/20 text-slate-400"     },
 ] as const;
 
+const STATUS_TO_COLS = [
+  { key: "status_to_new"            as const, label: "→ New",          color: "bg-blue-500/20 text-blue-500"       },
+  { key: "status_to_assigned"       as const, label: "→ Assigned",     color: "bg-amber-500/20 text-amber-500"     },
+  { key: "status_to_followup"       as const, label: "→ Follow Up",    color: "bg-purple-500/20 text-purple-500"   },
+  { key: "status_to_interested"     as const, label: "→ Interested",   color: "bg-violet-500/20 text-violet-500"   },
+  { key: "status_to_cnc"            as const, label: "→ CNC",          color: "bg-slate-500/20 text-slate-400"     },
+  { key: "status_to_booking"        as const, label: "→ Booking",      color: "bg-teal-500/20 text-teal-500"       },
+  { key: "status_to_partialbooking" as const, label: "→ Part.Booking", color: "bg-pink-500/20 text-pink-500"       },
+  { key: "status_to_closed"         as const, label: "→ Closed",       color: "bg-green-500/20 text-green-500"     },
+  { key: "status_to_rejected"       as const, label: "→ Rejected",     color: "bg-red-500/20 text-red-500"         },
+  { key: "status_to_rnr"            as const, label: "→ RNR",          color: "bg-amber-500/20 text-amber-400"     },
+  { key: "status_to_callback"       as const, label: "→ Call Back",    color: "bg-sky-500/20 text-sky-500"         },
+  { key: "status_to_whatsapp"       as const, label: "→ WhatsApp",     color: "bg-emerald-500/20 text-emerald-500" },
+  { key: "status_to_student"        as const, label: "→ Student",      color: "bg-indigo-500/20 text-indigo-500"   },
+] as const;
+
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
 function toISO(d: Date) { return d.toISOString().slice(0, 10); }
@@ -92,10 +108,12 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
 
   const totals = useMemo(() => {
     const t: Record<string, number> = { total: 0 };
-    for (const col of ACTION_COLS) t[col.key] = 0;
+    for (const col of ACTION_COLS)    t[col.key] = 0;
+    for (const col of STATUS_TO_COLS) t[col.key] = 0;
     for (const r of rows) {
       t.total += r.total;
-      for (const col of ACTION_COLS) t[col.key] += r[col.key];
+      for (const col of ACTION_COLS)    t[col.key] += r[col.key];
+      for (const col of STATUS_TO_COLS) t[col.key] += r[col.key];
     }
     return t;
   }, [rows]);
@@ -204,8 +222,26 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
       {/* ── Table ────────────────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-border/60 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs min-w-[800px]">
+          <table className="w-full text-xs min-w-[1400px]">
             <thead>
+              {/* Section labels row */}
+              <tr className="bg-muted/30 border-b border-border/40">
+                <th className="sticky left-0 z-10 bg-muted/30 px-4 py-1.5" />
+                <th className="px-3 py-1.5" />
+                <th
+                  colSpan={ACTION_COLS.length}
+                  className="px-2 py-1.5 text-center text-[10px] font-semibold text-primary/70 uppercase tracking-widest border-x border-border/40"
+                >
+                  Activity
+                </th>
+                <th
+                  colSpan={STATUS_TO_COLS.length}
+                  className="px-2 py-1.5 text-center text-[10px] font-semibold text-violet-500/70 uppercase tracking-widest"
+                >
+                  Status Changed To
+                </th>
+              </tr>
+              {/* Column headers row */}
               <tr className="bg-muted/50 border-b border-border/60">
                 <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left font-semibold text-muted-foreground uppercase tracking-wide">
                   <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
@@ -218,7 +254,14 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
                   </button>
                 </th>
                 {ACTION_COLS.map((col) => (
-                  <th key={col.key} className="px-2 py-3 text-center font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
+                  <th key={col.key} className="px-2 py-3 text-center font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap border-l first:border-l-0 border-border/20">
+                    <button onClick={() => toggleSort(col.key)} className="flex items-center gap-1 mx-auto hover:text-foreground transition-colors">
+                      {col.label} <SortIcon col={col.key} />
+                    </button>
+                  </th>
+                ))}
+                {STATUS_TO_COLS.map((col) => (
+                  <th key={col.key} className="px-2 py-3 text-center font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap border-l first:border-l-0 border-border/20">
                     <button onClick={() => toggleSort(col.key)} className="flex items-center gap-1 mx-auto hover:text-foreground transition-colors">
                       {col.label} <SortIcon col={col.key} />
                     </button>
@@ -240,7 +283,7 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
                         </div>
                       </div>
                     </td>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 1 + ACTION_COLS.length + STATUS_TO_COLS.length }).map((_, j) => (
                       <td key={j} className="px-3 py-3 text-center">
                         <div className="h-5 w-8 bg-muted rounded mx-auto" />
                       </td>
@@ -249,7 +292,7 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
                 ))
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-muted-foreground text-sm">
+                  <td colSpan={2 + ACTION_COLS.length + STATUS_TO_COLS.length} className="py-16 text-center text-muted-foreground text-sm">
                     <Activity size={32} className="mx-auto mb-2 opacity-30" />
                     No activity recorded for this period
                   </td>
@@ -312,6 +355,22 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
                         </td>
                       );
                     })}
+
+                    {/* Status changed-to columns */}
+                    {STATUS_TO_COLS.map((col) => {
+                      const val = row[col.key];
+                      return (
+                        <td key={col.key} className="px-2 py-3 text-center">
+                          {val > 0 ? (
+                            <span className={cn("inline-flex items-center justify-center min-w-[28px] px-1.5 py-0.5 rounded-md font-semibold", col.color)}>
+                              {val}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
                   </motion.tr>
                 ))
               )}
@@ -324,6 +383,17 @@ export function TeamTrackingTab({ teamId }: TeamTrackingTabProps) {
                   <td className="sticky left-0 z-10 bg-muted/30 px-4 py-3 text-sm">Team Total</td>
                   <td className="px-3 py-3 text-center font-bold text-foreground">{totals.total}</td>
                   {ACTION_COLS.map((col) => (
+                    <td key={col.key} className="px-2 py-3 text-center">
+                      {totals[col.key] > 0 ? (
+                        <span className={cn("inline-flex items-center justify-center min-w-[28px] px-1.5 py-0.5 rounded-md font-semibold", col.color)}>
+                          {totals[col.key]}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/40">—</span>
+                      )}
+                    </td>
+                  ))}
+                  {STATUS_TO_COLS.map((col) => (
                     <td key={col.key} className="px-2 py-3 text-center">
                       {totals[col.key] > 0 ? (
                         <span className={cn("inline-flex items-center justify-center min-w-[28px] px-1.5 py-0.5 rounded-md font-semibold", col.color)}>

@@ -588,12 +588,27 @@ export interface TeamTrackingRow {
   designation:    string;
   isActive:       boolean;
   total:          number;
+  // action counts
   lead_created:   number;
   lead_updated:   number;
   status_changed: number;
   lead_assigned:  number;
   note_added:     number;
   call_made:      number;
+  // "changed TO" status counts (prefixed to avoid key collision)
+  status_to_new:            number;
+  status_to_assigned:       number;
+  status_to_followup:       number;
+  status_to_interested:     number;
+  status_to_cnc:            number;
+  status_to_booking:        number;
+  status_to_partialbooking: number;
+  status_to_closed:         number;
+  status_to_rejected:       number;
+  status_to_rnr:            number;
+  status_to_callback:       number;
+  status_to_whatsapp:       number;
+  status_to_student:        number;
 }
 
 export const useTeamTracking = (
