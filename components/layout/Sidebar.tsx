@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -17,6 +17,8 @@ import {
   X,
   Bell,
   Settings,
+  BrainCircuit,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -34,6 +36,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { toast } from "sonner";
 import { useUserLeadStats } from "@/hooks/useLeads";
 import { useMyReminderCount } from "@/hooks/useReminders";
+import { useWAUnreadCount } from "@/hooks/useWhatsApp";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "@/lib/socket";
 
@@ -44,6 +47,8 @@ export const navItems = [
   { href: "/teams", label: "Teams", icon: UsersRound, permModule: "teams" },
   { href: "/courses", label: "Courses", icon: BookOpen, permModule: "courses" },
   { href: "/reports", label: "Reports", icon: BarChart2, permModule: "reports" },
+  { href: "/ai-agent", label: "AI Agent", icon: BrainCircuit, permModule: "dashboard" },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle, permModule: "leads" },
   { href: "/users", label: "Users", icon: Users, permModule: "users" },
   { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
   { href: "/settings", label: "Settings", icon: Settings, permModule: "settings" },
@@ -61,6 +66,7 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   const { data: myStats } = useUserLeadStats(userId);
   const newLeadsCount = myStats?.assigned ?? 0;
   const { data: reminderCount = 0 } = useMyReminderCount();
+  const { data: waUnreadCount = 0 } = useWAUnreadCount();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -81,14 +87,12 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
     };
   }, [userId, queryClient]);
 
-  if (typeof window === "undefined") return null;
-
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
         const isActive = pathname === href || pathname.startsWith(href + "/");
         const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
-        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : 0;
+        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : href === "/whatsapp" ? waUnreadCount : 0;
         const showBadge = badgeCount > 0;
 
         const linkEl = (
@@ -261,7 +265,9 @@ function UserProfileSection({ collapsed = false }: { collapsed?: boolean }) {
 
 function DesktopSidebar() {
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUiStore();
-  if (typeof window === "undefined") return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
   return (
     <TooltipProvider delayDuration={0}>
       <motion.aside

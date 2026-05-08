@@ -47,3 +47,8 @@ export function disconnectSocket(): void {
     socket = null;
   }
 }
+
+/** Returns the active socket or null. Safe to call on every render — no side effects. */
+export function getActiveSocket(): Socket | null {
+  return socket && socket.connected ? socket : null;
+}

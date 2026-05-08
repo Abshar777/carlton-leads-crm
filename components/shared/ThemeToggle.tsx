@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,8 +19,12 @@ const icons = {
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const currentIcon = resolvedTheme === "dark" ? icons.dark : icons.light;
+
+  if (!mounted) return <div className="h-9 w-9" />;
 
   return (
     <DropdownMenu>

@@ -43,6 +43,7 @@ import LeadDialog from "@/components/leads/LeadDialog";
 import { ReminderPanel } from "@/components/leads/ReminderPanel";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import { PaymentPanel } from "@/components/leads/PaymentPanel";
+import { WhatsAppChatPanel } from "@/components/leads/WhatsAppChatPanel";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1170,6 +1171,19 @@ export default function LeadDetailPage() {
                     );
                   })}
                 </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* WhatsApp Chat Panel */}
+          {lead.phone && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="border-border/50 overflow-hidden" style={{ height: 500 }}>
+                <WhatsAppChatPanel phone={lead.phone} leadName={lead.name} />
               </Card>
             </motion.div>
           )}
