@@ -16,6 +16,7 @@ import {
   BarChart2,
   X,
   Bell,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -45,6 +46,7 @@ export const navItems = [
   { href: "/reports", label: "Reports", icon: BarChart2, permModule: "reports" },
   { href: "/users", label: "Users", icon: Users, permModule: "users" },
   { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
+  { href: "/settings", label: "Settings", icon: Settings, permModule: "settings" },
 ];
 
 interface NavLinksProps {
