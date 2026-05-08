@@ -537,6 +537,50 @@ export const useTeamSettings = (teamId: string) => {
   });
 };
 
+// ── Team member report ────────────────────────────────────────────────────────
+
+export interface TeamMemberReportRow {
+  userId:          string;
+  name:            string;
+  email:           string;
+  designation:     string;
+  isActive:        boolean;
+  total:           number;
+  new:             number;
+  assigned:        number;
+  followup:        number;
+  interested:      number;
+  cnc:             number;
+  booking:         number;
+  partialbooking:  number;
+  closed:          number;
+  rejected:        number;
+  rnr:             number;
+  callback:        number;
+  whatsapp:        number;
+  student:         number;
+}
+
+export const useTeamMemberReport = (
+  teamId: string,
+  dateFrom?: string,
+  dateTo?: string,
+) =>
+  useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "member-report", dateFrom, dateTo],
+    queryFn:  async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const res = await api.get<ApiResponse<TeamMemberReportRow[]>>(
+        `/teams/${teamId}/member-report?${params.toString()}`,
+      );
+      return res.data.data ?? [];
+    },
+    enabled: !!teamId,
+    staleTime: 60_000,
+  });
+
 export const useUpdateTeamSettings = (teamId: string) => {
   const queryClient = useQueryClient();
   return useMutation({

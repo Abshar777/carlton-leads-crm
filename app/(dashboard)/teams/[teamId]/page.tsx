@@ -136,6 +136,7 @@ import { TeamDialog } from "@/components/teams/TeamDialog";
 import TeamRemindersTab from "@/components/teams/TeamRemindersTab";
 import { TeamMemberKanban } from "@/components/teams/TeamMemberKanban";
 import { TeamSettingsTab } from "@/components/teams/TeamSettingsTab";
+import { TeamReportTab } from "@/components/teams/TeamReportTab";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
@@ -196,7 +197,7 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders" | "settings";
+type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders" | "report" | "settings";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "dashboard",  label: "Dashboard"  },
@@ -205,6 +206,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "kanban",     label: "Kanban"     },
   { id: "reminders",  label: "Reminders"  },
   { id: "revenue",    label: "Revenue"    },
+  { id: "report",     label: "Report"     },
   { id: "updates",    label: "Updates"    },
   { id: "logs",       label: "Logs"       },
   { id: "settings",   label: "Settings"   },
@@ -3711,6 +3713,18 @@ function TeamDetailPageContent() {
               transition={{ duration: 0.2 }}
             >
               <LogsTab teamId={teamId} />
+            </motion.div>
+          )}
+
+          {activeTab === "report" && (
+            <motion.div
+              key="report"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TeamReportTab teamId={teamId} />
             </motion.div>
           )}
 
