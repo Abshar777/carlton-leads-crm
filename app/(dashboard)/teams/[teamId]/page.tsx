@@ -137,6 +137,7 @@ import TeamRemindersTab from "@/components/teams/TeamRemindersTab";
 import { TeamMemberKanban } from "@/components/teams/TeamMemberKanban";
 import { TeamSettingsTab } from "@/components/teams/TeamSettingsTab";
 import { TeamReportTab } from "@/components/teams/TeamReportTab";
+import { TeamTrackingTab } from "@/components/teams/TeamTrackingTab";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
@@ -197,7 +198,7 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders" | "report" | "settings";
+type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders" | "report" | "tracking" | "settings";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "dashboard",  label: "Dashboard"  },
@@ -207,6 +208,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "reminders",  label: "Reminders"  },
   { id: "revenue",    label: "Revenue"    },
   { id: "report",     label: "Report"     },
+  { id: "tracking",   label: "Tracking"   },
   { id: "updates",    label: "Updates"    },
   { id: "logs",       label: "Logs"       },
   { id: "settings",   label: "Settings"   },
@@ -3284,7 +3286,7 @@ function TeamDetailPageContent() {
   const { user, hasPermission } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const t = searchParams.get("tab") as TabId | null;
-    const valid: TabId[] = ["dashboard", "members", "leads", "kanban", "logs", "updates", "revenue", "reminders", "settings"];
+    const valid: TabId[] = ["dashboard", "members", "leads", "kanban", "logs", "updates", "revenue", "reminders", "report", "tracking", "settings"];
     return t && valid.includes(t) ? t : "dashboard";
   });
 
@@ -3725,6 +3727,18 @@ function TeamDetailPageContent() {
               transition={{ duration: 0.2 }}
             >
               <TeamReportTab teamId={teamId} />
+            </motion.div>
+          )}
+
+          {activeTab === "tracking" && (
+            <motion.div
+              key="tracking"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TeamTrackingTab teamId={teamId} />
             </motion.div>
           )}
 

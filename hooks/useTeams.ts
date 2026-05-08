@@ -581,6 +581,41 @@ export const useTeamMemberReport = (
     staleTime: 60_000,
   });
 
+export interface TeamTrackingRow {
+  userId:         string;
+  name:           string;
+  email:          string;
+  designation:    string;
+  isActive:       boolean;
+  total:          number;
+  lead_created:   number;
+  lead_updated:   number;
+  status_changed: number;
+  lead_assigned:  number;
+  note_added:     number;
+  call_made:      number;
+}
+
+export const useTeamTracking = (
+  teamId: string,
+  dateFrom?: string,
+  dateTo?: string,
+) =>
+  useQuery({
+    queryKey: [...TEAMS_KEY, teamId, "tracking", dateFrom, dateTo],
+    queryFn:  async () => {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo)   params.set("dateTo",   dateTo);
+      const res = await api.get<ApiResponse<TeamTrackingRow[]>>(
+        `/teams/${teamId}/tracking?${params.toString()}`,
+      );
+      return res.data.data ?? [];
+    },
+    enabled:   !!teamId,
+    staleTime: 60_000,
+  });
+
 export const useUpdateTeamSettings = (teamId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
