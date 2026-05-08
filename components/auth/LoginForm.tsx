@@ -129,16 +129,7 @@ export function LoginForm() {
               </Button>
             </form>
 
-            {/* Demo credentials hint */}
-            <div className="mt-6 rounded-lg border border-border/50 bg-muted/30 p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Demo credentials:</p>
-              <p className="text-xs text-muted-foreground">
-                Email: <span className="text-foreground font-mono">superadmin@crm.com</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Password: <span className="text-foreground font-mono">SuperAdmin@123</span>
-              </p>
-            </div>
+
           </CardContent>
         </Card>
       </motion.div>
