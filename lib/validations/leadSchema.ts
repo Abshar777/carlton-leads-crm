@@ -1,10 +1,13 @@
 import { z } from "zod";
 
+const PHONE_RE = /^(\+)?[\d\s\-().]{7,20}$/;
+
 // Base fields shared by create + update
 const baseLeadFields = z.object({
   name:   z.string().min(1, "Name is required").max(100, "Name too long"),
   email:  z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone:  z.string().min(1, "Phone is required").max(20, "Phone too long"),
+  phone:  z.string().min(1, "Phone is required").max(20, "Phone too long")
+            .regex(PHONE_RE, "Enter digits only — e.g. 9876543210 or +919876543210"),
   source: z.string().optional(),
   course: z.string().optional().nullable(),
 });
