@@ -388,10 +388,10 @@ export interface TeamMemberDetail {
     assigned: number;
     followup: number;
     closed: number;
-    rejected: number;
+    invalid: number;
     cnc: number;
     booking: number;
-    partialbooking: number;
+    notinterested: number;
     interested: number;
     rnr: number;
     callback: number;
@@ -552,9 +552,9 @@ export interface TeamMemberReportRow {
   interested:      number;
   cnc:             number;
   booking:         number;
-  partialbooking:  number;
+  notinterested:   number;
   closed:          number;
-  rejected:        number;
+  invalid:         number;
   rnr:             number;
   callback:        number;
   whatsapp:        number;
@@ -602,9 +602,9 @@ export interface TeamTrackingRow {
   status_to_interested:     number;
   status_to_cnc:            number;
   status_to_booking:        number;
-  status_to_partialbooking: number;
+  status_to_notinterested:  number;
   status_to_closed:         number;
-  status_to_rejected:       number;
+  status_to_invalid:        number;
   status_to_rnr:            number;
   status_to_callback:       number;
   status_to_whatsapp:       number;

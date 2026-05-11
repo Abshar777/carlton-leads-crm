@@ -2,7 +2,7 @@ import type { User } from "@/types";
 import type { Team } from "@/types/team";
 import type { Course } from "@/types/course";
 
-export type LeadStatus = "new" | "assigned" | "followup" | "closed" | "rejected" | "cnc" | "booking" | "partialbooking" | "interested" | "rnr" | "callback" | "whatsapp" | "student";
+export type LeadStatus = "new" | "assigned" | "followup" | "closed" | "invalid" | "cnc" | "booking" | "notinterested" | "interested" | "rnr" | "callback" | "whatsapp" | "student";
 
 export type ActivityAction =
   | "lead_created"
@@ -121,10 +121,10 @@ export interface LeadStats {
   assigned: number;
   followup: number;
   closed: number;
-  rejected: number;
+  invalid: number;
   cnc: number;
   booking: number;
-  partialbooking: number;
+  notinterested: number;
   interested: number;
   rnr: number;
   callback: number;

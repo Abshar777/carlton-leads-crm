@@ -16,10 +16,10 @@ const STATUS_COLORS: Record<string, string> = {
   assigned:       "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
   followup:       "bg-orange-500/15 text-orange-400 border-orange-500/30",
   closed:         "bg-green-500/15 text-green-400 border-green-500/30",
-  rejected:       "bg-red-500/15 text-red-400 border-red-500/30",
+  invalid:        "bg-red-500/15 text-red-400 border-red-500/30",
   cnc:            "bg-slate-500/15 text-slate-400 border-slate-500/30",
   booking:        "bg-teal-500/15 text-teal-400 border-teal-500/30",
-  partialbooking: "bg-pink-500/15 text-pink-400 border-pink-500/30",
+  notinterested:  "bg-orange-500/15 text-orange-400 border-orange-500/30",
   interested:     "bg-violet-500/15 text-violet-400 border-violet-500/30",
   rnr:            "bg-amber-500/15 text-amber-400 border-amber-500/30",
   callback:       "bg-sky-500/15 text-sky-400 border-sky-500/30",
@@ -29,8 +29,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   new: "New", assigned: "Assigned", followup: "Follow Up", closed: "Closed",
-  rejected: "Rejected", cnc: "CNC", booking: "Booking",
-  partialbooking: "Partial Booking", interested: "Interested",
+  invalid: "Invalid", cnc: "CNC", booking: "Booking",
+  notinterested: "Not Interested", interested: "Interested",
   rnr: "RNR", callback: "Call Back", whatsapp: "WhatsApp", student: "Student",
 };
 

@@ -154,11 +154,11 @@ interface TeamDashboardData {
     assigned: number;
     followup: number;
     closed: number;
-    rejected: number;
+    invalid: number;
     unassigned: number;
     cnc: number;
     booking: number;
-    partialbooking: number;
+    notinterested: number;
     interested: number;
     rnr: number;
     callback: number;
@@ -171,10 +171,10 @@ interface TeamDashboardData {
     assigned: number;
     followup: number;
     closed: number;
-    rejected: number;
+    invalid: number;
     cnc: number;
     booking: number;
-    partialbooking: number;
+    notinterested: number;
     interested: number;
     rnr: number;
     callback: number;
@@ -222,10 +222,10 @@ const STATUS_CONFIG: Record<
   assigned:       { label: "Assigned",        color: "bg-amber-500/15 text-amber-400 border-amber-500/30",       dot: "bg-amber-400",   bar: "bg-amber-500",   text: "text-amber-400"   },
   followup:       { label: "Follow Up",       color: "bg-purple-500/15 text-purple-400 border-purple-500/30",    dot: "bg-purple-400",  bar: "bg-purple-500",  text: "text-purple-400"  },
   closed:         { label: "Closed",          color: "bg-green-500/15 text-green-400 border-green-500/30",       dot: "bg-green-400",   bar: "bg-green-500",   text: "text-green-400"   },
-  rejected:       { label: "Rejected",        color: "bg-red-500/15 text-red-400 border-red-500/30",             dot: "bg-red-400",     bar: "bg-red-500",     text: "text-red-400"     },
+  invalid:        { label: "Invalid",         color: "bg-red-500/15 text-red-400 border-red-500/30",             dot: "bg-red-400",     bar: "bg-red-500",     text: "text-red-400"     },
   cnc:            { label: "CNC",             color: "bg-slate-500/15 text-slate-400 border-slate-500/30",       dot: "bg-slate-400",   bar: "bg-slate-500",   text: "text-slate-400"   },
   booking:        { label: "Booking",         color: "bg-teal-500/15 text-teal-400 border-teal-500/30",          dot: "bg-teal-400",    bar: "bg-teal-500",    text: "text-teal-400"    },
-  partialbooking: { label: "Partial Booking", color: "bg-pink-500/15 text-pink-400 border-pink-500/30",          dot: "bg-pink-400",    bar: "bg-pink-500",    text: "text-pink-400"    },
+  notinterested:  { label: "Not Interested",  color: "bg-orange-500/15 text-orange-400 border-orange-500/30",   dot: "bg-orange-400",  bar: "bg-orange-500",  text: "text-orange-400"  },
   interested:     { label: "Interested",      color: "bg-violet-500/15 text-violet-400 border-violet-500/30",    dot: "bg-violet-400",  bar: "bg-violet-500",  text: "text-violet-400"  },
   rnr:            { label: "RNR",             color: "bg-amber-500/15 text-amber-400 border-amber-500/30",       dot: "bg-amber-400",   bar: "bg-amber-500",   text: "text-amber-400"   },
   callback:       { label: "Call Back",       color: "bg-sky-500/15 text-sky-400 border-sky-500/30",             dot: "bg-sky-400",     bar: "bg-sky-500",     text: "text-sky-400"     },
@@ -485,10 +485,10 @@ function DashboardTab({
       border: "border-green-500/20",
     },
     {
-      title: "Rejection Rate",
+      title: "Invalid Rate",
       value:
         total > 0
-          ? `${Math.round(((dist?.rejected ?? 0) / total) * 100)}%`
+          ? `${Math.round(((dist?.invalid ?? 0) / total) * 100)}%`
           : "0%",
       icon: XCircle,
       color: "text-red-400",
@@ -504,9 +504,9 @@ function DashboardTab({
     { key: "interested",    label: "Interested"      },
     { key: "cnc",           label: "CNC"             },
     { key: "booking",       label: "Booking"         },
-    { key: "partialbooking",label: "Partial Booking" },
+    { key: "notinterested", label: "Not Interested"  },
     { key: "closed",        label: "Closed"          },
-    { key: "rejected",      label: "Rejected"        },
+    { key: "invalid",       label: "Invalid"         },
     { key: "rnr",           label: "RNR"             },
     { key: "callback",      label: "Call Back"       },
     { key: "whatsapp",      label: "WhatsApp"        },
@@ -767,7 +767,7 @@ function DashboardTab({
                         { label: "Total", value: member.total, cls: "text-foreground", show: "always" },
                         { label: "Closed", value: member.closed, cls: "text-green-400", show: "sm" },
                         { label: "Revenue", value: `₹${((member.totalPayments ?? 0)).toLocaleString("en-IN")}`, cls: "text-emerald-400", show: "always" },
-                        { label: "Rejected", value: member.rejected, cls: "text-red-400", show: "sm" },
+                        { label: "Invalid", value: member.invalid, cls: "text-red-400", show: "sm" },
                       ].map(({ label, value, cls, show }) => (
                         <div
                           key={label}
@@ -878,7 +878,7 @@ function MembersTab({
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">CNC</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden xl:table-cell">Booking</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Closed</th>
-                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Rejected</th>
+                    <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">Invalid</th>
                     <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Conv%</th>
                     {isLeaderOrAdmin && (
                       <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">Auto-assign</th>
@@ -973,7 +973,7 @@ function MembersTab({
                             <span className="text-sm text-green-400 font-medium">{stat.closed}</span>
                           </td>
                           <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center hidden lg:table-cell">
-                            <span className="text-sm text-red-400">{stat.rejected}</span>
+                            <span className="text-sm text-red-400">{stat.invalid ?? 0}</span>
                           </td>
                           <td className="px-2 py-2.5 sm:px-4 sm:py-3 text-center">
                             <ClosureRateBadge rate={closureRate} />
@@ -1204,7 +1204,7 @@ function LeadsTab({
   }
 
   const canActOnLead = (lead: Lead) =>
-    isLeaderOrAdmin && lead.status !== "closed" && lead.status !== "rejected";
+    isLeaderOrAdmin && lead.status !== "closed" && lead.status !== "invalid";
 
   return (
     <div className="space-y-4">

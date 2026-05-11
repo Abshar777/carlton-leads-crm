@@ -5,9 +5,9 @@ export type LeadStatus =
   | "interested"
   | "cnc"
   | "booking"
-  | "partialbooking"
+  | "notinterested"
   | "closed"
-  | "rejected"
+  | "invalid"
   | "rnr"
   | "callback"
   | "whatsapp"
@@ -54,9 +54,9 @@ export interface TimelinePoint {
   interested:number;
   cnc:       number;
   booking:        number;
-  partialbooking: number;
+  notinterested: number;
   closed:         number;
-  rejected:       number;
+  invalid:        number;
   rnr:            number;
   callback:       number;
   whatsapp:       number;
@@ -78,9 +78,9 @@ export interface UserRankItem {
   interested:     number;
   cnc:            number;
   booking:        number;
-  partialbooking: number;
+  notinterested: number;
   closed:         number;
-  rejected:       number;
+  invalid:        number;
   rnr:            number;
   callback:       number;
   whatsapp:       number;
@@ -104,9 +104,9 @@ export interface TeamRankItem {
   interested:     number;
   cnc:            number;
   booking:        number;
-  partialbooking: number;
+  notinterested: number;
   closed:         number;
-  rejected:       number;
+  invalid:        number;
   rnr:            number;
   callback:       number;
   whatsapp:       number;
@@ -136,9 +136,9 @@ export interface TeamSplitSummaryItem {
   interested:     number;
   cnc:            number;
   booking:        number;
-  partialbooking: number;
+  notinterested: number;
   closed:         number;
-  rejected:       number;
+  invalid:        number;
   rnr:            number;
   callback:       number;
   whatsapp:       number;
@@ -256,7 +256,7 @@ export interface SourceAnalyticsItem {
   total:          number;
   closed:         number;
   booking:        number;
-  partialbooking: number;
+  notinterested: number;
   revenue:        number;
   conversionRate: number;
   bookingRate:    number;
@@ -267,7 +267,7 @@ export interface CampaignBreakdownItem {
   total:          number;
   closed:         number;
   booking:        number;
-  partialbooking: number;
+  notinterested: number;
   revenue:        number;
   conversionRate: number;
   bookingRate:    number;

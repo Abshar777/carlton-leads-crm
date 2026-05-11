@@ -58,9 +58,9 @@ const STATUS_META: Record<
   interested:     { label: "Interested",      color: "#8b5cf6", bar: "bg-violet-500",  dot: "bg-violet-400"  },
   cnc:            { label: "CNC",             color: "#64748b", bar: "bg-slate-500",   dot: "bg-slate-400"   },
   booking:        { label: "Booking",         color: "#14b8a6", bar: "bg-teal-500",    dot: "bg-teal-400"    },
-  partialbooking: { label: "Partial Booking", color: "#ec4899", bar: "bg-pink-500",    dot: "bg-pink-400"    },
+  notinterested:  { label: "Not Interested",  color: "#f97316", bar: "bg-orange-500",  dot: "bg-orange-400"  },
   closed:         { label: "Closed",          color: "#22c55e", bar: "bg-green-500",   dot: "bg-green-400"   },
-  rejected:       { label: "Rejected",        color: "#ef4444", bar: "bg-red-500",     dot: "bg-red-400"     },
+  invalid:        { label: "Invalid",         color: "#ef4444", bar: "bg-red-500",     dot: "bg-red-400"     },
   rnr:            { label: "RNR",             color: "#f59e0b", bar: "bg-amber-500",   dot: "bg-amber-400"   },
   callback:       { label: "Call Back",       color: "#0ea5e9", bar: "bg-sky-500",     dot: "bg-sky-400"     },
   whatsapp:       { label: "WhatsApp",        color: "#25d366", bar: "bg-emerald-500", dot: "bg-emerald-400" },
@@ -68,7 +68,7 @@ const STATUS_META: Record<
 };
 
 const ALL_STATUSES: LeadStatus[] = [
-  "new","assigned","followup","interested","cnc","booking","partialbooking","closed","rejected",
+  "new","assigned","followup","interested","cnc","booking","notinterested","closed","invalid",
   "rnr","callback","whatsapp","student",
 ];
 
@@ -1497,7 +1497,7 @@ function CampaignPanel({
                       <td className="px-4 py-2 font-mono text-[11px] font-medium max-w-[200px] truncate">{c.campaignId}</td>
                       <td className="px-4 py-2 text-right font-semibold tabular-nums">{fmt(c.total)}</td>
                       <td className="px-4 py-2 text-right text-green-500 tabular-nums">{fmt(c.closed)}</td>
-                      <td className="px-4 py-2 text-right text-teal-500 tabular-nums">{fmt(c.booking + c.partialbooking)}</td>
+                      <td className="px-4 py-2 text-right text-teal-500 tabular-nums">{fmt(c.booking)}</td>
                       <td className="px-4 py-2 text-right">
                         <span className={cn("font-semibold tabular-nums",
                           c.conversionRate >= 10 ? "text-green-500" : c.conversionRate >= 5 ? "text-yellow-500" : "text-red-500")}>
@@ -1686,7 +1686,7 @@ function SourceAnalyticsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: st
                                   </td>
                                   <td className="px-4 py-3 text-right font-bold tabular-nums">{fmt(row.total)}</td>
                                   <td className="px-4 py-3 text-right text-green-500 tabular-nums">{fmt(row.closed)}</td>
-                                  <td className="px-4 py-3 text-right text-teal-500 tabular-nums">{fmt(row.booking + row.partialbooking)}</td>
+                                  <td className="px-4 py-3 text-right text-teal-500 tabular-nums">{fmt(row.booking)}</td>
                                   <td className="px-4 py-3 text-right">
                                     <span className={cn("font-semibold tabular-nums",
                                       row.conversionRate >= 15 ? "text-green-500" : row.conversionRate >= 5 ? "text-yellow-500" : "text-red-500")}>

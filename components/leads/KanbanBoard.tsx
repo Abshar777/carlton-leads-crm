@@ -44,7 +44,7 @@ import LeadDialog from "@/components/leads/LeadDialog";
 
 const KANBAN_STATUSES: LeadStatus[] = [
   "new", "assigned", "followup", "interested", "cnc",
-  "booking", "partialbooking", "closed", "rejected",
+  "booking", "notinterested", "closed", "invalid",
   "rnr", "callback", "whatsapp", "student",
 ];
 
@@ -55,9 +55,9 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   interested:     "Interested",
   cnc:            "CNC",
   booking:        "Booking",
-  partialbooking: "Partial Booking",
+  notinterested:  "Not Interested",
   closed:         "Closed",
-  rejected:       "Rejected",
+  invalid:        "Invalid",
   rnr:            "RNR",
   callback:       "Call Back",
   whatsapp:       "WhatsApp",
@@ -73,9 +73,9 @@ const STATUS_STYLE: Record<LeadStatus, {
   interested:     { header: "bg-violet-500/15 text-violet-400",   border: "border-violet-500/25",  dot: "bg-violet-400",  dropZone: "border-violet-500/50 bg-violet-500/5",   badge: "bg-violet-500/15 text-violet-400 border-violet-500/30"   },
   cnc:            { header: "bg-slate-500/15 text-slate-400",     border: "border-slate-500/25",   dot: "bg-slate-400",   dropZone: "border-slate-500/50 bg-slate-500/5",    badge: "bg-slate-500/15 text-slate-400 border-slate-500/30"       },
   booking:        { header: "bg-teal-500/15 text-teal-400",       border: "border-teal-500/25",    dot: "bg-teal-400",    dropZone: "border-teal-500/50 bg-teal-500/5",       badge: "bg-teal-500/15 text-teal-400 border-teal-500/30"         },
-  partialbooking: { header: "bg-pink-500/15 text-pink-400",       border: "border-pink-500/25",    dot: "bg-pink-400",    dropZone: "border-pink-500/50 bg-pink-500/5",       badge: "bg-pink-500/15 text-pink-400 border-pink-500/30"         },
+  notinterested:  { header: "bg-orange-500/15 text-orange-400",   border: "border-orange-500/25",  dot: "bg-orange-400",  dropZone: "border-orange-500/50 bg-orange-500/5",   badge: "bg-orange-500/15 text-orange-400 border-orange-500/30"   },
   closed:         { header: "bg-green-500/15 text-green-400",     border: "border-green-500/25",   dot: "bg-green-400",   dropZone: "border-green-500/50 bg-green-500/5",    badge: "bg-green-500/15 text-green-400 border-green-500/30"       },
-  rejected:       { header: "bg-red-500/15 text-red-400",         border: "border-red-500/25",     dot: "bg-red-400",     dropZone: "border-red-500/50 bg-red-500/5",        badge: "bg-red-500/15 text-red-400 border-red-500/30"           },
+  invalid:        { header: "bg-red-500/15 text-red-400",         border: "border-red-500/25",     dot: "bg-red-400",     dropZone: "border-red-500/50 bg-red-500/5",        badge: "bg-red-500/15 text-red-400 border-red-500/30"             },
   rnr:            { header: "bg-amber-500/15 text-amber-400",     border: "border-amber-500/25",   dot: "bg-amber-400",   dropZone: "border-amber-500/50 bg-amber-500/5",    badge: "bg-amber-500/15 text-amber-400 border-amber-500/30"       },
   callback:       { header: "bg-sky-500/15 text-sky-400",         border: "border-sky-500/25",     dot: "bg-sky-400",     dropZone: "border-sky-500/50 bg-sky-500/5",        badge: "bg-sky-500/15 text-sky-400 border-sky-500/30"           },
   whatsapp:       { header: "bg-emerald-500/15 text-emerald-400", border: "border-emerald-500/25", dot: "bg-emerald-400", dropZone: "border-emerald-500/50 bg-emerald-500/5", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
