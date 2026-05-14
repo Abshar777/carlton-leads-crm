@@ -167,11 +167,17 @@ export const useAssignLeadToChat = (phone: string) => {
   });
 };
 
+export interface CreateLeadFromChatInput {
+  name?:   string;
+  email?:  string;
+  status?: string;
+}
+
 export const useCreateLeadFromChat = (phone: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (name?: string) =>
-      api.post(`/whatsapp/chats/${phone}/create-lead`, { name }),
+    mutationFn: async (data?: CreateLeadFromChatInput) =>
+      api.post(`/whatsapp/chats/${phone}/create-lead`, data ?? {}),
     onSuccess: () => {
       toast.success("Lead created");
       qc.invalidateQueries({ queryKey: WA_CHATS_KEY });

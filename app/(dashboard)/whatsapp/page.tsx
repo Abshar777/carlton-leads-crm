@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef }  from "react";
+import { useForm }                       from "react-hook-form";
+import { zodResolver }                   from "@hookform/resolvers/zod";
+import { z }                             from "zod";
 import { motion, AnimatePresence }       from "framer-motion";
 import {
   MessageCircle, Search, Send, X, UserPlus, Link2, Phone,
@@ -18,6 +21,9 @@ import { Label }        from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 import { useLeads }             from "@/hooks/useLeads";
 import {
@@ -35,6 +41,7 @@ import {
   useDisconnectWA,
   type WAChat,
   type WAMessage,
+  type CreateLeadFromChatInput,
 } from "@/hooks/useWhatsApp";
 import { getSocket } from "@/lib/socket";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -56,6 +63,34 @@ function fmtTime(iso: string): string {
     hour: "2-digit", minute: "2-digit", hour12: true,
   });
 }
+
+// ── Create-lead form schema ───────────────────────────────────────────────────
+
+const createLeadSchema = z.object({
+  name:   z.string().min(1, "Name is required").max(100),
+  email:  z.string().email("Invalid email").optional().or(z.literal("")),
+  status: z.enum([
+    "new","assigned","followup","closed","invalid","cnc","booking",
+    "notinterested","interested","rnr","callback","whatsapp","student",
+  ]).default("new"),
+});
+type CreateLeadFormValues = z.infer<typeof createLeadSchema>;
+
+const STATUS_CREATE_OPTS: { value: CreateLeadFormValues["status"]; label: string }[] = [
+  { value: "new",           label: "New" },
+  { value: "interested",    label: "Interested" },
+  { value: "followup",      label: "Follow Up" },
+  { value: "whatsapp",      label: "WhatsApp" },
+  { value: "rnr",           label: "RNR" },
+  { value: "callback",      label: "Callback" },
+  { value: "assigned",      label: "Assigned" },
+  { value: "cnc",           label: "CNC" },
+  { value: "booking",       label: "Booking" },
+  { value: "notinterested", label: "Not Interested" },
+  { value: "student",       label: "Student" },
+  { value: "closed",        label: "Closed" },
+  { value: "invalid",       label: "Invalid" },
+];
 
 // ── Animation variants ────────────────────────────────────────────────────────
 
@@ -242,89 +277,263 @@ function MessageBubble({ msg }: { msg: WAMessage }) {
   );
 }
 
-// ── Assign lead dialog ────────────────────────────────────────────────────────
+// ── Assign / Create lead dialog ───────────────────────────────────────────────
 
 interface AssignDialogProps {
-  phone:   string;
-  open:    boolean;
-  onClose: () => void;
+  phone:       string;
+  senderName?: string;
+  open:        boolean;
+  onClose:     () => void;
 }
 
-function AssignLeadDialog({ phone, open, onClose }: AssignDialogProps) {
+function AssignLeadDialog({ phone, senderName, open, onClose }: AssignDialogProps) {
+  const [mode, setMode]         = useState<"assign" | "create">("assign");
   const [search, setSearch]     = useState("");
   const [selected, setSelected] = useState("");
+
+  // Reset to assign mode + clear search when dialog closes
+  useEffect(() => {
+    if (!open) { setMode("assign"); setSearch(""); setSelected(""); }
+  }, [open]);
 
   const leadsResult = useLeads({ search, limit: 20 });
   const leads = Array.isArray(leadsResult.data)
     ? leadsResult.data
     : (leadsResult.data as { data?: { _id: string; name: string; phone: string }[] })?.data ?? [];
 
-  const { mutate: assign, isPending }        = useAssignLeadToChat(phone);
+  const { mutate: assign, isPending }           = useAssignLeadToChat(phone);
   const { mutate: create, isPending: creating } = useCreateLeadFromChat(phone);
+
+  const form = useForm<CreateLeadFormValues>({
+    resolver: zodResolver(createLeadSchema),
+    defaultValues: { name: senderName ?? "", email: "", status: "new" },
+  });
+
+  // Re-sync pre-filled name when dialog opens for a different chat
+  useEffect(() => {
+    if (open) form.reset({ name: senderName ?? "", email: "", status: "new" });
+  }, [open, senderName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleAssign() {
     if (!selected) return;
     assign(selected, { onSuccess: onClose });
   }
 
-  function handleCreate() {
-    create(undefined, { onSuccess: onClose });
+  function handleCreate(values: CreateLeadFormValues) {
+    const payload: CreateLeadFromChatInput = {
+      name:   values.name,
+      status: values.status,
+      ...(values.email ? { email: values.email } : {}),
+    };
+    create(payload, { onSuccess: onClose });
   }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Link2 size={18} className="text-primary" />
-            Assign to Lead
+            {mode === "create" && (
+              <motion.button
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setMode("assign")}
+                className="p-1 rounded hover:bg-muted transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </motion.button>
+            )}
+            <AnimatePresence mode="wait">
+              {mode === "assign" ? (
+                <motion.span
+                  key="assign-title"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  className="flex items-center gap-2"
+                >
+                  <Link2 size={18} className="text-primary" /> Assign to Lead
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="create-title"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  className="flex items-center gap-2"
+                >
+                  <UserPlus size={18} className="text-primary" /> Create New Lead
+                </motion.span>
+              )}
+            </AnimatePresence>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-1">
-          <Input
-            placeholder="Search leads…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9"
-          />
+        <AnimatePresence mode="wait">
+          {/* ── Assign mode ── */}
+          {mode === "assign" ? (
+            <motion.div
+              key="assign-view"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4 py-1"
+            >
+              <Input
+                placeholder="Search leads…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9"
+              />
+              <div className="max-h-60 overflow-y-auto space-y-1 border border-border/50 rounded-lg p-2">
+                <AnimatePresence>
+                  {leads.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No leads found</p>
+                  )}
+                  {leads.map((lead) => (
+                    <motion.button
+                      key={lead._id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      onClick={() => setSelected(lead._id)}
+                      className={[
+                        "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                        selected === lead._id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted",
+                      ].join(" ")}
+                    >
+                      <span className="font-medium">{lead.name}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">{lead.phone}</span>
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              </div>
 
-          <div className="max-h-60 overflow-y-auto space-y-1 border border-border/50 rounded-lg p-2">
-            <AnimatePresence>
-              {leads.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No leads found</p>
-              )}
-              {leads.map((lead) => (
-                <motion.button
-                  key={lead._id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onClick={() => setSelected(lead._id)}
-                  className={[
-                    "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                    selected === lead._id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "hover:bg-muted",
-                  ].join(" ")}
+              <DialogFooter className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMode("create")}
+                  className="gap-1.5"
                 >
-                  <span className="font-medium">{lead.name}</span>
-                  <span className="text-muted-foreground ml-2 text-xs">{lead.phone}</span>
-                </motion.button>
-              ))}
-            </AnimatePresence>
-          </div>
-        </div>
+                  <UserPlus size={14} /> Create new lead
+                </Button>
+                <motion.div whileTap={{ scale: 0.97 }}>
+                  <Button size="sm" onClick={handleAssign} disabled={!selected || isPending}>
+                    {isPending
+                      ? <Loader2 size={14} className="animate-spin mr-1" />
+                      : <Link2 size={14} className="mr-1" />}
+                    Assign
+                  </Button>
+                </motion.div>
+              </DialogFooter>
+            </motion.div>
+          ) : (
+            /* ── Create mode ── */
+            <motion.form
+              key="create-view"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+              onSubmit={form.handleSubmit(handleCreate)}
+              className="space-y-4 py-1"
+            >
+              {/* Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="wacl-name" className="text-sm font-medium">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="wacl-name"
+                  placeholder="Contact name"
+                  {...form.register("name")}
+                  className="h-9"
+                />
+                {form.formState.errors.name && (
+                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                )}
+              </div>
 
-        <DialogFooter className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleCreate} disabled={creating}>
-            {creating ? <Loader2 size={14} className="animate-spin mr-1" /> : <UserPlus size={14} className="mr-1" />}
-            Create new lead
-          </Button>
-          <Button size="sm" onClick={handleAssign} disabled={!selected || isPending}>
-            {isPending ? <Loader2 size={14} className="animate-spin mr-1" /> : <Link2 size={14} className="mr-1" />}
-            Assign
-          </Button>
-        </DialogFooter>
+              {/* Phone — read-only */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                <Input
+                  value={phone}
+                  readOnly
+                  disabled
+                  className="h-9 bg-muted/50 text-muted-foreground cursor-not-allowed"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <Label htmlFor="wacl-email" className="text-sm font-medium">
+                  Email <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="wacl-email"
+                  type="email"
+                  placeholder="email@example.com"
+                  {...form.register("email")}
+                  className="h-9"
+                />
+                {form.formState.errors.email && (
+                  <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+                )}
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Status</Label>
+                <Select
+                  value={form.watch("status")}
+                  onValueChange={(v) =>
+                    form.setValue("status", v as CreateLeadFormValues["status"], { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_CREATE_OPTS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Source info badge */}
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-md px-3 py-2"
+              >
+                <MessageCircle size={13} className="text-primary flex-shrink-0" />
+                Source will be set to <span className="font-semibold text-primary ml-1">WhatsApp</span>
+              </motion.div>
+
+              <DialogFooter className="flex gap-2 pt-1">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setMode("assign")}>
+                  Back
+                </Button>
+                <motion.div whileTap={{ scale: 0.97 }}>
+                  <Button type="submit" size="sm" disabled={creating} className="gap-1.5">
+                    {creating
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <UserPlus size={14} />}
+                    Create Lead
+                  </Button>
+                </motion.div>
+              </DialogFooter>
+            </motion.form>
+          )}
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
@@ -499,6 +708,7 @@ function ChatPanel({ chat, onBack, isMobile }: ChatPanelProps) {
 
       <AssignLeadDialog
         phone={chat.phone}
+        senderName={chat.senderName || chat.lead?.name}
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
       />
