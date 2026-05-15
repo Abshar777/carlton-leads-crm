@@ -218,13 +218,72 @@ type NoteForm = z.infer<typeof noteSchema>;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+const FALLBACK_STATUS_CFG = {
+  label: "Unknown",
+  color: "bg-muted/15 text-muted-foreground border-border/50",
+  dot:   "bg-muted-foreground",
+};
+
 function StatusBadge({ status }: { status: LeadStatus }) {
-  const cfg = STATUS_CONFIG[status];
+  const cfg = STATUS_CONFIG[status] ?? FALLBACK_STATUS_CFG;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium ${cfg.color}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
+  );
+}
+
+/** Clickable status badge — shows a dropdown to change status inline. */
+function StatusDropdown({
+  leadId,
+  status,
+  canEdit,
+}: {
+  leadId:  string;
+  status:  LeadStatus;
+  canEdit: boolean;
+}) {
+  const updateStatus = useUpdateLeadStatus();
+  const cfg = STATUS_CONFIG[status] ?? FALLBACK_STATUS_CFG;
+
+  if (!canEdit) return <StatusBadge status={status} />;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          className={[
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium",
+            "cursor-pointer hover:opacity-80 transition-opacity focus:outline-none",
+            cfg.color,
+          ].join(" ")}
+        >
+          {updateStatus.isPending
+            ? <Loader2 className="h-3 w-3 animate-spin" />
+            : <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+          }
+          {cfg.label}
+          <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
+        </motion.button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-48">
+        {(Object.entries(STATUS_CONFIG) as [LeadStatus, (typeof STATUS_CONFIG)[LeadStatus]][]).map(([s, c]) => (
+          <DropdownMenuItem
+            key={s}
+            disabled={s === status || updateStatus.isPending}
+            onClick={() => { if (s !== status) updateStatus.mutate({ id: leadId, status: s }); }}
+            className="gap-2 cursor-pointer"
+          >
+            <span className={`h-2 w-2 rounded-full flex-shrink-0 ${c.dot}`} />
+            <span className="flex-1">{c.label}</span>
+            {s === status && <CheckCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -701,7 +760,7 @@ export default function LeadDetailPage() {
                       )}
                     </div>
                   </div>
-                  <StatusBadge status={lead.status} />
+                  <StatusDropdown leadId={leadId} status={lead.status} canEdit={canEdit} />
                 </div>
               </CardHeader>
 

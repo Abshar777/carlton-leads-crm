@@ -72,7 +72,7 @@ function UnknownContactContent({ data, onViewPortal, onDismiss }: ContentProps) 
   const { mutate: createLead, isPending } = useCreateLeadFromChat(data.phone);
 
   function handleCreate() {
-    createLead(data.senderName, {
+    createLead({ name: data.senderName }, {
       onSuccess: () => {
         onDismiss();
       },

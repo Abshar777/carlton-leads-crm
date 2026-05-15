@@ -278,10 +278,16 @@ function timeAgo(dateStr: string): string {
   return formatDate(dateStr);
 }
 
+const FALLBACK_STATUS_CFG = {
+  label: "Unknown",
+  color: "bg-muted/15 text-muted-foreground border-border/50",
+  dot:   "bg-muted-foreground",
+};
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: LeadStatus }) {
-  const cfg = STATUS_CONFIG[status];
+  const cfg = STATUS_CONFIG[status] ?? FALLBACK_STATUS_CFG;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.color}`}
