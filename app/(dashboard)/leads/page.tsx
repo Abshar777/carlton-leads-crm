@@ -554,7 +554,7 @@ function LeadsPageContent() {
                     )}
 
                     {/* Date Range */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                         <CalendarDays className="h-3 w-3" />
                         Date Range (Created)
@@ -604,7 +604,7 @@ function LeadsPageContent() {
                     </div>
 
                     {/* Date Range (Last Updated) */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                         <CalendarDays className="h-3 w-3" />
                         Date Range (Last Updated)
@@ -874,6 +874,7 @@ function LeadsPageContent() {
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Assigned At</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
+                        <th className="px-4 py-3 text-left hidden xl:table-cell">Last Updated</th>
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -977,6 +978,9 @@ function LeadsPageContent() {
                             </td>
                             <td className="px-4 py-4 hidden xl:table-cell">
                               <span className="text-sm text-muted-foreground">{formatDate(lead.createdAt)}</span>
+                            </td>
+                            <td className="px-4 py-4 hidden xl:table-cell">
+                              <span className="text-sm text-muted-foreground">{formatDate(lead.updatedAt)}</span>
                             </td>
                             <td className="px-4 py-4">
                               <div className="flex items-center justify-end gap-1">
