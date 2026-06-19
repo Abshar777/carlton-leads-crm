@@ -112,6 +112,10 @@ export interface LeadFilters {
   dateFrom?: string;
   /** YYYY-MM-DD — leads created on or before this date */
   dateTo?: string;
+  /** YYYY-MM-DD — leads last updated on or after this date */
+  updatedFrom?: string;
+  /** YYYY-MM-DD — leads last updated on or before this date */
+  updatedTo?: string;
   unassignedOnly?: boolean;
 }
 
