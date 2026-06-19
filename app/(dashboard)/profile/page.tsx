@@ -96,6 +96,8 @@ export default function ProfilePage() {
   const [searchInput,  setSearchInput]  = useState("");
   const [dateFrom,     setDateFrom]     = useState("");
   const [dateTo,       setDateTo]       = useState("");
+  const [updatedFrom,  setUpdatedFrom]  = useState("");
+  const [updatedTo,    setUpdatedTo]    = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
@@ -118,6 +120,8 @@ export default function ProfilePage() {
     search: search || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
+    updatedFrom: updatedFrom || undefined,
+    updatedTo: updatedTo || undefined,
   });
 
   const leads      = leadsData?.data ?? [];
@@ -313,7 +317,7 @@ export default function ProfilePage() {
                 >
                   <Filter className="h-3.5 w-3.5" />
                   Date Filter
-                  {(dateFrom || dateTo) && (
+                  {(dateFrom || dateTo || updatedFrom || updatedTo) && (
                     <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">!</span>
                   )}
                 </Button>
@@ -363,16 +367,26 @@ export default function ProfilePage() {
 
             {/* Row 2 — Date filter panel */}
             {showDateFilter && (
-              <LeadsDateFilter
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={(v) => { setDateFrom(v); setPage(1); }}
-                onDateToChange={(v) => { setDateTo(v); setPage(1); }}
-              />
+              <div className="space-y-3">
+                <LeadsDateFilter
+                  label="Created:"
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onDateFromChange={(v) => { setDateFrom(v); setPage(1); }}
+                  onDateToChange={(v) => { setDateTo(v); setPage(1); }}
+                />
+                <LeadsDateFilter
+                  label="Last Updated:"
+                  dateFrom={updatedFrom}
+                  dateTo={updatedTo}
+                  onDateFromChange={(v) => { setUpdatedFrom(v); setPage(1); }}
+                  onDateToChange={(v) => { setUpdatedTo(v); setPage(1); }}
+                />
+              </div>
             )}
 
             {/* Active date pills */}
-            {(dateFrom || dateTo) && !showDateFilter && (
+            {(dateFrom || dateTo || updatedFrom || updatedTo) && !showDateFilter && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {dateFrom && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
@@ -384,6 +398,18 @@ export default function ProfilePage() {
                   <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                     To: {dateTo}
                     <button onClick={() => { setDateTo(""); setPage(1); }}><XIcon className="h-3 w-3" /></button>
+                  </span>
+                )}
+                {updatedFrom && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    Updated from: {updatedFrom}
+                    <button onClick={() => { setUpdatedFrom(""); setPage(1); }}><XIcon className="h-3 w-3" /></button>
+                  </span>
+                )}
+                {updatedTo && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    Updated to: {updatedTo}
+                    <button onClick={() => { setUpdatedTo(""); setPage(1); }}><XIcon className="h-3 w-3" /></button>
                   </span>
                 )}
               </div>
@@ -399,6 +425,8 @@ export default function ProfilePage() {
                   search: search || undefined,
                   dateFrom: dateFrom || undefined,
                   dateTo: dateTo || undefined,
+                  updatedFrom: updatedFrom || undefined,
+                  updatedTo: updatedTo || undefined,
                 }}
                 canEdit={false}
               />

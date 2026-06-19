@@ -142,11 +142,13 @@ function LeadsPageContent() {
   const [reporter, setReporter]           = useState<string>(() => searchParams.get("reporter") ?? "all");
   const [dateFrom, setDateFrom]           = useState<string>(() => searchParams.get("from") ?? "");
   const [dateTo, setDateTo]               = useState<string>(() => searchParams.get("to") ?? "");
+  const [updatedFrom, setUpdatedFrom]     = useState<string>(() => searchParams.get("ufrom") ?? "");
+  const [updatedTo, setUpdatedTo]         = useState<string>(() => searchParams.get("uto") ?? "");
   const [courseId, setCourseId]           = useState<string>(() => searchParams.get("course") ?? "all");
   const [teamId, setTeamId]               = useState<string>(() => searchParams.get("team") ?? "all");
   const [showFilters, setShowFilters]     = useState(() => {
     const sp = searchParams;
-    return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to"));
+    return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to") || sp.get("ufrom") || sp.get("uto"));
   });
 
   // ── View mode — synced to ?view= URL param ────────────────────────────────────
@@ -173,8 +175,10 @@ function LeadsPageContent() {
     if (teamId !== "all")       params.set("team", teamId);
     if (dateFrom)               params.set("from", dateFrom);
     if (dateTo)                 params.set("to", dateTo);
+    if (updatedFrom)            params.set("ufrom", updatedFrom);
+    if (updatedTo)              params.set("uto", updatedTo);
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -198,7 +202,7 @@ function LeadsPageContent() {
   const { mutate: updateStatus } = useUpdateLeadStatus();
 
   // Clear selection when page/filters change
-  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, courseId, teamId]);
+  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, updatedFrom, updatedTo, courseId, teamId]);
 
   const toggleId = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -252,7 +256,9 @@ function LeadsPageContent() {
     ...(teamId !== "all" ? { team: teamId } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo]);
+    ...(updatedFrom ? { updatedFrom } : {}),
+    ...(updatedTo ? { updatedTo } : {}),
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
@@ -298,6 +304,8 @@ function LeadsPageContent() {
     teamId !== "all",
     !!dateFrom,
     !!dateTo,
+    !!updatedFrom,
+    !!updatedTo,
     !!debouncedSearch,
   ].filter(Boolean).length;
 
@@ -594,6 +602,56 @@ function LeadsPageContent() {
                         />
                       </div>
                     </div>
+
+                    {/* Date Range (Last Updated) */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" />
+                        Date Range (Last Updated)
+                      </p>
+                      {/* Quick period buttons */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["today", "week", "month", "year"] as const).map((p) => {
+                          const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
+                          const getRangeFor = (period: string) => {
+                            const now = new Date(); const t = now.toISOString().slice(0,10);
+                            if (period === "today") return { f: t, t };
+                            if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: m.toISOString().slice(0,10), t }; }
+                            if (period === "month") return { f: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10), t };
+                            return { f: new Date(now.getFullYear(),0,1).toISOString().slice(0,10), t };
+                          };
+                          const range = getRangeFor(p);
+                          const isActive = updatedFrom === range.f && updatedTo === range.t;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => { if (isActive) { setUpdatedFrom(""); setUpdatedTo(""); } else { setUpdatedFrom(range.f); setUpdatedTo(range.t); } setPage(1); }}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
+                            >
+                              {labels[p]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="date"
+                          value={updatedFrom}
+                          max={updatedTo || undefined}
+                          onChange={(e) => { setUpdatedFrom(e.target.value); setPage(1); }}
+                          className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                        />
+                        <span className="text-xs text-muted-foreground shrink-0">to</span>
+                        <Input
+                          type="date"
+                          value={updatedTo}
+                          min={updatedFrom || undefined}
+                          onChange={(e) => { setUpdatedTo(e.target.value); setPage(1); }}
+                          className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -636,6 +694,12 @@ function LeadsPageContent() {
                 {dateTo && (
                   <FilterPill label={`To: ${dateTo}`} onRemove={() => { setDateTo(""); setPage(1); }} />
                 )}
+                {updatedFrom && (
+                  <FilterPill label={`Updated from: ${updatedFrom}`} onRemove={() => { setUpdatedFrom(""); setPage(1); }} />
+                )}
+                {updatedTo && (
+                  <FilterPill label={`Updated to: ${updatedTo}`} onRemove={() => { setUpdatedTo(""); setPage(1); }} />
+                )}
               </motion.div>
             )}
           </CardHeader>
@@ -653,6 +717,8 @@ function LeadsPageContent() {
                   ...(teamId !== "all" ? { team: teamId } : {}),
                   ...(dateFrom ? { dateFrom } : {}),
                   ...(dateTo ? { dateTo } : {}),
+                  ...(updatedFrom ? { updatedFrom } : {}),
+                  ...(updatedTo ? { updatedTo } : {}),
                 }}
                 canEdit={canEdit}
               />

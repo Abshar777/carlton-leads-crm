@@ -1038,6 +1038,8 @@ function LeadsTab({
   const [reporterFilter, setReporterFilter] = useState<string>(() => sp.get("lreporter") ?? "all");
   const [dateFrom, setDateFrom] = useState<string>(() => sp.get("ldateFrom") ?? "");
   const [dateTo, setDateTo] = useState<string>(() => sp.get("ldateTo") ?? "");
+  const [updatedFrom, setUpdatedFrom] = useState<string>(() => sp.get("lupdatedFrom") ?? "");
+  const [updatedTo, setUpdatedTo] = useState<string>(() => sp.get("lupdatedTo") ?? "");
   const [unassignedOnly, setUnassignedOnly] = useState(() => sp.get("lunassigned") === "1");
   const [viewMode, setViewMode] = useState<"table" | "kanban">(() => sp.get("lview") === "kanban" ? "kanban" : "table");
 
@@ -1050,7 +1052,7 @@ function LeadsTab({
     setPage(1);
   }
   const [showFilters, setShowFilters] = useState(() =>
-    ["lstatus", "lassignee", "lreporter", "ldateFrom", "ldateTo"].some((k) => {
+    ["lstatus", "lassignee", "lreporter", "ldateFrom", "ldateTo", "lupdatedFrom", "lupdatedTo"].some((k) => {
       const v = sp.get(k); return !!v && v !== "all";
     })
   );
@@ -1099,7 +1101,7 @@ function LeadsTab({
   }
 
   // Clear selection when filters change
-  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, statusFilter, assigneeFilter, reporterFilter, dateFrom, dateTo, unassignedOnly]);
+  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, statusFilter, assigneeFilter, reporterFilter, dateFrom, dateTo, updatedFrom, updatedTo, unassignedOnly]);
 
   // Sync filters to URL (prefixed with "l" to avoid conflict with tab param)
   useEffect(() => {
@@ -1110,12 +1112,14 @@ function LeadsTab({
     if (reporterFilter !== "all") params.set("lreporter", reporterFilter); else params.delete("lreporter");
     if (dateFrom) params.set("ldateFrom", dateFrom); else params.delete("ldateFrom");
     if (dateTo) params.set("ldateTo", dateTo); else params.delete("ldateTo");
+    if (updatedFrom) params.set("lupdatedFrom", updatedFrom); else params.delete("lupdatedFrom");
+    if (updatedTo) params.set("lupdatedTo", updatedTo); else params.delete("lupdatedTo");
     if (unassignedOnly) params.set("lunassigned", "1"); else params.delete("lunassigned");
     if (page > 1) params.set("lpage", String(page)); else params.delete("lpage");
     if (viewMode !== "table") params.set("lview", viewMode); else params.delete("lview");
     router.replace(`?${params.toString()}`, { scroll: false });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, assigneeFilter, reporterFilter, dateFrom, dateTo, unassignedOnly, page, viewMode]);
+  }, [debouncedSearch, statusFilter, assigneeFilter, reporterFilter, dateFrom, dateTo, updatedFrom, updatedTo, unassignedOnly, page, viewMode]);
 
   function applyFilter(setter: (v: string) => void, value: string) {
     setter(value);
@@ -1130,6 +1134,8 @@ function LeadsTab({
     setReporterFilter("all");
     setDateFrom("");
     setDateTo("");
+    setUpdatedFrom("");
+    setUpdatedTo("");
     setUnassignedOnly(false);
     setPage(1);
   }
@@ -1140,6 +1146,8 @@ function LeadsTab({
     reporterFilter !== "all",
     !!dateFrom,
     !!dateTo,
+    !!updatedFrom,
+    !!updatedTo,
     unassignedOnly,
     !!debouncedSearch,
   ].filter(Boolean).length;
@@ -1153,6 +1161,8 @@ function LeadsTab({
     reporter: reporterFilter !== "all" ? reporterFilter : undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
+    updatedFrom: updatedFrom || undefined,
+    updatedTo: updatedTo || undefined,
     unassignedOnly,
     page,
     limit,
@@ -1399,6 +1409,56 @@ function LeadsTab({
                       />
                     </div>
                   </div>
+
+                  {/* Date Range (Last Updated) */}
+                  <div className="space-y-2 col-span-2">
+                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <CalendarDays className="h-3 w-3" />
+                      Date Range (Last Updated)
+                    </p>
+                    {/* Quick period buttons */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {(["today", "week", "month", "year"] as const).map((p) => {
+                        const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
+                        const getRangeFor = (period: string) => {
+                          const now = new Date(); const t = now.toISOString().slice(0,10);
+                          if (period === "today") return { f: t, t };
+                          if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: m.toISOString().slice(0,10), t }; }
+                          if (period === "month") return { f: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10), t };
+                          return { f: new Date(now.getFullYear(),0,1).toISOString().slice(0,10), t };
+                        };
+                        const range = getRangeFor(p);
+                        const isActive = updatedFrom === range.f && updatedTo === range.t;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => { if (isActive) { setUpdatedFrom(""); setUpdatedTo(""); } else { setUpdatedFrom(range.f); setUpdatedTo(range.t); } setPage(1); }}
+                            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
+                          >
+                            {labels[p]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="date"
+                        value={updatedFrom}
+                        max={updatedTo || undefined}
+                        onChange={(e) => { setUpdatedFrom(e.target.value); setPage(1); }}
+                        className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">to</span>
+                      <Input
+                        type="date"
+                        value={updatedTo}
+                        min={updatedFrom || undefined}
+                        onChange={(e) => { setUpdatedTo(e.target.value); setPage(1); }}
+                        className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1445,6 +1505,18 @@ function LeadsTab({
                 <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                   To: {dateTo}
                   <button onClick={() => { setDateTo(""); setPage(1); }} className="ml-0.5 hover:text-primary/60"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {updatedFrom && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  Updated from: {updatedFrom}
+                  <button onClick={() => { setUpdatedFrom(""); setPage(1); }} className="ml-0.5 hover:text-primary/60"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {updatedTo && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  Updated to: {updatedTo}
+                  <button onClick={() => { setUpdatedTo(""); setPage(1); }} className="ml-0.5 hover:text-primary/60"><X className="h-3 w-3" /></button>
                 </span>
               )}
             </motion.div>
@@ -1906,6 +1978,8 @@ function LeadsTab({
               assignedTo: assigneeFilter !== "all" ? assigneeFilter : undefined,
               dateFrom: dateFrom || undefined,
               dateTo: dateTo || undefined,
+              updatedFrom: updatedFrom || undefined,
+              updatedTo: updatedTo || undefined,
               unassignedOnly: unassignedOnly || undefined,
             }}
             canEdit={!!isLeaderOrAdmin}
