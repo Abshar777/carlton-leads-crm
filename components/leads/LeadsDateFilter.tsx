@@ -18,6 +18,8 @@ export interface LeadsDateFilterProps {
   onDateToChange: (v: string) => void;
   /** Called when the user picks a quick period; parent receives resolved from/to */
   onQuickPeriod?: (from: string, to: string, period: QuickPeriod) => void;
+  /** Label shown before the quick-period buttons. Defaults to "Period:" */
+  label?: string;
   className?: string;
 }
 
@@ -61,6 +63,7 @@ export function LeadsDateFilter({
   onDateFromChange,
   onDateToChange,
   onQuickPeriod,
+  label = "Period:",
   className,
 }: LeadsDateFilterProps) {
   const [activePeriod, setActivePeriod] = useState<QuickPeriod>("");
