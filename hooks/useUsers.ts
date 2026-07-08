@@ -1,9 +1,11 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/axios";
-import type { ApiResponse, User } from "@/types";
+import type { ApiResponse, AuthUser, User } from "@/types";
 import type { CreateUserFormValues, UpdateUserFormValues } from "@/lib/validations/userSchema";
+import { useAuthStore } from "@/lib/store/authStore";
 
 const USERS_KEY = ["users"] as const;
 
@@ -82,6 +84,33 @@ export const useDeleteUser = () => {
       const msg =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         "Failed to delete user";
+      toast.error(msg);
+    },
+  });
+};
+
+export const useImpersonateUser = () => {
+  const { startImpersonation } = useAuthStore();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.post<ApiResponse<{ token: string; user: AuthUser }>>(
+        `/users/${userId}/impersonate`
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      startImpersonation(data.user, data.token);
+      queryClient.clear();
+      toast.success(`Now viewing as ${data.user.name}`);
+      router.push("/dashboard");
+    },
+    onError: (error: unknown) => {
+      const msg =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to impersonate user";
       toast.error(msg);
     },
   });

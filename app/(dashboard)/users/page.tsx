@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, ExternalLink } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, X, ExternalLink, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserDialog } from "@/components/users/UserDialog";
 import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsers, useImpersonateUser } from "@/hooks/useUsers";
 import { useRolesSimple } from "@/hooks/useRoles";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -109,6 +109,9 @@ function UsersPageContent() {
   const canCreate = hasPermission("users", "create");
   const canEdit = hasPermission("users", "edit");
   const canDelete = hasPermission("users", "delete");
+  const canImpersonate = hasPermission("impersonate", "create");
+
+  const { mutate: impersonate, isPending: isImpersonating, variables: impersonatingId } = useImpersonateUser();
 
   return (
     <div className="space-y-6">
@@ -317,6 +320,21 @@ function UsersPageContent() {
                                   <ExternalLink className="h-4 w-4" />
                                 </Button>
                               </Link>
+                              {canImpersonate && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-amber-500 hover:text-amber-600"
+                                  title={`Impersonate ${user.name}`}
+                                  disabled={isImpersonating && impersonatingId === user._id}
+                                  onClick={() => impersonate(user._id)}
+                                >
+                                  {isImpersonating && impersonatingId === user._id
+                                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                                    : <UserCog className="h-4 w-4" />
+                                  }
+                                </Button>
+                              )}
                               {canEdit && (
                                 <Button
                                   variant="ghost"

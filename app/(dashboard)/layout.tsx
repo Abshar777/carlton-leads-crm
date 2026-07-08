@@ -8,6 +8,7 @@ import { navItems } from "@/components/layout/Sidebar";
 import { useReminderNotifications } from "@/hooks/useReminderNotifications";
 import { RecentPageTracker } from "@/components/shared/CommandPalette";
 import { WAUnknownContactToast } from "@/components/shared/WAUnknownContactToast";
+import { ImpersonationBanner } from "@/components/shared/ImpersonationBanner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasPermission } = useAuthStore();
@@ -46,13 +47,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
+    <div className="flex h-dvh flex-col overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
       <RecentPageTracker />
       <WAUnknownContactToast />
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <ImpersonationBanner />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
       </div>
     </div>
   );

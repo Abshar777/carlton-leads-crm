@@ -3,15 +3,25 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { AuthUser } from "@/types";
 
+interface OriginalAuth {
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
+}
+
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  impersonating: boolean;
+  originalAuth: OriginalAuth | null;
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
   updateUser: (user: AuthUser) => void;
   clearAuth: () => void;
   hasPermission: (module: string, action: string) => boolean;
+  startImpersonation: (targetUser: AuthUser, token: string) => void;
+  stopImpersonation: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,6 +31,8 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: typeof window !== "undefined" ? localStorage.getItem("crm-auth") !== null? JSON.parse(localStorage.getItem("crm-auth")!)?.state?.isAuthenticated : false : false,
+      impersonating: false,
+      originalAuth: null,
 
       setAuth: (user, accessToken, refreshToken) => {
         // Also store tokens in localStorage for Axios interceptor
@@ -38,7 +50,36 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
         }
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, impersonating: false, originalAuth: null });
+      },
+
+      startImpersonation: (targetUser, token) => {
+        const { user, accessToken, refreshToken } = get();
+        if (typeof window !== "undefined") {
+          localStorage.setItem("accessToken", token);
+        }
+        set({
+          originalAuth: { user: user!, accessToken: accessToken!, refreshToken: refreshToken! },
+          user: targetUser as AuthUser,
+          accessToken: token,
+          impersonating: true,
+        });
+      },
+
+      stopImpersonation: () => {
+        const { originalAuth } = get();
+        if (!originalAuth) return;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("accessToken", originalAuth.accessToken);
+          localStorage.setItem("refreshToken", originalAuth.refreshToken);
+        }
+        set({
+          user: originalAuth.user,
+          accessToken: originalAuth.accessToken,
+          refreshToken: originalAuth.refreshToken,
+          impersonating: false,
+          originalAuth: null,
+        });
       },
 
       hasPermission: (module, action) => {
@@ -65,6 +106,8 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        impersonating: state.impersonating,
+        originalAuth: state.originalAuth,
       }),
     }
   )
