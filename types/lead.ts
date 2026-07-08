@@ -1,6 +1,7 @@
 import type { User } from "@/types";
 import type { Team } from "@/types/team";
 import type { Course } from "@/types/course";
+import type { Tag } from "@/types/tag";
 
 export type LeadStatus = "new" | "assigned" | "followup" | "closed" | "invalid" | "cnc" | "booking" | "notinterested" | "interested" | "rnr" | "callback" | "whatsapp" | "student";
 
@@ -86,6 +87,7 @@ export interface Lead {
   callCount?: number;
   platform?: string;
   campaign?: string;
+  tags?: (Tag | string)[];
   createdAt: string;
   updatedAt: string;
 }
@@ -117,6 +119,7 @@ export interface LeadFilters {
   /** YYYY-MM-DD — leads last updated on or before this date */
   updatedTo?: string;
   unassignedOnly?: boolean;
+  tags?: string;
 }
 
 export interface LeadStats {

@@ -414,3 +414,22 @@ export const useAddCallLog = () => {
   });
 };
 
+
+// ─── Today's Queue ────────────────────────────────────────────────────────────
+
+interface MyQueueData {
+  assigned: Lead[];
+  cnc: Lead[];
+  totalCount: number;
+}
+
+export const useMyQueue = () => {
+  return useQuery({
+    queryKey: ["leads", "my-queue"],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<MyQueueData>>("/leads/my-queue");
+      return response.data.data!;
+    },
+    refetchInterval: 5 * 60 * 1000, // auto-refresh every 5 min
+  });
+};

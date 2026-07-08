@@ -614,3 +614,43 @@ Copy the template at the top and place it in the correct module section.
 
 **Feature count**: 12
 *(Increment every time you add a feature)*
+
+---
+
+## Feature #13 — Tag Manager (2026-07-07)
+
+**Settings > Tags tab:** Create/edit/delete colored tags with a color picker (8 presets + custom hex). Accessible at `/settings` (Tags tab) and `/settings/tags`.
+
+**Lead Dialog:** `TagSelector` multi-select dropdown in `LeadDialog` form. Tags are saved via `PUT /leads/:id/tags` after create/edit.
+
+**Leads Page:**
+- **Tags column** in desktop table (`hidden xl:table-cell`) — shows up to 3 `TagBadge` pills + "+N more" overflow.
+- **Tag filter** in filter panel — color-coded toggle buttons. Filter persisted in URL as `?tags=id1,id2`.
+- **Active filter pills** for selected tags.
+- Tag filter included in `activeFilterCount` and `clearAllFilters`.
+
+**Types:** `frontend/types/tag.ts` — `Tag` interface. `Lead.tags?: (Tag | string)[]` added to lead type.
+
+---
+
+## Daily Queue Page (added 2026-07-08)
+
+**Route:** `/leads/queue`
+**File:** `app/(dashboard)/leads/queue/page.tsx`
+**Sidebar:** "My Queue" nav item with `ListTodo` icon, under Leads
+
+**What it does:**
+- Shows the agent's daily work queue: assigned leads + stale CNC leads due for recall today
+- 3 stat tiles (Total / Assigned / CNC) — click to filter the section view
+- Auto-refreshes every 5 min via `refetchInterval`; manual Refresh button
+- Empty state: "All clear!" with CheckCircle2 icon
+- Each lead card: name, status badge, phone, course, last note, tags, "not connected N×" for CNC
+
+---
+
+## Team Inline Change from Leads Table (added 2026-07-08)
+
+**File:** `app/(dashboard)/leads/page.tsx` (Team column in desktop table)
+**Access:** Reporter of the lead OR admin/team leader (`canChangeTeam = reporterId === user?._id || isAdmin`)
+**UI:** DropdownMenu with all active teams; current team highlighted; shows "Assign team" with icon when no team set
+**Hook:** `useAssignLeadToTeam()` → `PATCH /api/v1/leads/:id/team`

@@ -1000,3 +1000,36 @@
 **Props:** `teams: Team[]`, `selectedTeamIds: Set<string>`, `selectedMemberIds: Record<string, Set<string>>`, `lockedTeamId?: string | null`, `lockedMemberId?: string | null`, `onToggleTeam: (id: string) => void`, `onToggleMember: (teamId: string, memberId: string) => void`, `onSetAllMembers: (teamId: string, all: boolean) => void`
 **Used in:** upload page
 **Purpose:** Vertical list of team rows, each expands to show `MemberSelector`. BDE sees only their team (locked, non-removable). Admins can toggle any team + any member. Framer Motion AnimatePresence for expand/collapse.
+
+---
+
+## Tag Components — `components/tags/`
+
+### `TagBadge.tsx`
+**Props:** `tag: Tag`, `onRemove?: () => void`, `size?: "xs" | "sm"`
+**Purpose:** Colored pill with dot and tag name. Optional remove ×. Uses inline `style` for dynamic color (semantic tokens can't be dynamic). Framer Motion scale in/out.
+**Used in:** leads table (Tags column), TagSelector, TagManager list.
+
+### `TagSelector.tsx`
+**Props:** `value: string[]`, `onChange: (ids: string[]) => void`, `placeholder?: string`
+**Purpose:** Clickable multi-select dropdown with search. Fetches all tags via `useTags()`. Outside-click closes via `useRef` + mousedown listener. Checkmark on selected items.
+**Used in:** `LeadDialog` (Tags field).
+
+### `TagManager.tsx`
+**Exports:** `TagManager` (default), `TagFormDialog`, `DeleteTagDialog`
+**Purpose:** Full CRUD UI for tags. Color picker with 8 presets + custom hex input. Edit/delete on hover. Empty state with "Create first tag" CTA.
+**Used in:** `settings/page.tsx` (wrapped in `TagManagerInline`), `settings/tags/page.tsx`.
+
+---
+
+## My Queue Page — `app/(dashboard)/leads/queue/page.tsx`
+
+**Route:** `/leads/queue`
+**Purpose:** Daily work queue for agents — shows assigned leads + stale CNC leads due for recall today.
+**Components (inline, not separate files):**
+- `LeadCard` — lead info card (name, status badge, phone, course, last note, tags, CNC count)
+- `Section` — titled section wrapper with AnimatePresence empty/list switch
+- Stat tiles — 3 clickable buttons (Total / Assigned / CNC) that filter the view
+**Hooks used:** `useMyQueue()` (5-min auto-refetch)
+**Tags shown via:** `TagBadge` from `components/tags/TagBadge.tsx`
+**Sidebar:** Listed as "My Queue" with `ListTodo` icon in `components/layout/Sidebar.tsx`

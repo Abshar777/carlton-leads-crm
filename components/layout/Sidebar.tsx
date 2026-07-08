@@ -19,6 +19,7 @@ import {
   Settings,
   BrainCircuit,
   MessageCircle,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -43,6 +44,7 @@ import { getSocket } from "@/lib/socket";
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
   { href: "/leads", label: "Leads", icon: FileText, permModule: "leads" },
+  { href: "/leads/queue", label: "My Queue", icon: ListTodo, permModule: "leads" },
   { href: "/reminders", label: "Reminders", icon: Bell, permModule: "reminders" },
   { href: "/teams", label: "Teams", icon: UsersRound, permModule: "teams" },
   { href: "/courses", label: "Courses", icon: BookOpen, permModule: "courses" },

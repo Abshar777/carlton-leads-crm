@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -23,9 +23,12 @@ import {
   type UpdateLeadFormValues,
 } from "@/lib/validations/leadSchema";
 import { useCreateLead, useUpdateLead } from "@/hooks/useLeads";
+import { useUpdateLeadTags } from "@/hooks/useTags";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useTeams, useTeam } from "@/hooks/useTeams";
+import { TagSelector } from "@/components/tags/TagSelector";
 import type { Lead } from "@/types/lead";
+import type { Tag } from "@/types/tag";
 
 const SOURCES = [
   { value: "website",  label: "Website" },
@@ -47,11 +50,13 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
 
   const { mutate: createLead, isPending: creating } = useCreateLead();
   const { mutate: updateLead, isPending: updating } = useUpdateLead();
+  const { mutate: updateLeadTags } = useUpdateLeadTags();
   const { data: allCourses = [] } = useAllCourses();
   // All active teams for the Team dropdown
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const teams = teamsData?.data ?? [];
 
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const isPending = creating || updating;
 
   const {
@@ -99,8 +104,14 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
             ? (lead.course as { _id: string })._id
             : (lead.course as string | null | undefined) ?? "",
         } as UpdateLeadFormValues as never);
+        // Populate tag IDs from lead
+        const ids = (lead.tags ?? []).map((t) =>
+          typeof t === "object" ? (t as Tag)._id : t
+        );
+        setSelectedTagIds(ids);
       } else {
         reset({ name: "", email: "", phone: "", source: "", course: "", team: "", assignedTo: "" });
+        setSelectedTagIds([]);
       }
     }
   }, [open, lead, reset]);
@@ -116,9 +127,26 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
     };
 
     if (isEditing && lead) {
-      updateLead({ id: lead._id, data: payload }, { onSuccess: () => onOpenChange(false) });
+      updateLead(
+        { id: lead._id, data: payload },
+        {
+          onSuccess: () => {
+            if (selectedTagIds.length > 0 || (lead.tags ?? []).length > 0) {
+              updateLeadTags({ leadId: lead._id, tagIds: selectedTagIds });
+            }
+            onOpenChange(false);
+          },
+        },
+      );
     } else {
-      createLead(payload, { onSuccess: () => onOpenChange(false) });
+      createLead(payload, {
+        onSuccess: (newLead) => {
+          if (selectedTagIds.length > 0 && newLead?._id) {
+            updateLeadTags({ leadId: newLead._id, tagIds: selectedTagIds });
+          }
+          onOpenChange(false);
+        },
+      });
     }
   };
 
@@ -189,6 +217,12 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
                   </Select>
                 )}
               />
+            </div>
+
+            {/* Tags */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Tags <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <TagSelector value={selectedTagIds} onChange={setSelectedTagIds} />
             </div>
 
             {/* ── Create-only fields ─────────────────────────────────────── */}

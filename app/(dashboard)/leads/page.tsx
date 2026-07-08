@@ -5,7 +5,7 @@ import {
   Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight,
   X, Upload, UserCheck, FileText, ChevronDown, ExternalLink,
   CalendarDays, Filter, CheckSquare, Square, Tags, ArrowRightLeft, AlertTriangle,
-  LayoutGrid, List,
+  LayoutGrid, List, UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
@@ -29,14 +29,17 @@ import { LeadDialog } from "@/components/leads/LeadDialog";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { AssignLeadDialog } from "@/components/leads/AssignLeadDialog";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
-import { useLeads, useUpdateLeadStatus, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
+import { useLeads, useUpdateLeadStatus, useAssignLeadToTeam, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useUsers } from "@/hooks/useUsers";
 import { useTeams } from "@/hooks/useTeams";
+import { useTags } from "@/hooks/useTags";
+import { TagBadge } from "@/components/tags/TagBadge";
 import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Lead, LeadStatus } from "@/types/lead";
+import type { Tag } from "@/types/tag";
 import type { User } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -146,9 +149,13 @@ function LeadsPageContent() {
   const [updatedTo, setUpdatedTo]         = useState<string>(() => searchParams.get("uto") ?? "");
   const [courseId, setCourseId]           = useState<string>(() => searchParams.get("course") ?? "all");
   const [teamId, setTeamId]               = useState<string>(() => searchParams.get("team") ?? "all");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(() => {
+    const t = searchParams.get("tags");
+    return t ? t.split(",").filter(Boolean) : [];
+  });
   const [showFilters, setShowFilters]     = useState(() => {
     const sp = searchParams;
-    return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to") || sp.get("ufrom") || sp.get("uto"));
+    return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to") || sp.get("ufrom") || sp.get("uto") || sp.get("tags"));
   });
 
   // ── View mode — synced to ?view= URL param ────────────────────────────────────
@@ -175,10 +182,11 @@ function LeadsPageContent() {
     if (teamId !== "all")       params.set("team", teamId);
     if (dateFrom)               params.set("from", dateFrom);
     if (dateTo)                 params.set("to", dateTo);
-    if (updatedFrom)            params.set("ufrom", updatedFrom);
-    if (updatedTo)              params.set("uto", updatedTo);
+    if (updatedFrom)                    params.set("ufrom", updatedFrom);
+    if (updatedTo)                      params.set("uto", updatedTo);
+    if (selectedTagIds.length > 0)      params.set("tags", selectedTagIds.join(","));
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -200,9 +208,10 @@ function LeadsPageContent() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { mutate: updateStatus } = useUpdateLeadStatus();
+  const { mutate: assignToTeam, isPending: assigningTeam } = useAssignLeadToTeam();
 
   // Clear selection when page/filters change
-  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, updatedFrom, updatedTo, courseId, teamId]);
+  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, status, assignedTo, reporter, dateFrom, dateTo, updatedFrom, updatedTo, courseId, teamId, selectedTagIds]);
 
   const toggleId = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -258,12 +267,14 @@ function LeadsPageContent() {
     ...(dateTo ? { dateTo } : {}),
     ...(updatedFrom ? { updatedFrom } : {}),
     ...(updatedTo ? { updatedTo } : {}),
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo]);
+    ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(",") } : {}),
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const { data: allCourses = [] } = useAllCourses();
+  const { data: allTags = [] } = useTags();
 
   const leads = data?.data ?? [];
   const pagination = data?.pagination;
@@ -307,6 +318,7 @@ function LeadsPageContent() {
     !!updatedFrom,
     !!updatedTo,
     !!debouncedSearch,
+    selectedTagIds.length > 0,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
@@ -319,6 +331,9 @@ function LeadsPageContent() {
     setTeamId("all");
     setDateFrom("");
     setDateTo("");
+    setUpdatedFrom("");
+    setUpdatedTo("");
+    setSelectedTagIds([]);
     setSearch("");
     setDebouncedSearch("");
     setPage(1);
@@ -553,6 +568,42 @@ function LeadsPageContent() {
                       </div>
                     )}
 
+                    {/* Tags */}
+                    {allTags.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Tags</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {allTags.map((tag) => {
+                            const active = selectedTagIds.includes(tag._id);
+                            return (
+                              <button
+                                key={tag._id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTagIds((prev) =>
+                                    active ? prev.filter((id) => id !== tag._id) : [...prev, tag._id]
+                                  );
+                                  setPage(1);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-all"
+                                style={{
+                                  backgroundColor: active ? `${tag.color}30` : `${tag.color}10`,
+                                  borderColor: active ? tag.color : `${tag.color}40`,
+                                  color: tag.color,
+                                }}
+                              >
+                                <span
+                                  className="inline-block rounded-full"
+                                  style={{ width: 6, height: 6, backgroundColor: tag.color }}
+                                />
+                                {tag.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Date Range */}
                     <div className="space-y-2 sm:col-span-2">
                       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -700,6 +751,16 @@ function LeadsPageContent() {
                 {updatedTo && (
                   <FilterPill label={`Updated to: ${updatedTo}`} onRemove={() => { setUpdatedTo(""); setPage(1); }} />
                 )}
+                {selectedTagIds.map((id) => {
+                  const tag = allTags.find((t) => t._id === id);
+                  return tag ? (
+                    <FilterPill
+                      key={id}
+                      label={`Tag: ${tag.name}`}
+                      onRemove={() => { setSelectedTagIds((prev) => prev.filter((v) => v !== id)); setPage(1); }}
+                    />
+                  ) : null;
+                })}
               </motion.div>
             )}
           </CardHeader>
@@ -872,6 +933,7 @@ function LeadsPageContent() {
                         <th className="px-4 py-3 text-left hidden lg:table-cell">Team</th>
                         <th className="px-4 py-3 text-left hidden lg:table-cell">Assigned To</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Assigned At</th>
+                        <th className="px-4 py-3 text-left hidden xl:table-cell">Tags</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Last Updated</th>
@@ -944,13 +1006,71 @@ function LeadsPageContent() {
                               </DropdownMenu>
                             </td>
                             <td className="px-4 py-4 hidden lg:table-cell">
-                              {lead.team ? (
-                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                                  {typeof lead.team === "object" ? lead.team.name : lead.team}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-muted-foreground/50">—</span>
-                              )}
+                              {(() => {
+                                const reporterId = typeof lead.reporter === "object"
+                                  ? (lead.reporter as { _id: string })._id
+                                  : lead.reporter as string;
+                                const canChangeTeam = reporterId === user?._id || isAdmin;
+                                const teams = teamsData?.data ?? [];
+                                const teamName = lead.team
+                                  ? (typeof lead.team === "object" ? (lead.team as { name: string }).name : lead.team as string)
+                                  : null;
+
+                                if (!canChangeTeam) {
+                                  return teamName ? (
+                                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                      {teamName}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground/50">—</span>
+                                  );
+                                }
+
+                                return (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        className="flex items-center gap-1 group/team"
+                                        disabled={assigningTeam}
+                                        title="Change team"
+                                      >
+                                        {teamName ? (
+                                          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                                            {teamName}
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                                            <UsersRound className="h-3 w-3" />
+                                            Assign team
+                                          </span>
+                                        )}
+                                        <ChevronDown className="h-3 w-3 text-muted-foreground opacity-0 group-hover/team:opacity-100 transition-opacity" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-48">
+                                      {teams.length === 0 && (
+                                        <div className="px-3 py-2 text-xs text-muted-foreground">No active teams</div>
+                                      )}
+                                      {teams.map((t) => (
+                                        <DropdownMenuItem
+                                          key={t._id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            assignToTeam({ id: lead._id, teamId: t._id });
+                                          }}
+                                          className={typeof lead.team === "object"
+                                            ? (lead.team as { _id: string })._id === t._id ? "font-semibold bg-primary/5" : ""
+                                            : lead.team === t._id ? "font-semibold bg-primary/5" : ""
+                                          }
+                                        >
+                                          <UsersRound className="h-3.5 w-3.5 mr-2 text-primary" />
+                                          {t.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-4 hidden lg:table-cell">
                               <span className="text-sm text-muted-foreground">
@@ -966,6 +1086,25 @@ function LeadsPageContent() {
                                   <p className="text-[11px] text-muted-foreground/60">
                                     {new Date(lead.assignedAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true })} IST
                                   </p>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground/40">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 hidden xl:table-cell">
+                              {lead.tags && lead.tags.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  <AnimatePresence>
+                                    {(lead.tags as (Tag | string)[]).slice(0, 3).map((tag) => {
+                                      const t = typeof tag === "object" ? tag : allTags.find((at) => at._id === tag);
+                                      return t && typeof t === "object" ? (
+                                        <TagBadge key={t._id} tag={t} size="xs" />
+                                      ) : null;
+                                    })}
+                                  </AnimatePresence>
+                                  {lead.tags.length > 3 && (
+                                    <span className="text-xs text-muted-foreground">+{lead.tags.length - 3}</span>
+                                  )}
                                 </div>
                               ) : (
                                 <span className="text-xs text-muted-foreground/40">—</span>

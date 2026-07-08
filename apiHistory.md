@@ -1325,3 +1325,39 @@ Copy the template at the top of this file and add under the correct module secti
 **Params:** `memberId`, `isDone`, `search`, `page`, `limit`
 **Response:** `{ data: TeamReminderItem[], pagination }`
 **Used by:** `TeamRemindersTab`
+
+---
+
+## Tags — `hooks/useTags.ts`
+
+**Query key:** `["tags"]`
+**Endpoint:** `GET /api/v1/tags`
+
+| Hook | Method | Endpoint | Invalidates |
+|------|--------|----------|-------------|
+| `useTags()` | GET | `/tags` | — |
+| `useCreateTag()` | POST | `/tags` | `["tags"]` |
+| `useUpdateTag()` | PUT | `/tags/:id` | `["tags"]`, `["leads"]` |
+| `useDeleteTag()` | DELETE | `/tags/:id` | `["tags"]`, `["leads"]` |
+| `useUpdateLeadTags()` | PUT | `/leads/:leadId/tags` | `["leads"]` |
+
+`useUpdateLeadTags` takes `{ leadId: string, tagIds: string[] }`.
+
+---
+
+## My Queue — `hooks/useLeads.ts`
+
+| Hook | Method | Endpoint | Invalidates |
+|------|--------|----------|-------------|
+| `useMyQueue()` | GET | `/leads/my-queue` | — (auto-refetches every 5 min) |
+
+**Response type:** `MyQueueData { assigned: Lead[], cnc: Lead[], totalCount: number }`
+**Query key:** `["leads", "my-queue"]`
+**Used by:** `app/(dashboard)/leads/queue/page.tsx`
+
+---
+
+## Team Inline Assignment (leads page)
+
+Hook already existed: `useAssignLeadToTeam()` → `PATCH /leads/:id/team`
+Added usage in `leads/page.tsx` Team column — reporters + admins see DropdownMenu to change team inline.

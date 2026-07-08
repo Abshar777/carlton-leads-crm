@@ -6,8 +6,9 @@ import {
   Database, RefreshCw, RotateCcw, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Clock, AlertTriangle, CloudUpload,
   HardDrive, Loader2, MessageCircle, Wifi, WifiOff, QrCode,
-  Smartphone,
+  Smartphone, Tag,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,17 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { getSocket } from "@/lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import { WA_STATUS_KEY } from "@/hooks/useWhatsApp";
+import { TagManager } from "@/components/tags/TagManager";
+
+function TagManagerInline() {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <TagManager />
+      </CardContent>
+    </Card>
+  );
+}
 
 // ─── Animation variants ───────────────────────────────────────────────────────
 
@@ -324,7 +336,7 @@ export default function SettingsPage() {
   const { user } = useAuthStore();
   const isSuperAdmin = (user as { role?: { roleName?: string } })?.role?.roleName === "Super Admin";
 
-  const [activeTab, setActiveTab] = useState<"whatsapp" | "backup">("whatsapp");
+  const [activeTab, setActiveTab] = useState<"whatsapp" | "backup" | "tags">("whatsapp");
 
   const { data: manifest, isLoading, refetch } = useBackupManifest();
   const { mutate: triggerBackup, isPending: triggering } = useTriggerBackup();
@@ -358,6 +370,7 @@ export default function SettingsPage() {
         {([
           { key: "whatsapp", label: "WhatsApp", icon: MessageCircle },
           { key: "backup",   label: "Backup & Restore", icon: Database },
+          { key: "tags",     label: "Tags", icon: Tag },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -375,13 +388,19 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab Content */}
-      <AnimatePresence mode="wait">
-        {activeTab === "whatsapp" ? (
-          <motion.div key="whatsapp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+      <AnimatePresence>
+        {activeTab === "tags" && (
+          <motion.div key="tags" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <TagManagerInline />
+          </motion.div>
+        )}
+        {activeTab === "whatsapp" && (
+          <motion.div key="whatsapp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <WhatsAppTab />
           </motion.div>
-        ) : (
-          <motion.div key="backup" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
+        )}
+        {activeTab === "backup" && (
+          <motion.div key="backup" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
             {/* Run Backup Now */}
             {isSuperAdmin && (
               <Card>
