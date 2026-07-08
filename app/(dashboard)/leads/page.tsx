@@ -469,6 +469,69 @@ function LeadsPageContent() {
               </div>
             </div>
 
+            {/* Tag chip bar — always visible, multi-select */}
+            {allTags.length > 0 && (
+              <div className="flex items-start gap-2">
+                <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground shrink-0 mt-1">
+                  <Tags className="h-3 w-3" />
+                  Tags:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {allTags.map((tag) => {
+                    const active = selectedTagIds.includes(tag._id);
+                    return (
+                      <motion.button
+                        key={tag._id}
+                        type="button"
+                        whileTap={{ scale: 0.94 }}
+                        onClick={() => {
+                          setSelectedTagIds((prev) =>
+                            active ? prev.filter((id) => id !== tag._id) : [...prev, tag._id]
+                          );
+                          setPage(1);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all"
+                        style={{
+                          backgroundColor: active ? `${tag.color}28` : `${tag.color}10`,
+                          borderColor: active ? tag.color : `${tag.color}35`,
+                          color: tag.color,
+                          boxShadow: active ? `0 0 0 1.5px ${tag.color}50` : "none",
+                        }}
+                      >
+                        <span
+                          className="inline-block rounded-full shrink-0 transition-opacity"
+                          style={{ width: 6, height: 6, backgroundColor: tag.color, opacity: active ? 1 : 0.55 }}
+                        />
+                        {tag.name}
+                        {active && (
+                          <motion.span
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            className="ml-0.5 text-[10px] leading-none"
+                          >
+                            ✓
+                          </motion.span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                  {selectedTagIds.length > 0 && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      type="button"
+                      onClick={() => { setSelectedTagIds([]); setPage(1); }}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear ({selectedTagIds.length})
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Row 2 — Expandable filter panel */}
             <AnimatePresence initial={false}>
               {showFilters && (
@@ -565,42 +628,6 @@ function LeadsPageContent() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                    )}
-
-                    {/* Tags */}
-                    {allTags.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Tags</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {allTags.map((tag) => {
-                            const active = selectedTagIds.includes(tag._id);
-                            return (
-                              <button
-                                key={tag._id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedTagIds((prev) =>
-                                    active ? prev.filter((id) => id !== tag._id) : [...prev, tag._id]
-                                  );
-                                  setPage(1);
-                                }}
-                                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-all"
-                                style={{
-                                  backgroundColor: active ? `${tag.color}30` : `${tag.color}10`,
-                                  borderColor: active ? tag.color : `${tag.color}40`,
-                                  color: tag.color,
-                                }}
-                              >
-                                <span
-                                  className="inline-block rounded-full"
-                                  style={{ width: 6, height: 6, backgroundColor: tag.color }}
-                                />
-                                {tag.name}
-                              </button>
-                            );
-                          })}
-                        </div>
                       </div>
                     )}
 

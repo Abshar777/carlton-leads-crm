@@ -92,7 +92,16 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
       {navItems.map(({ href, label, icon: Icon, permModule }) => {
-        const isActive = pathname === href || pathname.startsWith(href + "/");
+        // Active only if exact match OR starts-with but no more-specific nav item also matches
+        const isActive =
+          pathname === href ||
+          (pathname.startsWith(href + "/") &&
+            !navItems.some(
+              (other) =>
+                other.href !== href &&
+                other.href.startsWith(href + "/") &&
+                pathname.startsWith(other.href),
+            ));
         const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
         const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : href === "/whatsapp" ? waUnreadCount : 0;
         const showBadge = badgeCount > 0;
