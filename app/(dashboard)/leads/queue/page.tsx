@@ -69,7 +69,7 @@ function LeadCard({ lead, type }: { lead: Lead; type: "assigned" | "cnc" }) {
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className="font-semibold text-foreground truncate">{lead.name}</span>
                   {statusBadge(lead.status)}
-                  {type === "cnc" && lead.callNotConnected > 0 && (
+                  {type === "cnc" && (lead.callNotConnected ?? 0) > 0 && (
                     <span className="inline-flex items-center gap-1 text-xs text-orange-500">
                       <PhoneOff className="h-3 w-3" />
                       {lead.callNotConnected}× not connected
