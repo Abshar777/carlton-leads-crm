@@ -44,7 +44,7 @@ import { getSocket } from "@/lib/socket";
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
   { href: "/leads", label: "Leads", icon: FileText, permModule: "leads" },
-  { href: "/leads/queue", label: "My Queue", icon: ListTodo, permModule: "leads" },
+  { href: "/leads/queue", label: "My Queue", icon: ListTodo, permModule: "queue" },
   { href: "/reminders", label: "Reminders", icon: Bell, permModule: "reminders" },
   { href: "/teams", label: "Teams", icon: UsersRound, permModule: "teams" },
   { href: "/courses", label: "Courses", icon: BookOpen, permModule: "courses" },
