@@ -1085,7 +1085,7 @@ function LeadsPageContent() {
                                             e.stopPropagation();
                                             assignToTeam({ id: lead._id, teamId: t._id });
                                           }}
-                                          className={typeof lead.team === "object"
+                                          className={(lead.team && typeof lead.team === "object")
                                             ? (lead.team as { _id: string })._id === t._id ? "font-semibold bg-primary/5" : ""
                                             : lead.team === t._id ? "font-semibold bg-primary/5" : ""
                                           }
