@@ -1034,9 +1034,9 @@ function LeadsPageContent() {
                             </td>
                             <td className="px-4 py-4 hidden lg:table-cell">
                               {(() => {
-                                const reporterId = typeof lead.reporter === "object"
+                                const reporterId = (lead.reporter && typeof lead.reporter === "object")
                                   ? (lead.reporter as { _id: string })._id
-                                  : lead.reporter as string;
+                                  : (lead.reporter as string | null);
                                 const canChangeTeam = reporterId === user?._id || isAdmin;
                                 const teams = teamsData?.data ?? [];
                                 const teamName = lead.team
