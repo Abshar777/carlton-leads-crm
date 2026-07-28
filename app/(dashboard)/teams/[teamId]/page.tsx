@@ -1020,12 +1020,14 @@ function LeadsTab({
   teamId,
   team,
   isLeaderOrAdmin,
+  isReporter = false,
   onAutoAssign,
   assigning,
 }: {
   teamId: string;
   team: Team;
   isLeaderOrAdmin: boolean;
+  isReporter?: boolean;
   onAutoAssign: () => void;
   assigning: boolean;
 }) {
@@ -1168,7 +1170,7 @@ function LeadsTab({
     limit,
   });
 
-  const { data: allTeamsResult } = useTeams();
+  const { data: allTeamsResult } = useTeams({ status: "active", limit: 100 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const assignMutation = (useAssignLeadToMember as any)(teamId);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1626,7 +1628,7 @@ function LeadsTab({
                                 <UserCheck className="h-4 w-4" />
                               </Button>
                             )}
-                            {isLeaderOrAdmin && (
+                            {(isLeaderOrAdmin || isReporter) && (
                               <Button
                                 variant="ghost" size="icon"
                                 className="h-8 w-8 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
@@ -1829,7 +1831,7 @@ function LeadsTab({
                             )}
 
                             {/* Transfer team */}
-                            {isLeaderOrAdmin && (
+                            {(isLeaderOrAdmin || isReporter) && (
                               <Dialog
                                 open={transferLeadId === lead._id}
                                 onOpenChange={(open) => {
@@ -1847,7 +1849,10 @@ function LeadsTab({
                                     <ArrowRightLeft className="h-3.5 w-3.5" />
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-sm">
+                                <DialogContent
+                                  className="sm:max-w-sm"
+                                  onPointerDownOutside={(e) => e.preventDefault()}
+                                >
                                   <DialogHeader>
                                     <DialogTitle className="text-base">Transfer Lead</DialogTitle>
                                   </DialogHeader>
@@ -1855,21 +1860,24 @@ function LeadsTab({
                                     <p className="text-sm text-muted-foreground">
                                       Transfer <span className="font-medium text-foreground">{lead.name}</span> to another team:
                                     </p>
-                                    <Select
-                                      value={selectedTeamId}
-                                      onValueChange={setSelectedTeamId}
-                                    >
-                                      <SelectTrigger className="h-9">
-                                        <SelectValue placeholder="Select a team..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
+                                    {otherTeams.length === 0 ? (
+                                      <p className="text-sm text-amber-500 bg-amber-500/10 rounded-md px-3 py-2">
+                                        No other teams available. Create a second team first.
+                                      </p>
+                                    ) : (
+                                      <select
+                                        value={selectedTeamId}
+                                        onChange={(e) => setSelectedTeamId(e.target.value)}
+                                        className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                      >
+                                        <option value="" disabled>Select a team...</option>
                                         {otherTeams.map((t: Team) => (
-                                          <SelectItem key={t._id} value={t._id}>
+                                          <option key={t._id} value={t._id}>
                                             {t.name}
-                                          </SelectItem>
+                                          </option>
                                         ))}
-                                      </SelectContent>
-                                    </Select>
+                                      </select>
+                                    )}
                                     <div className="flex justify-end gap-2">
                                       <Button
                                         variant="outline"
@@ -1883,7 +1891,7 @@ function LeadsTab({
                                       </Button>
                                       <Button
                                         size="sm"
-                                        disabled={!selectedTeamId || transferMutation.isPending}
+                                        disabled={!selectedTeamId || transferMutation.isPending || otherTeams.length === 0}
                                         onClick={() => handleTransfer(lead._id)}
                                       >
                                         {transferMutation.isPending ? (
@@ -3721,6 +3729,7 @@ function TeamDetailPageContent() {
                 teamId={teamId}
                 team={team}
                 isLeaderOrAdmin={!!isLeaderOrAdmin}
+                isReporter={!!isReporter}
                 onAutoAssign={handleAutoAssign}
                 assigning={assigning}
               />

@@ -46,6 +46,52 @@ What was changed.
 
 ---
 
+## 🪟 Dialogs & Modals
+
+### Radix UI `Select` Inside `Dialog` — Focus Trap Blocks Selection
+- **Date**: 2026-07-27
+- **Category**: components
+
+**What happened**:
+Transfer Lead dialog opened fine, but clicking a `SelectItem` or pressing Enter to pick a team did nothing — the dropdown stayed open, value never updated.
+
+**Why it happened**:
+Radix UI `Dialog` applies a focus trap to its content. The `SelectContent` renders in a **portal** outside the Dialog DOM. The focus trap intercepts pointer events and keyboard events (Enter) targeting the portal, preventing `onValueChange` from firing.
+
+**Fix**:
+1. Added `onPointerDownOutside={(e) => e.preventDefault()}` to `DialogContent` to prevent the dialog closing when clicking the Select trigger.
+2. Replaced the Radix `<Select>` with a **native HTML `<select>`** to avoid portal/focus-trap conflict entirely.
+
+**Rule — Never do this again**:
+> Never put Radix `Select` inside Radix `Dialog` — use a native `<select>` styled with Tailwind instead (works with focus trap, no portal).
+
+**Code**:
+```tsx
+// ❌ Wrong — Radix Select inside Radix Dialog breaks selection
+<DialogContent>
+  <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+    <SelectTrigger><SelectValue placeholder="Select a team..." /></SelectTrigger>
+    <SelectContent>
+      {teams.map(t => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}
+    </SelectContent>
+  </Select>
+</DialogContent>
+
+// ✅ Correct — native select, no portal conflict
+<DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
+  <select
+    value={selectedTeamId}
+    onChange={(e) => setSelectedTeamId(e.target.value)}
+    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+  >
+    <option value="" disabled>Select a team...</option>
+    {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+  </select>
+</DialogContent>
+```
+
+---
+
 ## 🔔 Notifications & Browser APIs
 
 ### Android `new Notification()` Constructor Crash
