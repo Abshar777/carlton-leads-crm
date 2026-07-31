@@ -931,9 +931,31 @@ function MembersTab({
                                     <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {stat.user.designation ?? stat.user.email}
-                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {stat.user.designation ?? stat.user.email}
+                                  </p>
+                                  <motion.span
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className={cn(
+                                      "sm:hidden inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold border shrink-0",
+                                      inactiveMemberIds.has(stat.user._id)
+                                        ? "border-red-500/40 bg-red-500/10 text-red-400"
+                                        : "border-green-500/40 bg-green-500/10 text-green-400",
+                                    )}
+                                  >
+                                    <span
+                                      className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        inactiveMemberIds.has(stat.user._id)
+                                          ? "bg-red-400"
+                                          : "bg-green-400",
+                                      )}
+                                    />
+                                    {inactiveMemberIds.has(stat.user._id) ? "Inactive" : "Active"}
+                                  </motion.span>
+                                </div>
                               </div>
                             </div>
                           </td>
