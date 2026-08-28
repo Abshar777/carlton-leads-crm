@@ -143,7 +143,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <p className="text-muted-foreground">Profile not found</p>
-        <Button variant="outline" onClick={() => router.push("/dashboard")}>
+        <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
         </Button>
       </div>
@@ -178,7 +178,7 @@ export default function ProfilePage() {
     <div className="space-y-6 pb-10">
       {/* Back */}
       <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}>
-        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")} className="gap-2 -ml-2">
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2">
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Button>

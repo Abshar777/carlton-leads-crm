@@ -152,7 +152,7 @@ export default function UserDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <p className="text-muted-foreground">User not found</p>
-        <Button variant="outline" onClick={() => router.push("/users")}>
+        <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Users
         </Button>
       </div>
@@ -287,7 +287,7 @@ export default function UserDetailPage() {
       <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}>
         <Button
           variant="ghost" size="sm"
-          onClick={() => router.push("/users")}
+          onClick={() => router.back()}
           className="gap-2 -ml-2"
         >
           <ArrowLeft className="h-4 w-4" />

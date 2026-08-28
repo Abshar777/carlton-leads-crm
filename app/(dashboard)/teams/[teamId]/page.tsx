@@ -3502,7 +3502,7 @@ function TeamDetailPageContent() {
       <div className="flex flex-col items-center justify-center py-32 gap-4">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/50" />
         <p className="text-muted-foreground">Team not found</p>
-        <Button variant="outline" onClick={() => router.push("/teams")}>
+        <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Teams
         </Button>
       </div>
@@ -3516,7 +3516,7 @@ function TeamDetailPageContent() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/teams")}
+          onClick={() => router.back()}
           className="gap-2 -ml-2"
         >
           <ArrowLeft className="h-4 w-4" />

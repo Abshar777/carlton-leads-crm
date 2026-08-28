@@ -5,12 +5,13 @@ import {
   Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight,
   X, Upload, UserCheck, FileText, ChevronDown, ExternalLink,
   CalendarDays, Filter, CheckSquare, Square, Tags, ArrowRightLeft, AlertTriangle,
-  LayoutGrid, List, UsersRound,
+  LayoutGrid, List, UsersRound, StickyNote,
 } from "lucide-react";
 import Link from "next/link";
 import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -31,7 +32,7 @@ import { AssignLeadDialog } from "@/components/leads/AssignLeadDialog";
 import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
 import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
-import { useLeads, useUpdateLeadStatus, useAssignLeadToTeam, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
+import { useLeads, useLead, useUpdateLeadStatus, useAddLeadNote, useAssignLeadToTeam, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useUsers } from "@/hooks/useUsers";
 import { useTeams } from "@/hooks/useTeams";
@@ -131,6 +132,86 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+// ─── Quick Note Dialog ────────────────────────────────────────────────────────
+
+function QuickNoteDialog({ leadId, onClose }: { leadId: string | null; onClose: () => void }) {
+  const { data: lead, isLoading } = useLead(leadId ?? "");
+  const { mutate: addNote, isPending } = useAddLeadNote();
+  const [content, setContent] = useState("");
+
+  const notes = lead?.notes ?? [];
+
+  function handleSubmit() {
+    if (!leadId || !content.trim()) return;
+    addNote({ leadId, content: content.trim() }, {
+      onSuccess: () => setContent(""),
+    });
+  }
+
+  return (
+    <ResponsiveDialog open={!!leadId} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <ResponsiveDialogContent className="max-w-lg">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
+            {lead ? `Notes — ${lead.name}` : "Notes"}
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
+            {notes.length === 0 ? "No notes yet." : `${notes.length} note${notes.length !== 1 ? "s" : ""}`}
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+
+        <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : notes.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No notes yet. Add one below.</p>
+          ) : (
+            <AnimatePresence>
+              {notes.map((note) => (
+                <motion.div
+                  key={note._id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg border border-border bg-muted/30 p-3 space-y-1"
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {typeof note.author === "object" ? note.author.name : "—"} ·{" "}
+                    {new Date(note.createdAt).toLocaleString("en-IN", {
+                      timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
+                      hour: "2-digit", minute: "2-digit", hour12: true,
+                    })} IST
+                  </p>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
+
+        <div className="space-y-2 pt-2 border-t border-border">
+          <Textarea
+            placeholder="Add a note..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={3}
+            className="resize-none text-sm"
+          />
+        </div>
+
+        <ResponsiveDialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button onClick={handleSubmit} disabled={!content.trim() || isPending}>
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Add Note
+          </Button>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
+  );
+}
 
 function LeadsPageContent() {
   const { hasPermission, user } = useAuthStore();
@@ -342,6 +423,7 @@ function LeadsPageContent() {
   }
 
   const [bookingLead, setBookingLead] = useState<Lead | null>(null);
+  const [noteLeadId, setNoteLeadId] = useState<string | null>(null);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleCreate = () => { setSelectedLead(null); setDialogOpen(true); };
@@ -936,6 +1018,14 @@ function LeadsPageContent() {
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
                             </Link>
+                            <Button
+                              variant="ghost" size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => setNoteLeadId(lead._id)}
+                              title="Notes"
+                            >
+                              <StickyNote className="h-4 w-4" />
+                            </Button>
                             {canEdit && (
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lead)} title="Edit">
                                 <Pencil className="h-4 w-4" />
@@ -1172,6 +1262,14 @@ function LeadsPageContent() {
                                     <ExternalLink className="h-4 w-4" />
                                   </Button>
                                 </Link>
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                  onClick={() => setNoteLeadId(lead._id)}
+                                  title="Notes"
+                                >
+                                  <StickyNote className="h-4 w-4" />
+                                </Button>
                                 {canEdit && (
                                   <Button
                                     variant="ghost" size="icon"
@@ -1265,6 +1363,7 @@ function LeadsPageContent() {
       <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={selectedLead} />
       <DeleteLeadDialog open={deleteOpen} onOpenChange={setDeleteOpen} lead={selectedLead} />
       <AssignLeadDialog open={assignOpen} onOpenChange={setAssignOpen} lead={selectedLead} />
+      <QuickNoteDialog leadId={noteLeadId} onClose={() => setNoteLeadId(null)} />
       {bookingLead && (
         <BookingDetailsModal
           open={!!bookingLead}

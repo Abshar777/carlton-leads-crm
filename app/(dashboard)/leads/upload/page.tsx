@@ -628,7 +628,7 @@ return (
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center gap-4"
     >
-      <Button variant="ghost" size="icon" onClick={() => router.push("/leads")} className="h-9 w-9">
+      <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9">
         <ArrowLeft className="h-5 w-5" />
       </Button>
       <div>

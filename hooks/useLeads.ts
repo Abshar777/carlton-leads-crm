@@ -34,6 +34,7 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.dateTo)     params.dateTo     = filters.dateTo;
       if (filters?.updatedFrom) params.updatedFrom = filters.updatedFrom;
       if (filters?.updatedTo)   params.updatedTo   = filters.updatedTo;
+      if (filters?.tags)        params.tags        = filters.tags;
       const response = await api.get<ApiResponse<Lead[]>>("/leads", { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },
