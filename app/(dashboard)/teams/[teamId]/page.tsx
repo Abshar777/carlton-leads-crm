@@ -3585,6 +3585,23 @@ function TeamDetailPageContent() {
                       Created {formatDate(team.createdAt)}
                     </span>
                   </div>
+                  {/* Team tags */}
+                  {(team.tags?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {team.tags.map((tag) => (
+                        <motion.span
+                          key={tag._id}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
+                          style={{ backgroundColor: tag.color }}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+                          {tag.name}
+                        </motion.span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

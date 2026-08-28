@@ -211,6 +211,20 @@ function AdminTeamsList() {
                           {team.leadStats.unassigned} unassigned lead{team.leadStats.unassigned > 1 ? "s" : ""}
                         </p>
                       )}
+                      {/* Tags */}
+                      {(team.tags?.length ?? 0) > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {team.tags.map((tag, i) => (
+                            <span
+                              key={typeof tag === "object" ? tag._id : `tag-${i}`}
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                              style={{ backgroundColor: typeof tag === "object" ? tag.color : undefined }}
+                            >
+                              {typeof tag === "object" ? tag.name : tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       <Button asChild variant="outline" size="sm" className="flex-1">

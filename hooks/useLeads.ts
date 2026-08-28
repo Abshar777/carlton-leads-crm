@@ -120,8 +120,16 @@ export const useUpdateLead = () => {
 export const useUpdateLeadStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Lead["status"] }) => {
-      const response = await api.patch<ApiResponse<Lead>>(`/leads/${id}/status`, { status });
+    mutationFn: async ({ id, status, bookingDetails }: {
+      id: string;
+      status: Lead["status"];
+      bookingDetails?: {
+        batch: string; time: string; mode: "online" | "offline";
+        staffName: string; whatsappNo: string; clientName: string;
+        clientEmail?: string; contactNo: string;
+      };
+    }) => {
+      const response = await api.patch<ApiResponse<Lead>>(`/leads/${id}/status`, { status, bookingDetails });
       return response.data.data!;
     },
     onSuccess: (_, vars) => {

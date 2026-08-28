@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Search, X, Check, UsersRound } from "lucide-react";
+import { Loader2, Search, X, Check, UsersRound, Tag as TagIcon } from "lucide-react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -17,8 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useCreateTeam, useUpdateTeam, useTeams } from "@/hooks/useTeams";
 import { useUsers } from "@/hooks/useUsers";
+import { useTags } from "@/hooks/useTags";
 import type { Team } from "@/types/team";
 import type { User } from "@/types";
+import type { Tag } from "@/types/tag";
 import { cn } from "@/lib/utils";
 
 const teamSchema = z.object({
@@ -27,6 +29,7 @@ const teamSchema = z.object({
   status: z.enum(["active", "inactive"]).optional(),
   leaders: z.array(z.string()).optional(),
   members: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 type TeamFormValues = z.infer<typeof teamSchema>;
@@ -156,6 +159,64 @@ function UserPicker({
   );
 }
 
+// ─── Tag Picker ───────────────────────────────────────────────────────────────
+function TagPicker({
+  selected,
+  onChange,
+  allTags,
+}: {
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  allTags: Tag[];
+}) {
+  const toggle = (id: string) => {
+    if (selected.includes(id)) {
+      onChange(selected.filter((s) => s !== id));
+    } else {
+      onChange(Array.from(new Set(selected.concat(id))));
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-1.5">
+        <TagIcon className="h-3.5 w-3.5" />
+        Tags
+      </Label>
+      {allTags.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No tags available — create tags first in Settings.</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {allTags.map((tag) => {
+            const isSelected = selected.includes(tag._id);
+            return (
+              <button
+                key={tag._id}
+                type="button"
+                onClick={() => toggle(tag._id)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium border transition-all",
+                  isSelected
+                    ? "border-transparent text-white shadow-sm"
+                    : "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
+                )}
+                style={isSelected ? { backgroundColor: tag.color, borderColor: tag.color } : {}}
+              >
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.7)" : tag.color }}
+                />
+                {tag.name}
+                {isSelected && <X className="h-3 w-3 ml-0.5" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Dialog ──────────────────────────────────────────────────────────────
 export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
   const isEdit = !!team;
@@ -168,6 +229,8 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
 
   const { data: teamsResult } = useTeams({ limit: "200" } as never);
   const allTeams = teamsResult?.data ?? [];
+
+  const { data: allTags = [] } = useTags();
 
   const userTeamMap = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -196,6 +259,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
       status: "active",
       leaders: [],
       members: [],
+      tags: [],
     },
   });
 
@@ -210,6 +274,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
         status: team?.status ?? "active",
         leaders: team?.leaders?.map((l) => (typeof l === "string" ? l : l._id)) ?? [],
         members: team?.members?.map((m) => (typeof m === "string" ? m : m._id)) ?? [],
+        tags: team?.tags?.map((t) => (typeof t === "string" ? t : t._id)) ?? [],
       });
     }
   }, [open, team, reset]);
@@ -292,6 +357,19 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                 allUsers={allUsers}
                 disabledIds={leaders}
                 userTeamMap={userTeamMap}
+              />
+            )}
+          />
+
+          {/* Tags */}
+          <Controller
+            control={control}
+            name="tags"
+            render={({ field }) => (
+              <TagPicker
+                selected={field.value ?? []}
+                onChange={field.onChange}
+                allTags={allTags}
               />
             )}
           />

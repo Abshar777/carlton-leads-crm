@@ -109,6 +109,7 @@ export type TeamFormData = {
   leaders?: string[];
   members?: string[];
   status?: "active" | "inactive";
+  tags?: string[];
 };
 
 export const useCreateTeam = () => {

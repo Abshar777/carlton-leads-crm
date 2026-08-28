@@ -44,6 +44,8 @@ import { ReminderPanel } from "@/components/leads/ReminderPanel";
 import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import { PaymentPanel } from "@/components/leads/PaymentPanel";
 import { WhatsAppChatPanel } from "@/components/leads/WhatsAppChatPanel";
+import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
+import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -237,53 +239,85 @@ function StatusBadge({ status }: { status: LeadStatus }) {
 /** Clickable status badge — shows a dropdown to change status inline. */
 function StatusDropdown({
   leadId,
+  lead,
   status,
   canEdit,
+  currentUserName,
 }: {
   leadId:  string;
+  lead: import("@/types/lead").Lead;
   status:  LeadStatus;
   canEdit: boolean;
+  currentUserName: string;
 }) {
   const updateStatus = useUpdateLeadStatus();
   const cfg = STATUS_CONFIG[status] ?? FALLBACK_STATUS_CFG;
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   if (!canEdit) return <StatusBadge status={status} />;
 
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          className={[
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium",
-            "cursor-pointer hover:opacity-80 transition-opacity focus:outline-none",
-            cfg.color,
-          ].join(" ")}
-        >
-          {updateStatus.isPending
-            ? <Loader2 className="h-3 w-3 animate-spin" />
-            : <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-          }
-          {cfg.label}
-          <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
-        </motion.button>
-      </DropdownMenuTrigger>
+  function handleStatusClick(s: LeadStatus) {
+    if (s === status) return;
+    if (s === "booking") {
+      setBookingModalOpen(true);
+    } else {
+      updateStatus.mutate({ id: leadId, status: s });
+    }
+  }
 
-      <DropdownMenuContent align="end" className="w-48">
-        {(Object.entries(STATUS_CONFIG) as [LeadStatus, (typeof STATUS_CONFIG)[LeadStatus]][]).map(([s, c]) => (
-          <DropdownMenuItem
-            key={s}
-            disabled={s === status || updateStatus.isPending}
-            onClick={() => { if (s !== status) updateStatus.mutate({ id: leadId, status: s }); }}
-            className="gap-2 cursor-pointer"
+  function handleBookingConfirm(details: BookingFormValues) {
+    updateStatus.mutate(
+      { id: leadId, status: "booking", bookingDetails: details },
+      { onSuccess: () => setBookingModalOpen(false) },
+    );
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium",
+              "cursor-pointer hover:opacity-80 transition-opacity focus:outline-none",
+              cfg.color,
+            ].join(" ")}
           >
-            <span className={`h-2 w-2 rounded-full flex-shrink-0 ${c.dot}`} />
-            <span className="flex-1">{c.label}</span>
-            {s === status && <CheckCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            {updateStatus.isPending
+              ? <Loader2 className="h-3 w-3 animate-spin" />
+              : <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+            }
+            {cfg.label}
+            <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
+          </motion.button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-48">
+          {(Object.entries(STATUS_CONFIG) as [LeadStatus, (typeof STATUS_CONFIG)[LeadStatus]][]).map(([s, c]) => (
+            <DropdownMenuItem
+              key={s}
+              disabled={s === status || updateStatus.isPending}
+              onClick={() => handleStatusClick(s)}
+              className="gap-2 cursor-pointer"
+            >
+              <span className={`h-2 w-2 rounded-full flex-shrink-0 ${c.dot}`} />
+              <span className="flex-1">{c.label}</span>
+              {s === status && <CheckCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <BookingDetailsModal
+        open={bookingModalOpen}
+        onOpenChange={setBookingModalOpen}
+        lead={lead}
+        currentUserName={currentUserName}
+        onConfirm={handleBookingConfirm}
+        isPending={updateStatus.isPending}
+      />
+    </>
   );
 }
 
@@ -760,7 +794,7 @@ export default function LeadDetailPage() {
                       )}
                     </div>
                   </div>
-                  <StatusDropdown leadId={leadId} status={lead.status} canEdit={canEdit} />
+                  <StatusDropdown leadId={leadId} lead={lead} status={lead.status} canEdit={canEdit} currentUserName={authUser?.name ?? ""} />
                 </div>
               </CardHeader>
 
@@ -866,6 +900,27 @@ export default function LeadDetailPage() {
 
                 <InfoRow icon={Calendar} label="Created" value={formatDate(lead.createdAt)} />
                 <InfoRow icon={Clock} label="Last Updated" value={formatDate(lead.updatedAt)} />
+
+                {/* Booking Details */}
+                {lead.bookingDetails && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border border-teal-500/25 bg-teal-500/5 p-3 space-y-2"
+                  >
+                    <p className="text-xs font-semibold text-teal-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+                      Booking Details
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                      <div><span className="text-muted-foreground">Batch:</span> <span className="font-medium">{lead.bookingDetails.batch}</span></div>
+                      <div><span className="text-muted-foreground">Time:</span> <span className="font-medium">{lead.bookingDetails.time}</span></div>
+                      <div><span className="text-muted-foreground">Mode:</span> <span className={`font-medium capitalize ${lead.bookingDetails.mode === "online" ? "text-blue-400" : "text-orange-400"}`}>{lead.bookingDetails.mode}</span></div>
+                      <div><span className="text-muted-foreground">WhatsApp:</span> <span className="font-medium">{lead.bookingDetails.whatsappNo}</span></div>
+                      <div><span className="text-muted-foreground">Staff:</span> <span className="font-medium">{lead.bookingDetails.staffName}</span></div>
+                    </div>
+                  </motion.div>
+                )}
 
                 {/* Call Not Connected Counter */}
                 <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">

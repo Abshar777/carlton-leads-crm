@@ -88,8 +88,22 @@ export interface Lead {
   platform?: string;
   campaign?: string;
   tags?: (Tag | string)[];
+  bookingDetails?: BookingDetails;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BookingDetails {
+  batch: string;
+  time: string;
+  mode: "online" | "offline";
+  staffName: string;
+  whatsappNo: string;
+  clientName: string;
+  clientEmail?: string;
+  contactNo: string;
+  bookedAt: string;
+  bookedBy: User | string;
 }
 
 export interface CallLog {

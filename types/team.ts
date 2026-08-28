@@ -1,4 +1,5 @@
 import type { User } from "@/types";
+import type { Tag } from "@/types/tag";
 
 export interface TeamSettings {
   autoAssign: boolean;
@@ -16,6 +17,7 @@ export interface Team {
   status: "active" | "inactive";
   /** Member IDs excluded from auto-assignment within this team (team-scoped) */
   inactiveMembers: string[];
+  tags: Tag[];
   settings?: TeamSettings;
   leadStats?: {
     teamId: string;

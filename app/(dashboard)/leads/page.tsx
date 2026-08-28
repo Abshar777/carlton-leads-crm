@@ -28,6 +28,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LeadDialog } from "@/components/leads/LeadDialog";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { AssignLeadDialog } from "@/components/leads/AssignLeadDialog";
+import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
+import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { useLeads, useUpdateLeadStatus, useAssignLeadToTeam, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
@@ -339,12 +341,23 @@ function LeadsPageContent() {
     setPage(1);
   }
 
+  const [bookingLead, setBookingLead] = useState<Lead | null>(null);
+
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleCreate = () => { setSelectedLead(null); setDialogOpen(true); };
   const handleEdit = (l: Lead) => { setSelectedLead(l); setDialogOpen(true); };
   const handleDelete = (l: Lead) => { setSelectedLead(l); setDeleteOpen(true); };
   const handleAssign = (l: Lead) => { setSelectedLead(l); setAssignOpen(true); };
-  const handleStatusChange = (l: Lead, s: LeadStatus) => updateStatus({ id: l._id, status: s });
+  const handleStatusChange = (l: Lead, s: LeadStatus) => {
+    if (s === "booking") { setBookingLead(l); return; }
+    updateStatus({ id: l._id, status: s });
+  };
+  const handleBookingConfirm = (details: BookingFormValues) => {
+    if (!bookingLead) return;
+    updateStatus({ id: bookingLead._id, status: "booking", bookingDetails: details }, {
+      onSuccess: () => setBookingLead(null),
+    });
+  };
 
   // ── Active filter label helpers ───────────────────────────────────────────────
   function userName(id: string) {
@@ -1252,6 +1265,15 @@ function LeadsPageContent() {
       <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={selectedLead} />
       <DeleteLeadDialog open={deleteOpen} onOpenChange={setDeleteOpen} lead={selectedLead} />
       <AssignLeadDialog open={assignOpen} onOpenChange={setAssignOpen} lead={selectedLead} />
+      {bookingLead && (
+        <BookingDetailsModal
+          open={!!bookingLead}
+          onOpenChange={(open) => { if (!open) setBookingLead(null); }}
+          lead={bookingLead}
+          currentUserName={user?.name ?? ""}
+          onConfirm={handleBookingConfirm}
+        />
+      )}
 
       {/* ── Bulk: Change Status ───────────────────────────────────────────────── */}
       <ResponsiveDialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>

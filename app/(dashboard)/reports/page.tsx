@@ -12,7 +12,7 @@ import {
   TrendingUp, Users, UsersRound, Target, Award,
   Calendar, RefreshCw, BarChart2, Activity, Layers,
   GitFork, IndianRupee, Trophy, ChevronDown, ChevronUp,
-  Loader2, Tag, X, ArrowUpRight,
+  Loader2, Tag, X, ArrowUpRight, BookMarked,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,7 @@ import {
   useRevenueTeams,
   useSourceAnalytics,
   useCampaignBreakdown,
+  useBookingsReport,
 } from "@/hooks/useReports";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -1731,16 +1732,196 @@ function SourceAnalyticsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: st
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// BOOKINGS TAB
+// ─────────────────────────────────────────────────────────────────────────────
+
+function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role?.isSystemRole === true && user?.role?.roleName === "Super Admin";
+
+  const [search,  setSearch]  = useState("");
+  const [dSearch, setDSearch] = useState("");
+  const [teamId,  setTeamId]  = useState("all");
+  const [page,    setPage]    = useState(1);
+  const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: teamsResult } = useTeams({ limit: "200" } as never);
+  const allTeams = teamsResult?.data ?? [];
+
+  const { data, isLoading } = useBookingsReport({
+    dateFrom: dateFrom || undefined,
+    dateTo:   dateTo   || undefined,
+    search:   dSearch  || undefined,
+    team:     teamId !== "all" ? teamId : undefined,
+    page,
+    limit: 20,
+  });
+
+  const bookings = data?.data ?? [];
+  const pagination = data?.pagination;
+
+  function handleSearch(val: string) {
+    setSearch(val);
+    if (debRef.current) clearTimeout(debRef.current);
+    debRef.current = setTimeout(() => { setDSearch(val); setPage(1); }, 400);
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      {/* Summary stat */}
+      <Card>
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15">
+              <Target className="h-5 w-5 text-teal-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground tabular-nums">{pagination?.total ?? "—"}</p>
+              <p className="text-xs text-muted-foreground">Total Bookings{dateFrom && dateTo ? ` (${dateFrom} → ${dateTo})` : ""}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filters */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Activity className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+            placeholder="Search client, staff, batch, WhatsApp..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+        </div>
+        {isSuperAdmin && (
+          <Select value={teamId} onValueChange={(v) => { setTeamId(v); setPage(1); }}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="All Teams" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Teams</SelectItem>
+              {allTeams.map((t) => (
+                <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                <Target className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <p className="font-semibold">No bookings found</p>
+              <p className="text-sm text-muted-foreground">Try adjusting the date range or search.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[900px]">
+                <thead>
+                  <tr className="border-b border-border/40">
+                    {["Client", "Contact", "Batch", "Time", "Mode", "Staff", "WhatsApp", "Team", "Course", "Booked At"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((lead, i) => {
+                    const bd = lead.bookingDetails;
+                    return (
+                      <motion.tr
+                        key={lead._id}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.02 }}
+                        className="border-b border-border/20 hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 font-medium text-foreground">{lead.name || "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground font-mono">{lead.phone}</td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 font-semibold">{bd?.batch || "—"}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">{bd?.time || "—"}</td>
+                        <td className="px-4 py-3">
+                          {bd?.mode ? (
+                            <span className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold capitalize",
+                              bd.mode === "online" ? "bg-blue-500/10 text-blue-400" : "bg-orange-500/10 text-orange-400"
+                            )}>
+                              <span className={cn("h-1.5 w-1.5 rounded-full", bd.mode === "online" ? "bg-blue-400" : "bg-orange-400")} />
+                              {bd.mode}
+                            </span>
+                          ) : "—"}
+                        </td>
+                        <td className="px-4 py-3 font-medium">{bd?.staffName || "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground font-mono">{bd?.whatsappNo || "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {lead.team && typeof lead.team === "object" ? (lead.team as { name: string }).name : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {lead.course && typeof lead.course === "object" ? (lead.course as { name: string }).name : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                          {bd?.bookedAt
+                            ? new Date(bd.bookedAt).toLocaleString("en-IN", {
+                                timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
+                                year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true,
+                              })
+                            : "—"}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border/40 pt-4">
+          <p className="text-sm text-muted-foreground">
+            Page <span className="font-medium text-foreground">{pagination.page}</span> of{" "}
+            <span className="font-medium text-foreground">{pagination.totalPages}</span>{" "}
+            <span className="hidden sm:inline">({pagination.total} bookings)</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={!pagination.hasPrevPage}>
+              Prev
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!pagination.hasNextPage}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ROOT PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "split" | "revenue" | "sources";
+type Tab = "overview" | "split" | "revenue" | "sources" | "bookings";
 
 const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementType }[] = [
-  { id: "overview", label: "Overview",      shortLabel: "Overview", icon: BarChart2    },
-  { id: "split",    label: "Lead Splitting", shortLabel: "Leads",    icon: GitFork      },
-  { id: "revenue",  label: "Revenue",        shortLabel: "Revenue",  icon: IndianRupee  },
-  { id: "sources",  label: "Sources",        shortLabel: "Sources",  icon: TrendingUp   },
+  { id: "overview",  label: "Overview",      shortLabel: "Overview", icon: BarChart2    },
+  { id: "split",     label: "Lead Splitting", shortLabel: "Leads",    icon: GitFork      },
+  { id: "revenue",   label: "Revenue",        shortLabel: "Revenue",  icon: IndianRupee  },
+  { id: "sources",   label: "Sources",        shortLabel: "Sources",  icon: TrendingUp   },
+  { id: "bookings",  label: "Bookings",       shortLabel: "Bookings", icon: BookMarked   },
 ];
 
 function ReportsPageContent() {
@@ -1897,6 +2078,10 @@ function ReportsPageContent() {
           ) : activeTab === "revenue" ? (
             <motion.div key="revenue" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
               <RevenueTab dateFrom={dateFrom} dateTo={dateTo} />
+            </motion.div>
+          ) : activeTab === "bookings" ? (
+            <motion.div key="bookings" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
+              <BookingsTab dateFrom={dateFrom} dateTo={dateTo} />
             </motion.div>
           ) : (
             <motion.div key="sources" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>

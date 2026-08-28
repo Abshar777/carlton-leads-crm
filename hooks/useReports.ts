@@ -213,3 +213,35 @@ export function useRevenueTeams(dateFrom: string, dateTo: string) {
     staleTime: 60_000,
   });
 }
+
+// ── Bookings Report ───────────────────────────────────────────────────────────
+
+export interface BookingReportFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  team?: string;
+}
+
+export function useBookingsReport(filters: BookingReportFilters) {
+  return useQuery({
+    queryKey: ["reports", "bookings", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo)   params.set("dateTo",   filters.dateTo);
+      if (filters.page)     params.set("page",     String(filters.page));
+      if (filters.limit)    params.set("limit",    String(filters.limit));
+      if (filters.search)   params.set("search",   filters.search);
+      if (filters.team)     params.set("team",     filters.team);
+      const { data } = await api.get(`/reports/bookings?${params}`);
+      return data.data as {
+        data: import("@/types/lead").Lead[];
+        pagination: { total: number; page: number; limit: number; totalPages: number; hasNextPage: boolean; hasPrevPage: boolean };
+      };
+    },
+    staleTime: 30_000,
+  });
+}
