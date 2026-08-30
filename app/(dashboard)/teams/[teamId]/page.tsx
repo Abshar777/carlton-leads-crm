@@ -143,6 +143,7 @@ import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
 import type { Lead, LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
+import { useLeads } from "@/hooks/useLeads";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -198,20 +199,21 @@ interface TeamLog {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders" | "report" | "tracking" | "settings";
+type TabId = "dashboard" | "members" | "leads" | "kanban" | "logs" | "updates" | "revenue" | "reminders" | "report" | "tracking" | "settings" | "transferred";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "dashboard",  label: "Dashboard"  },
-  { id: "members",    label: "Members"    },
-  { id: "leads",      label: "Leads"      },
-  { id: "kanban",     label: "Kanban"     },
-  { id: "reminders",  label: "Reminders"  },
-  { id: "revenue",    label: "Revenue"    },
-  { id: "report",     label: "Report"     },
-  { id: "tracking",   label: "Tracking"   },
-  { id: "updates",    label: "Updates"    },
-  { id: "logs",       label: "Logs"       },
-  { id: "settings",   label: "Settings"   },
+  { id: "dashboard",   label: "Dashboard"   },
+  { id: "members",     label: "Members"     },
+  { id: "leads",       label: "Leads"       },
+  { id: "kanban",      label: "Kanban"      },
+  { id: "transferred", label: "Transferred" },
+  { id: "reminders",   label: "Reminders"   },
+  { id: "revenue",     label: "Revenue"     },
+  { id: "report",      label: "Report"      },
+  { id: "tracking",    label: "Tracking"    },
+  { id: "updates",     label: "Updates"     },
+  { id: "logs",        label: "Logs"        },
+  { id: "settings",    label: "Settings"    },
 ];
 
 const STATUS_CONFIG: Record<
@@ -2235,6 +2237,81 @@ function LeadsTab({
   );
 }
 
+// ─── Transferred Leads Tab ────────────────────────────────────────────────────
+
+function TransferredLeadsTab({ teamId }: { teamId: string }) {
+  const { data: result, isLoading } = useLeads({ previousTeam: teamId, limit: 50 });
+  const leads = result?.data ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!leads.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/60 mb-3">
+          <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">No transferred leads yet</p>
+        <p className="text-xs text-muted-foreground mt-1">Leads auto-transferred out of this team will appear here</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground mb-3">
+        {leads.length} lead{leads.length !== 1 ? "s" : ""} transferred out from this team
+      </p>
+      <motion.div
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.04 } } }}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        {leads.map((lead) => {
+          const currentTeam = typeof lead.team === "object" && lead.team ? (lead.team as { name?: string }).name : "–";
+          return (
+            <motion.div
+              key={lead._id}
+              variants={{ hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0 } }}
+              className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{lead.name || "–"}</p>
+                <p className="text-xs text-muted-foreground">{lead.phone || "–"}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant="outline" className="text-xs hidden sm:flex">
+                  Now in: {currentTeam}
+                </Badge>
+                <StatusBadge status={lead.status} />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => window.open(`/leads/${lead._id}`, "_blank")}
+                >
+                  View
+                </Button>
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Logs Tab ─────────────────────────────────────────────────────────────────
 
 function LogsTab({ teamId }: { teamId: string }) {
@@ -3396,7 +3473,7 @@ function TeamDetailPageContent() {
   const { user, hasPermission } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const t = searchParams.get("tab") as TabId | null;
-    const valid: TabId[] = ["dashboard", "members", "leads", "kanban", "logs", "updates", "revenue", "reminders", "report", "tracking", "settings"];
+    const valid: TabId[] = ["dashboard", "members", "leads", "kanban", "transferred", "logs", "updates", "revenue", "reminders", "report", "tracking", "settings"];
     return t && valid.includes(t) ? t : "dashboard";
   });
 
@@ -3447,14 +3524,14 @@ function TeamDetailPageContent() {
 
   // If a regular member somehow lands on a restricted tab, bounce them to dashboard
   useEffect(() => {
-    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue" || activeTab === "reminders" || activeTab === "kanban")) {
+    if (!canSeeSensitiveTabs && (activeTab === "leads" || activeTab === "logs" || activeTab === "revenue" || activeTab === "reminders" || activeTab === "kanban" || activeTab === "transferred")) {
       setActiveTab("dashboard");
     }
   }, [canSeeSensitiveTabs, activeTab]);
 
 
   const visibleTabs = TABS.filter((tab) => {
-    if (tab.id === "leads" || tab.id === "logs" || tab.id === "revenue" || tab.id === "reminders" || tab.id === "kanban") return canSeeSensitiveTabs;
+    if (tab.id === "leads" || tab.id === "logs" || tab.id === "revenue" || tab.id === "reminders" || tab.id === "kanban" || tab.id === "transferred") return canSeeSensitiveTabs;
     if (tab.id === "settings") return !!isLeaderOrAdmin;
     return true;
   });
@@ -3789,6 +3866,18 @@ function TeamDetailPageContent() {
                 team={team}
                 canEdit={!!isLeaderOrAdmin}
               />
+            </motion.div>
+          )}
+
+          {activeTab === "transferred" && canSeeSensitiveTabs && (
+            <motion.div
+              key="transferred"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TransferredLeadsTab teamId={teamId} />
             </motion.div>
           )}
 

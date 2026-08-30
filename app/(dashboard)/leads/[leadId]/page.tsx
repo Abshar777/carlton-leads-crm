@@ -266,8 +266,9 @@ function StatusDropdown({
   }
 
   function handleBookingConfirm(details: BookingFormValues) {
+    const { reminderAt, ...bookingDetails } = details;
     updateStatus.mutate(
-      { id: leadId, status: "booking", bookingDetails: details },
+      { id: leadId, status: "booking", bookingDetails, reminderAt: reminderAt || undefined },
       { onSuccess: () => setBookingModalOpen(false) },
     );
   }

@@ -27,6 +27,7 @@ const bookingSchema = z.object({
   clientName:  z.string().min(1),
   clientEmail: z.string().optional(),
   contactNo:   z.string().min(1),
+  reminderAt:  z.string().optional(),
 });
 
 export type BookingFormValues = z.infer<typeof bookingSchema>;
@@ -66,13 +67,19 @@ export function BookingDetailsModal({
       clientName:  lead.name ?? "",
       clientEmail: lead.email ?? "",
       contactNo:   lead.phone ?? "",
+      reminderAt:  "",
     },
   });
 
   const mode = watch("mode");
 
   function onSubmit(values: BookingFormValues) {
-    onConfirm(values);
+    const payload: BookingFormValues = { ...values };
+    if (values.reminderAt) {
+      // Convert datetime-local (IST) → ISO string with +05:30 offset
+      payload.reminderAt = new Date(`${values.reminderAt}:00+05:30`).toISOString();
+    }
+    onConfirm(payload);
   }
 
   function handleClose() {
@@ -195,6 +202,24 @@ export function BookingDetailsModal({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Reminder */}
+          <div className="border-t border-border/40 pt-3 space-y-1.5">
+            <Label htmlFor="reminderAt" className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              Reminder Date & Time
+              <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+            </Label>
+            <Input
+              id="reminderAt"
+              type="datetime-local"
+              {...register("reminderAt")}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              A reminder will be created automatically for this booking.
+            </p>
           </div>
 
           <DialogFooter className="pt-2">

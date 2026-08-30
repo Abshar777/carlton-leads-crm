@@ -34,7 +34,8 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.dateTo)     params.dateTo     = filters.dateTo;
       if (filters?.updatedFrom) params.updatedFrom = filters.updatedFrom;
       if (filters?.updatedTo)   params.updatedTo   = filters.updatedTo;
-      if (filters?.tags)        params.tags        = filters.tags;
+      if (filters?.tags)         params.tags         = filters.tags;
+      if (filters?.previousTeam) params.previousTeam = filters.previousTeam;
       const response = await api.get<ApiResponse<Lead[]>>("/leads", { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },
@@ -121,7 +122,7 @@ export const useUpdateLead = () => {
 export const useUpdateLeadStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status, bookingDetails }: {
+    mutationFn: async ({ id, status, bookingDetails, reminderAt }: {
       id: string;
       status: Lead["status"];
       bookingDetails?: {
@@ -129,14 +130,16 @@ export const useUpdateLeadStatus = () => {
         staffName: string; whatsappNo: string; clientName: string;
         clientEmail?: string; contactNo: string;
       };
+      reminderAt?: string;
     }) => {
-      const response = await api.patch<ApiResponse<Lead>>(`/leads/${id}/status`, { status, bookingDetails });
+      const response = await api.patch<ApiResponse<Lead>>(`/leads/${id}/status`, { status, bookingDetails, reminderAt });
       return response.data.data!;
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: LEADS_KEY });
       queryClient.invalidateQueries({ queryKey: [...LEADS_KEY, vars.id] });
       queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["reminders"] });
       toast.success("Status updated");
     },
     onError: (error: unknown) => toast.error(errMsg(error, "Failed to update status")),

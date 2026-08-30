@@ -6,7 +6,7 @@ import {
   Database, RefreshCw, RotateCcw, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Clock, AlertTriangle, CloudUpload,
   HardDrive, Loader2, MessageCircle, Wifi, WifiOff, QrCode,
-  Smartphone, Tag,
+  Smartphone, Tag, GitFork,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import { getSocket } from "@/lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import { WA_STATUS_KEY } from "@/hooks/useWhatsApp";
 import { TagManager } from "@/components/tags/TagManager";
+import { Switch } from "@/components/ui/switch";
+import { useAppSettings, useUpdateAppSettings } from "@/hooks/useAppSettings";
 
 function TagManagerInline() {
   return (
@@ -330,13 +332,102 @@ function WhatsAppTab() {
   );
 }
 
+// ─── Workflow Settings Tab ────────────────────────────────────────────────────
+
+function WorkflowTab() {
+  const { data, isLoading } = useAppSettings();
+  const { mutate, isPending } = useUpdateAppSettings();
+
+  const enabled = data?.workflowEnabled ?? false;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <GitFork className="h-5 w-5 text-primary" />
+            Lead Workflow
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-sm text-muted-foreground">
+            When enabled, leads automatically move through teams based on status changes.
+          </p>
+
+          {/* Toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-foreground">Enable Workflow</p>
+              <p className="text-xs text-muted-foreground">
+                {enabled ? "Workflow is active — leads will auto-transfer between teams." : "Workflow is off — teams work independently."}
+              </p>
+            </div>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Switch
+                checked={enabled}
+                disabled={isPending}
+                onCheckedChange={(val) => mutate({ workflowEnabled: val })}
+              />
+            )}
+          </div>
+
+          {/* Flow diagram */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">How it works</p>
+            <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+              {[
+                {
+                  step: "1",
+                  color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                  label: "Booking Team",
+                  desc: "Receives all leads. When a lead status changes to Booking, it auto-transfers to the Closing Team and disappears from Booking Team.",
+                },
+                {
+                  step: "2",
+                  color: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+                  label: "Closing Team",
+                  desc: "Closes the lead (status → Closed). Booking team can still view the lead history.",
+                },
+                {
+                  step: "3",
+                  color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                  label: "Redeposit Team (Redep)",
+                  desc: "Gets shared read+write access when lead is Closed. Both Closing and Redep teams can update the same lead.",
+                },
+              ].map(({ step, color, label, desc }) => (
+                <div key={step} className="flex gap-3">
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${color}`}>
+                    {step}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3">
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+              Teams are identified by their tag name — create tags named <strong>Booking</strong>, <strong>Closing</strong>, and <strong>Redep</strong> and assign them to the respective teams.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const isSuperAdmin = (user as { role?: { roleName?: string } })?.role?.roleName === "Super Admin";
 
-  const [activeTab, setActiveTab] = useState<"whatsapp" | "backup" | "tags">("whatsapp");
+  const [activeTab, setActiveTab] = useState<"whatsapp" | "backup" | "tags" | "workflow">("whatsapp");
 
   const { data: manifest, isLoading, refetch } = useBackupManifest();
   const { mutate: triggerBackup, isPending: triggering } = useTriggerBackup();
@@ -371,6 +462,7 @@ export default function SettingsPage() {
           { key: "whatsapp", label: "WhatsApp", icon: MessageCircle },
           { key: "backup",   label: "Backup & Restore", icon: Database },
           { key: "tags",     label: "Tags", icon: Tag },
+          { key: "workflow", label: "Workflow", icon: GitFork },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -389,6 +481,11 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <AnimatePresence>
+        {activeTab === "workflow" && (
+          <motion.div key="workflow" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <WorkflowTab />
+          </motion.div>
+        )}
         {activeTab === "tags" && (
           <motion.div key="tags" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <TagManagerInline />

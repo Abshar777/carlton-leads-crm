@@ -77,6 +77,8 @@ export interface Lead {
   assignedTo?: User | string | null;
   assignedAt?: string | null;
   team?: Team | string | null;
+  previousTeam?: Team | string | null;
+  sharedWithTeams?: (Team | string)[];
   reporter?: User | string | null;
   notes: LeadNote[];
   reminders: Reminder[];
@@ -134,6 +136,7 @@ export interface LeadFilters {
   updatedTo?: string;
   unassignedOnly?: boolean;
   tags?: string;
+  previousTeam?: string;
 }
 
 export interface LeadStats {

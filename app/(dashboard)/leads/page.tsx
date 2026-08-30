@@ -436,7 +436,8 @@ function LeadsPageContent() {
   };
   const handleBookingConfirm = (details: BookingFormValues) => {
     if (!bookingLead) return;
-    updateStatus({ id: bookingLead._id, status: "booking", bookingDetails: details }, {
+    const { reminderAt, ...bookingDetails } = details;
+    updateStatus({ id: bookingLead._id, status: "booking", bookingDetails, reminderAt: reminderAt || undefined }, {
       onSuccess: () => setBookingLead(null),
     });
   };

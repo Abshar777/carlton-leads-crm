@@ -29,7 +29,7 @@ const teamSchema = z.object({
   status: z.enum(["active", "inactive"]).optional(),
   leaders: z.array(z.string()).optional(),
   members: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string()).max(1, "A team can only have one tag").optional(),
 });
 
 type TeamFormValues = z.infer<typeof teamSchema>;
@@ -159,46 +159,52 @@ function UserPicker({
   );
 }
 
-// ─── Tag Picker ───────────────────────────────────────────────────────────────
+// ─── Tag Picker (single-select, exclusive per team) ──────────────────────────
 function TagPicker({
   selected,
   onChange,
   allTags,
+  takenTagMap = {},
 }: {
   selected: string[];
   onChange: (ids: string[]) => void;
   allTags: Tag[];
+  takenTagMap?: Record<string, string>;
 }) {
-  const toggle = (id: string) => {
-    if (selected.includes(id)) {
-      onChange(selected.filter((s) => s !== id));
-    } else {
-      onChange(Array.from(new Set(selected.concat(id))));
-    }
+  const selectedId = selected[0] ?? null;
+
+  const pick = (id: string) => {
+    if (takenTagMap[id]) return;
+    onChange(selectedId === id ? [] : [id]);
   };
 
   return (
     <div className="space-y-2">
       <Label className="flex items-center gap-1.5">
         <TagIcon className="h-3.5 w-3.5" />
-        Tags
+        Tag <span className="text-muted-foreground font-normal">(pick one)</span>
       </Label>
       {allTags.length === 0 ? (
         <p className="text-xs text-muted-foreground">No tags available — create tags first in Settings.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {allTags.map((tag) => {
-            const isSelected = selected.includes(tag._id);
+            const isSelected = selectedId === tag._id;
+            const takenBy = takenTagMap[tag._id];
             return (
               <button
                 key={tag._id}
                 type="button"
-                onClick={() => toggle(tag._id)}
+                disabled={!!takenBy}
+                onClick={() => pick(tag._id)}
+                title={takenBy ? `Already assigned to "${takenBy}"` : undefined}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium border transition-all",
                   isSelected
                     ? "border-transparent text-white shadow-sm"
-                    : "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
+                    : takenBy
+                    ? "border-border bg-muted/20 text-muted-foreground/40 cursor-not-allowed opacity-50"
+                    : "border-border bg-muted/40 text-muted-foreground hover:bg-muted cursor-pointer",
                 )}
                 style={isSelected ? { backgroundColor: tag.color, borderColor: tag.color } : {}}
               >
@@ -207,6 +213,7 @@ function TagPicker({
                   style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.7)" : tag.color }}
                 />
                 {tag.name}
+                {takenBy && <span className="ml-0.5 text-[10px]">({takenBy})</span>}
                 {isSelected && <X className="h-3 w-3 ml-0.5" />}
               </button>
             );
@@ -239,6 +246,19 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
       for (const u of [...(t.leaders ?? []), ...(t.members ?? [])]) {
         const id = typeof u === "string" ? u : u._id;
         if (id && !map[id]) map[id] = t.name;
+      }
+    }
+    return map;
+  }, [allTeams, isEdit, team]);
+
+  // tagId → team name for tags already owned by another team
+  const takenTagMap = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const t of allTeams) {
+      if (isEdit && team && t._id === team._id) continue;
+      for (const tag of t.tags ?? []) {
+        const id = typeof tag === "string" ? tag : tag._id;
+        if (id) map[id] = t.name;
       }
     }
     return map;
@@ -370,6 +390,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                 selected={field.value ?? []}
                 onChange={field.onChange}
                 allTags={allTags}
+                takenTagMap={takenTagMap}
               />
             )}
           />
