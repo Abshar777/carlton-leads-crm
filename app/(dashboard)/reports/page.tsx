@@ -39,6 +39,7 @@ import {
   useCampaignBreakdown,
   useBookingsReport,
   useClosingsReport,
+  useTeamMemberReport,
 } from "@/hooks/useReports";
 import { useUsers } from "@/hooks/useUsers";
 import { useTeams } from "@/hooks/useTeams";
@@ -2116,10 +2117,270 @@ function ClosingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TEAM REPORT TAB
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TEAM_STATUS_COLUMNS: { key: string; label: string; color: string }[] = [
+  { key: "new",           label: "New",         color: "text-blue-400"    },
+  { key: "assigned",      label: "Assigned",     color: "text-yellow-400"  },
+  { key: "followup",      label: "Follow Up",    color: "text-orange-400"  },
+  { key: "interested",    label: "Interested",   color: "text-violet-400"  },
+  { key: "cnc",           label: "CNC",          color: "text-slate-400"   },
+  { key: "booking",       label: "Booking",      color: "text-teal-400"    },
+  { key: "notinterested", label: "Not Int.",     color: "text-orange-400"  },
+  { key: "closed",        label: "Closed",       color: "text-green-400"   },
+  { key: "invalid",       label: "Invalid",      color: "text-red-400"     },
+  { key: "rnr",           label: "RNR",          color: "text-amber-400"   },
+  { key: "callback",      label: "Call Back",    color: "text-sky-400"     },
+  { key: "whatsapp",      label: "WhatsApp",     color: "text-emerald-400" },
+  { key: "student",       label: "Student",      color: "text-indigo-400"  },
+];
+
+type TeamReportPeriod = "today" | "week" | "month" | "year" | "custom";
+
+function getTeamReportRange(period: TeamReportPeriod): { from: string; to: string } {
+  const now   = new Date();
+  const today = now.toISOString().slice(0, 10);
+  if (period === "today") return { from: today, to: today };
+  if (period === "week") {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    return { from: d.toISOString().slice(0, 10), to: today };
+  }
+  if (period === "month") {
+    const d = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { from: d.toISOString().slice(0, 10), to: today };
+  }
+  if (period === "year") {
+    return { from: `${now.getFullYear()}-01-01`, to: today };
+  }
+  return { from: "", to: "" };
+}
+
+function TeamReportTab({ globalDateFrom, globalDateTo }: { globalDateFrom: string; globalDateTo: string }) {
+  const { data: teamsResult } = useTeams({ limit: "200" } as never);
+  const allTeams = teamsResult?.data ?? [];
+
+  const [selectedTeam, setSelectedTeam] = useState<string>("");
+  const [period, setPeriod]             = useState<TeamReportPeriod>("month");
+  const [customFrom, setCustomFrom]     = useState(globalDateFrom);
+  const [customTo,   setCustomTo]       = useState(globalDateTo);
+
+  const { from: dateFrom, to: dateTo } = useMemo(() => {
+    if (period === "custom") return { from: customFrom, to: customTo };
+    return getTeamReportRange(period);
+  }, [period, customFrom, customTo]);
+
+  const teamId = selectedTeam || (allTeams[0]?._id ?? "");
+
+  const { data, isLoading } = useTeamMemberReport(
+    teamId,
+    dateFrom || undefined,
+    dateTo   || undefined,
+  );
+
+  const selectedTeamName = allTeams.find((t) => t._id === teamId)?.name ?? "";
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      {/* Header controls */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Team selector */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <UsersRound className="h-5 w-5 text-primary" />
+              </div>
+              <Select value={teamId} onValueChange={(v) => setSelectedTeam(v)}>
+                <SelectTrigger className="h-9 text-sm max-w-xs">
+                  <SelectValue placeholder="Select a team…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allTeams.map((t) => (
+                    <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Summary badges */}
+            {data && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                  <UsersRound className="h-3.5 w-3.5 text-muted-foreground" />
+                  {data.rows.length} members
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                  {data.grandTotal} total leads
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/15 text-green-400 px-3 py-1 text-xs font-semibold">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {data.totals?.closed ?? 0} closed
+                </span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Period selector */}
+      <Card>
+        <CardContent className="pt-3 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {(["today","week","month","year","custom"] as TeamReportPeriod[]).map((p) => (
+              <motion.button
+                key={p}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => setPeriod(p)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors capitalize",
+                  period === p
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {p === "week" ? "This Week" : p === "month" ? "This Month" : p === "year" ? "This Year" : p.charAt(0).toUpperCase() + p.slice(1)}
+              </motion.button>
+            ))}
+
+            {period === "custom" && (
+              <div className="flex items-center gap-2 ml-2">
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                />
+                <span className="text-muted-foreground text-xs">→</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !teamId ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+              <UsersRound className="h-10 w-10 text-muted-foreground/30" />
+              <p className="font-semibold">Select a team</p>
+              <p className="text-sm text-muted-foreground">Choose a team from the dropdown above.</p>
+            </div>
+          ) : !data || data.rows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+              <UsersRound className="h-10 w-10 text-muted-foreground/30" />
+              <p className="font-semibold">No data</p>
+              <p className="text-sm text-muted-foreground">No leads found for {selectedTeamName} in this period.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              {/* Table caption */}
+              <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-semibold text-foreground">Member Report</span>
+                <span className="text-xs text-muted-foreground ml-1">Lead status breakdown per member</span>
+              </div>
+              <table className="w-full text-xs" style={{ minWidth: `${(TEAM_STATUS_COLUMNS.length + 2) * 90}px` }}>
+                <thead>
+                  <tr className="border-b border-border/40 bg-muted/20">
+                    <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[160px]">
+                      Member
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Total</th>
+                    {TEAM_STATUS_COLUMNS.map((col) => (
+                      <th key={col.key} className={cn("px-4 py-3 text-right font-medium whitespace-nowrap", col.color)}>
+                        {col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.rows.map((row, i) => (
+                    <motion.tr
+                      key={row.member._id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="border-b border-border/20 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="sticky left-0 z-10 bg-card px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase">
+                            {row.member.name?.charAt(0) ?? "?"}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{row.member.name}</p>
+                            {row.member.role?.roleName && (
+                              <p className="text-[10px] text-muted-foreground truncate">{row.member.role.roleName}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">{row.total}</td>
+                      {TEAM_STATUS_COLUMNS.map((col) => {
+                        const val = row.counts[col.key] ?? 0;
+                        return (
+                          <td key={col.key} className="px-4 py-3 text-right tabular-nums">
+                            {val > 0 ? (
+                              <span className={cn("inline-flex items-center justify-center rounded-full px-2 py-0.5 font-semibold min-w-[28px] bg-muted/60", col.color)}>
+                                {val}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/40">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </motion.tr>
+                  ))}
+
+                  {/* Team Total row */}
+                  <tr className="border-t-2 border-border/60 bg-muted/20 font-semibold">
+                    <td className="sticky left-0 z-10 bg-muted/20 px-4 py-3 text-sm text-foreground">Team Total</td>
+                    <td className="px-4 py-3 text-right text-sm font-bold text-foreground tabular-nums">{data.grandTotal}</td>
+                    {TEAM_STATUS_COLUMNS.map((col) => {
+                      const val = data.totals[col.key] ?? 0;
+                      return (
+                        <td key={col.key} className="px-4 py-3 text-right tabular-nums">
+                          {val > 0 ? (
+                            <span className={cn("inline-flex items-center justify-center rounded-full px-2 py-0.5 font-semibold min-w-[28px]", col.color)}>
+                              {val}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ROOT PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "split" | "revenue" | "sources" | "bookings" | "closing";
+type Tab = "overview" | "split" | "revenue" | "sources" | "bookings" | "closing" | "teams";
 
 const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementType }[] = [
   { id: "overview",  label: "Overview",      shortLabel: "Overview", icon: BarChart2    },
@@ -2128,6 +2389,7 @@ const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementTyp
   { id: "sources",   label: "Sources",        shortLabel: "Sources",  icon: TrendingUp   },
   { id: "bookings",  label: "Bookings",       shortLabel: "Bookings", icon: BookMarked   },
   { id: "closing",   label: "Closings",       shortLabel: "Closings", icon: CheckCircle2 },
+  { id: "teams",     label: "Teams",          shortLabel: "Teams",    icon: UsersRound   },
 ];
 
 function ReportsPageContent() {
@@ -2292,6 +2554,10 @@ function ReportsPageContent() {
           ) : activeTab === "closing" ? (
             <motion.div key="closing" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
               <ClosingsTab dateFrom={dateFrom} dateTo={dateTo} />
+            </motion.div>
+          ) : activeTab === "teams" ? (
+            <motion.div key="teams" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
+              <TeamReportTab globalDateFrom={dateFrom} globalDateTo={dateTo} />
             </motion.div>
           ) : (
             <motion.div key="sources" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
