@@ -251,18 +251,28 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
     return map;
   }, [allTeams, isEdit, team]);
 
-  // tagId → team name for tags already owned by another team
+  // Closing and Redep tags are exclusive — only one team can hold them.
+  // Booking and Dummy tags are shared — multiple teams can hold them.
+  const exclusiveTagIds = useMemo<Set<string>>(() => {
+    const set = new Set<string>();
+    for (const tag of allTags) {
+      if (/^(closing|redep)$/i.test(tag.name)) set.add(tag._id);
+    }
+    return set;
+  }, [allTags]);
+
+  // tagId → team name — only populated for exclusive tags taken by another team
   const takenTagMap = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
     for (const t of allTeams) {
       if (isEdit && team && t._id === team._id) continue;
       for (const tag of t.tags ?? []) {
         const id = typeof tag === "string" ? tag : tag._id;
-        if (id) map[id] = t.name;
+        if (id && exclusiveTagIds.has(id)) map[id] = t.name;
       }
     }
     return map;
-  }, [allTeams, isEdit, team]);
+  }, [allTeams, isEdit, team, exclusiveTagIds]);
 
   const {
     register,

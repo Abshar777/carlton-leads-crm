@@ -1326,7 +1326,7 @@ function LeadsPageContent() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[10, 25, 50, 100].map((n) => (
+                      {[10, 25, 50, 100, 200, 300].map((n) => (
                         <SelectItem key={n} value={String(n)} className="text-xs">{n} / page</SelectItem>
                       ))}
                     </SelectContent>
