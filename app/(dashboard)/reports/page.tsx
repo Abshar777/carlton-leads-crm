@@ -12,7 +12,7 @@ import {
   TrendingUp, Users, UsersRound, Target, Award,
   Calendar, RefreshCw, BarChart2, Activity, Layers,
   GitFork, IndianRupee, Trophy, ChevronDown, ChevronUp,
-  Loader2, Tag, X, ArrowUpRight, BookMarked,
+  Loader2, Tag, X, ArrowUpRight, BookMarked, CheckCircle2, SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +38,9 @@ import {
   useSourceAnalytics,
   useCampaignBreakdown,
   useBookingsReport,
+  useClosingsReport,
 } from "@/hooks/useReports";
+import { useUsers } from "@/hooks/useUsers";
 import { useTeams } from "@/hooks/useTeams";
 import { useAuthStore } from "@/lib/store/authStore";
 import type {
@@ -1735,29 +1737,65 @@ function SourceAnalyticsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: st
 // BOOKINGS TAB
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+// ── Shared status-report table ────────────────────────────────────────────────
+
+function StatusReportTab({
+  mode,
+  dateFrom,
+  dateTo,
+  accentColor,
+  icon: Icon,
+  emptyLabel,
+  useHook,
+  defaultDateField,
+  dateFieldOptions,
+  tableHeaders,
+  renderRow,
+}: {
+  mode: string;
+  dateFrom: string;
+  dateTo: string;
+  accentColor: string;
+  icon: React.ElementType;
+  emptyLabel: string;
+  useHook: typeof useBookingsReport;
+  defaultDateField: string;
+  dateFieldOptions: { value: string; label: string }[];
+  tableHeaders: string[];
+  renderRow: (lead: import("@/types/lead").Lead, i: number) => React.ReactNode;
+}) {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role?.isSystemRole === true && user?.role?.roleName === "Super Admin";
 
-  const [search,  setSearch]  = useState("");
-  const [dSearch, setDSearch] = useState("");
-  const [teamId,  setTeamId]  = useState("all");
-  const [page,    setPage]    = useState(1);
+  const [search,     setSearch]     = useState("");
+  const [dSearch,    setDSearch]    = useState("");
+  const [teamId,     setTeamId]     = useState("all");
+  const [assignedTo, setAssignedTo] = useState("all");
+  const [sortBy,     setSortBy]     = useState(defaultDateField);
+  const [sortOrder,  setSortOrder]  = useState<"desc"|"asc">("desc");
+  const [dateField,  setDateField]  = useState(defaultDateField);
+  const [page,       setPage]       = useState(1);
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: teamsResult } = useTeams({ limit: "200" } as never);
   const allTeams = teamsResult?.data ?? [];
+  const { data: usersData } = useUsers({ status: "active", limit: "200" });
+  const allUsers = usersData?.data ?? [];
 
-  const { data, isLoading } = useBookingsReport({
-    dateFrom: dateFrom || undefined,
-    dateTo:   dateTo   || undefined,
-    search:   dSearch  || undefined,
-    team:     teamId !== "all" ? teamId : undefined,
+  const { data, isLoading } = useHook({
+    dateFrom:   dateFrom   || undefined,
+    dateTo:     dateTo     || undefined,
+    dateField,
+    sortBy,
+    sortOrder,
+    search:     dSearch    || undefined,
+    team:       teamId     !== "all" ? teamId     : undefined,
+    assignedTo: assignedTo !== "all" ? assignedTo : undefined,
     page,
-    limit: 20,
+    limit: 50,
   });
 
-  const bookings = data?.data ?? [];
+  const leads = data?.data ?? [];
   const pagination = data?.pagination;
 
   function handleSearch(val: string) {
@@ -1768,46 +1806,110 @@ function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {/* Summary stat */}
+      {/* Summary */}
       <Card>
         <CardContent className="pt-4 pb-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15">
-              <Target className="h-5 w-5 text-teal-400" />
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentColor}/15`}>
+              <Icon className={`h-5 w-5 ${accentColor}`} />
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground tabular-nums">{pagination?.total ?? "—"}</p>
-              <p className="text-xs text-muted-foreground">Total Bookings{dateFrom && dateTo ? ` (${dateFrom} → ${dateTo})` : ""}</p>
+              <p className="text-xs text-muted-foreground">
+                Total {mode}{dateFrom && dateTo ? ` (${dateFrom} → ${dateTo})` : ""}
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Activity className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <input
-            className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
-            placeholder="Search client, staff, batch, WhatsApp..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-          />
-        </div>
-        {isSuperAdmin && (
-          <Select value={teamId} onValueChange={(v) => { setTeamId(v); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="All Teams" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {allTeams.map((t) => (
-                <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      <Card>
+        <CardContent className="pt-3 pb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Filters & Sort</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {/* Search */}
+            <div className="relative col-span-1 sm:col-span-2 lg:col-span-1">
+              <Activity className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Search client, staff, batch..."
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Date field filter */}
+            <Select value={dateField} onValueChange={(v) => { setDateField(v); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {dateFieldOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort by */}
+            <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Sort by…" />
+              </SelectTrigger>
+              <SelectContent>
+                {dateFieldOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>Sort: {o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort order */}
+            <Select value={sortOrder} onValueChange={(v) => { setSortOrder(v as "asc"|"desc"); setPage(1); }}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Newest first</SelectItem>
+                <SelectItem value="asc">Oldest first</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Team filter */}
+            {isSuperAdmin && (
+              <Select value={teamId} onValueChange={(v) => { setTeamId(v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {allTeams.map((t) => (
+                    <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Assigned to filter */}
+            {isSuperAdmin && (
+              <Select value={assignedTo} onValueChange={(v) => { setAssignedTo(v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="All Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {allUsers.map((u) => (
+                    <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
       <Card>
@@ -1816,71 +1918,26 @@ function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : bookings.length === 0 ? (
+          ) : leads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                <Target className="h-7 w-7 text-muted-foreground" />
+                <Icon className="h-7 w-7 text-muted-foreground" />
               </div>
-              <p className="font-semibold">No bookings found</p>
-              <p className="text-sm text-muted-foreground">Try adjusting the date range or search.</p>
+              <p className="font-semibold">No {emptyLabel} found</p>
+              <p className="text-sm text-muted-foreground">Try adjusting the date range, filters, or search.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[900px]">
+              <table className="w-full text-xs min-w-[1100px]">
                 <thead>
                   <tr className="border-b border-border/40">
-                    {["Client", "Contact", "Batch", "Time", "Mode", "Staff", "WhatsApp", "Team", "Course", "Booked At"].map((h) => (
+                    {tableHeaders.map((h) => (
                       <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((lead, i) => {
-                    const bd = lead.bookingDetails;
-                    return (
-                      <motion.tr
-                        key={lead._id}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.02 }}
-                        className="border-b border-border/20 hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="px-4 py-3 font-medium text-foreground">{lead.name || "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground font-mono">{lead.phone}</td>
-                        <td className="px-4 py-3">
-                          <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 font-semibold">{bd?.batch || "—"}</span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">{bd?.time || "—"}</td>
-                        <td className="px-4 py-3">
-                          {bd?.mode ? (
-                            <span className={cn(
-                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold capitalize",
-                              bd.mode === "online" ? "bg-blue-500/10 text-blue-400" : "bg-orange-500/10 text-orange-400"
-                            )}>
-                              <span className={cn("h-1.5 w-1.5 rounded-full", bd.mode === "online" ? "bg-blue-400" : "bg-orange-400")} />
-                              {bd.mode}
-                            </span>
-                          ) : "—"}
-                        </td>
-                        <td className="px-4 py-3 font-medium">{bd?.staffName || "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground font-mono">{bd?.whatsappNo || "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {lead.team && typeof lead.team === "object" ? (lead.team as { name: string }).name : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {lead.course && typeof lead.course === "object" ? (lead.course as { name: string }).name : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                          {bd?.bookedAt
-                            ? new Date(bd.bookedAt).toLocaleString("en-IN", {
-                                timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
-                                year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true,
-                              })
-                            : "—"}
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
+                  {leads.map((lead, i) => renderRow(lead, i))}
                 </tbody>
               </table>
             </div>
@@ -1894,7 +1951,7 @@ function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
           <p className="text-sm text-muted-foreground">
             Page <span className="font-medium text-foreground">{pagination.page}</span> of{" "}
             <span className="font-medium text-foreground">{pagination.totalPages}</span>{" "}
-            <span className="hidden sm:inline">({pagination.total} bookings)</span>
+            <span className="hidden sm:inline">({pagination.total} {mode})</span>
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={!pagination.hasPrevPage}>
@@ -1911,10 +1968,158 @@ function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// BOOKINGS TAB WRAPPER
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BOOKING_DATE_FIELD_OPTIONS = [
+  { value: "bookedAt",  label: "Booked At" },
+  { value: "createdAt", label: "Created At" },
+  { value: "updatedAt", label: "Updated At" },
+];
+
+const BOOKING_HEADERS = ["Client", "Contact", "Email", "Batch", "Time", "Mode", "Staff", "WhatsApp", "Team", "Course", "Booked At"];
+
+function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  return (
+    <StatusReportTab
+      mode="bookings"
+      dateFrom={dateFrom}
+      dateTo={dateTo}
+      accentColor="text-teal-400"
+      icon={BookMarked}
+      emptyLabel="No bookings found"
+      useHook={useBookingsReport}
+      defaultDateField="bookedAt"
+      dateFieldOptions={BOOKING_DATE_FIELD_OPTIONS}
+      tableHeaders={BOOKING_HEADERS}
+      renderRow={(lead, i) => {
+        const bd = lead.bookingDetails;
+        return (
+          <motion.tr
+            key={lead._id}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.02 }}
+            className="border-b border-border/20 hover:bg-muted/30 transition-colors"
+          >
+            <td className="px-4 py-3 font-medium text-foreground">{bd?.clientName || lead.name || "—"}</td>
+            <td className="px-4 py-3 text-muted-foreground font-mono">{bd?.contactNo || lead.phone || "—"}</td>
+            <td className="px-4 py-3 text-muted-foreground">{bd?.clientEmail || lead.email || "—"}</td>
+            <td className="px-4 py-3">
+              <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 font-semibold">{bd?.batch || "—"}</span>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap">{bd?.time || "—"}</td>
+            <td className="px-4 py-3">
+              {bd?.mode ? (
+                <span className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold capitalize",
+                  bd.mode === "online" ? "bg-blue-500/10 text-blue-400" : "bg-orange-500/10 text-orange-400"
+                )}>
+                  <span className={cn("h-1.5 w-1.5 rounded-full", bd.mode === "online" ? "bg-blue-400" : "bg-orange-400")} />
+                  {bd.mode}
+                </span>
+              ) : "—"}
+            </td>
+            <td className="px-4 py-3 font-medium">{bd?.staffName || "—"}</td>
+            <td className="px-4 py-3 text-muted-foreground font-mono">{bd?.whatsappNo || "—"}</td>
+            <td className="px-4 py-3 text-muted-foreground">
+              {lead.team && typeof lead.team === "object" ? (lead.team as { name: string }).name : "—"}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+              {lead.course && typeof lead.course === "object" ? (lead.course as { name: string }).name : "—"}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+              {bd?.bookedAt
+                ? new Date(bd.bookedAt).toLocaleString("en-IN", {
+                    timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
+                    year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true,
+                  })
+                : "—"}
+            </td>
+          </motion.tr>
+        );
+      }}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLOSINGS TAB WRAPPER
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CLOSING_DATE_FIELD_OPTIONS = [
+  { value: "updatedAt", label: "Closed At" },
+  { value: "createdAt", label: "Created At" },
+];
+
+const CLOSING_HEADERS = ["Client", "Contact", "Email", "Staff", "Team", "Course", "Assigned To", "Closed At", "Created At"];
+
+function ClosingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  return (
+    <StatusReportTab
+      mode="closings"
+      dateFrom={dateFrom}
+      dateTo={dateTo}
+      accentColor="text-green-400"
+      icon={CheckCircle2}
+      emptyLabel="No closed leads found"
+      useHook={useClosingsReport}
+      defaultDateField="updatedAt"
+      dateFieldOptions={CLOSING_DATE_FIELD_OPTIONS}
+      tableHeaders={CLOSING_HEADERS}
+      renderRow={(lead, i) => {
+        const assignedUser = lead.assignedTo && typeof lead.assignedTo === "object"
+          ? (lead.assignedTo as { name: string }).name
+          : "—";
+        return (
+          <motion.tr
+            key={lead._id}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.02 }}
+            className="border-b border-border/20 hover:bg-muted/30 transition-colors"
+          >
+            <td className="px-4 py-3 font-medium text-foreground">{lead.name || "—"}</td>
+            <td className="px-4 py-3 text-muted-foreground font-mono">{lead.phone || "—"}</td>
+            <td className="px-4 py-3 text-muted-foreground">{lead.email || "—"}</td>
+            <td className="px-4 py-3 font-medium">
+              {lead.bookingDetails?.staffName || "—"}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+              {lead.team && typeof lead.team === "object" ? (lead.team as { name: string }).name : "—"}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+              {lead.course && typeof lead.course === "object" ? (lead.course as { name: string }).name : "—"}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">{assignedUser}</td>
+            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+              {lead.updatedAt
+                ? new Date(lead.updatedAt).toLocaleString("en-IN", {
+                    timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
+                    year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true,
+                  })
+                : "—"}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+              {lead.createdAt
+                ? new Date(lead.createdAt).toLocaleString("en-IN", {
+                    timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
+                    year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true,
+                  })
+                : "—"}
+            </td>
+          </motion.tr>
+        );
+      }}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ROOT PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "split" | "revenue" | "sources" | "bookings";
+type Tab = "overview" | "split" | "revenue" | "sources" | "bookings" | "closing";
 
 const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementType }[] = [
   { id: "overview",  label: "Overview",      shortLabel: "Overview", icon: BarChart2    },
@@ -1922,6 +2127,7 @@ const TABS: { id: Tab; label: string; shortLabel: string; icon: React.ElementTyp
   { id: "revenue",   label: "Revenue",        shortLabel: "Revenue",  icon: IndianRupee  },
   { id: "sources",   label: "Sources",        shortLabel: "Sources",  icon: TrendingUp   },
   { id: "bookings",  label: "Bookings",       shortLabel: "Bookings", icon: BookMarked   },
+  { id: "closing",   label: "Closings",       shortLabel: "Closings", icon: CheckCircle2 },
 ];
 
 function ReportsPageContent() {
@@ -2082,6 +2288,10 @@ function ReportsPageContent() {
           ) : activeTab === "bookings" ? (
             <motion.div key="bookings" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
               <BookingsTab dateFrom={dateFrom} dateTo={dateTo} />
+            </motion.div>
+          ) : activeTab === "closing" ? (
+            <motion.div key="closing" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>
+              <ClosingsTab dateFrom={dateFrom} dateTo={dateTo} />
             </motion.div>
           ) : (
             <motion.div key="sources" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ duration:0.2 }}>

@@ -162,43 +162,47 @@ export function BookingDetailsModal({
           </div>
 
           <div className="border-t border-border/40 pt-3">
-            <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">Auto-filled from lead</p>
+            <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">Client Details</p>
             <div className="space-y-3">
-              {/* Staff Name (auto) */}
+              {/* Staff Name */}
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-1.5 text-muted-foreground">
-                  <User className="h-3.5 w-3.5" />
-                  Staff Name
+                <Label htmlFor="staffName" className="flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  Staff Name *
                 </Label>
-                <Input {...register("staffName")} readOnly className="bg-muted/30 cursor-not-allowed opacity-70" />
+                <Input id="staffName" placeholder="Staff name" {...register("staffName")} />
+                {errors.staffName && <p className="text-xs text-destructive">{errors.staffName.message}</p>}
               </div>
 
-              {/* Client Name (auto) */}
+              {/* Client Name */}
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-1.5 text-muted-foreground">
-                  <User className="h-3.5 w-3.5" />
-                  Client Name
+                <Label htmlFor="clientName" className="flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  Client Name *
                 </Label>
-                <Input {...register("clientName")} readOnly className="bg-muted/30 cursor-not-allowed opacity-70" />
+                <Input id="clientName" placeholder="Client full name" {...register("clientName")} />
+                {errors.clientName && <p className="text-xs text-destructive">{errors.clientName.message}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Client Email (auto) */}
+                {/* Client Email */}
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1.5 text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5" />
+                  <Label htmlFor="clientEmail" className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                     Email
+                    <span className="text-muted-foreground text-xs font-normal">(optional)</span>
                   </Label>
-                  <Input {...register("clientEmail")} readOnly className="bg-muted/30 cursor-not-allowed opacity-70 text-xs" />
+                  <Input id="clientEmail" placeholder="email@example.com" {...register("clientEmail")} className="text-xs" />
                 </div>
 
-                {/* Contact No (auto) */}
+                {/* Contact No */}
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1.5 text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5" />
-                    Contact No
+                  <Label htmlFor="contactNo" className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                    Contact No *
                   </Label>
-                  <Input {...register("contactNo")} readOnly className="bg-muted/30 cursor-not-allowed opacity-70 text-xs" />
+                  <Input id="contactNo" placeholder="Phone number" {...register("contactNo")} className="text-xs" />
+                  {errors.contactNo && <p className="text-xs text-destructive">{errors.contactNo.message}</p>}
                 </div>
               </div>
             </div>
