@@ -2295,7 +2295,7 @@ function TeamReportTab({ globalDateFrom: _gdf, globalDateTo: _gdt }: { globalDat
                       <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">{row.total}</td>
                       {GENERAL_STATUS_COLS.map((c) => (
                         <td key={c.key} className="px-4 py-3 text-right tabular-nums">
-                          <StatCell val={row.counts[c.key] ?? 0} color={c.color} />
+                          <StatCell val={(row.counts ?? {})[c.key] ?? 0} color={c.color} />
                         </td>
                       ))}
                     </motion.tr>
@@ -2305,7 +2305,7 @@ function TeamReportTab({ globalDateFrom: _gdf, globalDateTo: _gdt }: { globalDat
                     <td className="px-4 py-3 text-right text-sm font-bold text-foreground tabular-nums">{data.grandTotal}</td>
                     {GENERAL_STATUS_COLS.map((c) => (
                       <td key={c.key} className="px-4 py-3 text-right tabular-nums">
-                        <StatCell val={data.totals[c.key] ?? 0} color={c.color} bold />
+                        <StatCell val={(data.totals ?? {})[c.key] ?? 0} color={c.color} bold />
                       </td>
                     ))}
                   </tr>
