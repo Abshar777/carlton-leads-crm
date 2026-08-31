@@ -265,26 +265,52 @@ export const useClosingsReport = buildStatusReportHook("closings");
 
 // ── Team Member Report ────────────────────────────────────────────────────────
 
-export interface TeamMemberRow {
-  member: { _id: string; name: string; email: string; role?: { roleName: string } };
+type MemberMeta = { _id: string; name: string; email: string; role?: { roleName: string } };
+
+export interface GeneralMemberRow {
+  member: MemberMeta;
   counts: Record<string, number>;
   total: number;
 }
 
-export interface TeamMemberReport {
-  rows: TeamMemberRow[];
-  totals: Record<string, number>;
-  grandTotal: number;
-  statuses: string[];
+export interface SpecialMemberRow {
+  member: MemberMeta;
+  total: number;
+  thisMonth: number;
+  oldConversions: number;
+  targetThisMonth: number;
+  conversionRate: number;
+  otherCounts: Record<string, number>;
 }
 
-export function useTeamMemberReport(teamId: string, dateFrom?: string, dateTo?: string) {
+export type TeamMemberReport =
+  | {
+      reportType: "general";
+      rows: GeneralMemberRow[];
+      totals: Record<string, number>;
+      grandTotal: number;
+      statuses: readonly string[];
+    }
+  | {
+      reportType: "booking" | "closing";
+      targetStatus: string;
+      rows: SpecialMemberRow[];
+      totals: {
+        total: number;
+        thisMonth: number;
+        oldConversions: number;
+        targetThisMonth: number;
+        conversionRate: number;
+        otherStatuses: Record<string, number>;
+      };
+      monthStart: string;
+    };
+
+export function useTeamMemberReport(teamId: string) {
   return useQuery<TeamMemberReport>({
-    queryKey: ["reports", "team-member-report", teamId, dateFrom, dateTo],
+    queryKey: ["reports", "team-member-report", teamId],
     queryFn: async () => {
       const params = new URLSearchParams({ teamId });
-      if (dateFrom) params.set("dateFrom", dateFrom);
-      if (dateTo)   params.set("dateTo",   dateTo);
       const { data } = await api.get<ApiResponse<TeamMemberReport>>(
         `/reports/team-member-report?${params}`,
       );

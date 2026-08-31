@@ -2120,7 +2120,8 @@ function ClosingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
 // TEAM REPORT TAB
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TEAM_STATUS_COLUMNS: { key: string; label: string; color: string }[] = [
+// All statuses ordered for the general table
+const GENERAL_STATUS_COLS: { key: string; label: string; color: string }[] = [
   { key: "new",           label: "New",         color: "text-blue-400"    },
   { key: "assigned",      label: "Assigned",     color: "text-yellow-400"  },
   { key: "followup",      label: "Follow Up",    color: "text-orange-400"  },
@@ -2136,58 +2137,73 @@ const TEAM_STATUS_COLUMNS: { key: string; label: string; color: string }[] = [
   { key: "student",       label: "Student",      color: "text-indigo-400"  },
 ];
 
-type TeamReportPeriod = "today" | "week" | "month" | "year" | "custom";
+// "Other" statuses for booking teams (everything except booking)
+const BOOKING_OTHER_COLS = GENERAL_STATUS_COLS.filter((c) => c.key !== "booking");
+// "Other" statuses for closing teams (everything except closed, but include booking)
+const CLOSING_OTHER_COLS = GENERAL_STATUS_COLS.filter((c) => c.key !== "closed");
 
-function getTeamReportRange(period: TeamReportPeriod): { from: string; to: string } {
-  const now   = new Date();
-  const today = now.toISOString().slice(0, 10);
-  if (period === "today") return { from: today, to: today };
-  if (period === "week") {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 6);
-    return { from: d.toISOString().slice(0, 10), to: today };
-  }
-  if (period === "month") {
-    const d = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { from: d.toISOString().slice(0, 10), to: today };
-  }
-  if (period === "year") {
-    return { from: `${now.getFullYear()}-01-01`, to: today };
-  }
-  return { from: "", to: "" };
+// Shared member avatar cell
+function MemberCell({ name, roleName }: { name: string; roleName?: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase">
+        {name?.charAt(0) ?? "?"}
+      </div>
+      <div className="min-w-0">
+        <p className="font-medium text-foreground truncate">{name}</p>
+        {roleName && <p className="text-[10px] text-muted-foreground truncate">{roleName}</p>}
+      </div>
+    </div>
+  );
 }
 
-function TeamReportTab({ globalDateFrom, globalDateTo }: { globalDateFrom: string; globalDateTo: string }) {
+function StatCell({ val, color, bold }: { val: number; color?: string; bold?: boolean }) {
+  if (val === 0) return <span className="text-muted-foreground/40">—</span>;
+  return (
+    <span className={cn(
+      "inline-flex items-center justify-center rounded-full px-2 py-0.5 font-semibold min-w-[28px] bg-muted/60",
+      color,
+      bold && "font-bold",
+    )}>
+      {val}
+    </span>
+  );
+}
+
+function TeamReportTab({ globalDateFrom: _gdf, globalDateTo: _gdt }: { globalDateFrom: string; globalDateTo: string }) {
   const { data: teamsResult } = useTeams({ limit: "200" } as never);
   const allTeams = teamsResult?.data ?? [];
 
   const [selectedTeam, setSelectedTeam] = useState<string>("");
-  const [period, setPeriod]             = useState<TeamReportPeriod>("month");
-  const [customFrom, setCustomFrom]     = useState(globalDateFrom);
-  const [customTo,   setCustomTo]       = useState(globalDateTo);
-
-  const { from: dateFrom, to: dateTo } = useMemo(() => {
-    if (period === "custom") return { from: customFrom, to: customTo };
-    return getTeamReportRange(period);
-  }, [period, customFrom, customTo]);
-
   const teamId = selectedTeam || (allTeams[0]?._id ?? "");
 
-  const { data, isLoading } = useTeamMemberReport(
-    teamId,
-    dateFrom || undefined,
-    dateTo   || undefined,
-  );
+  const { data, isLoading } = useTeamMemberReport(teamId);
 
   const selectedTeamName = allTeams.find((t) => t._id === teamId)?.name ?? "";
 
+  // Summary badge values
+  const summaryTotal = data
+    ? data.reportType === "general"
+      ? data.grandTotal
+      : data.totals.total
+    : null;
+
+  const summaryThisMonth = data && data.reportType !== "general"
+    ? data.totals.targetThisMonth
+    : null;
+
+  const summaryLabel = data?.reportType === "booking"
+    ? "Bookings this month"
+    : data?.reportType === "closing"
+      ? "Closings this month"
+      : null;
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {/* Header controls */}
+      {/* Header — team selector + badges */}
       <Card>
         <CardContent className="pt-4 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            {/* Team selector */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                 <UsersRound className="h-5 w-5 text-primary" />
@@ -2204,62 +2220,29 @@ function TeamReportTab({ globalDateFrom, globalDateTo }: { globalDateFrom: strin
               </Select>
             </div>
 
-            {/* Summary badges */}
             {data && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
                   <UsersRound className="h-3.5 w-3.5 text-muted-foreground" />
                   {data.rows.length} members
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                  {data.grandTotal} total leads
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/15 text-green-400 px-3 py-1 text-xs font-semibold">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {data.totals?.closed ?? 0} closed
-                </span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Period selector */}
-      <Card>
-        <CardContent className="pt-3 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {(["today","week","month","year","custom"] as TeamReportPeriod[]).map((p) => (
-              <motion.button
-                key={p}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors capitalize",
-                  period === p
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
+                {summaryTotal !== null && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                    {summaryTotal} total leads
+                  </span>
                 )}
-              >
-                {p === "week" ? "This Week" : p === "month" ? "This Month" : p === "year" ? "This Year" : p.charAt(0).toUpperCase() + p.slice(1)}
-              </motion.button>
-            ))}
-
-            {period === "custom" && (
-              <div className="flex items-center gap-2 ml-2">
-                <input
-                  type="date"
-                  value={customFrom}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
-                />
-                <span className="text-muted-foreground text-xs">→</span>
-                <input
-                  type="date"
-                  value={customTo}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
-                />
+                {summaryThisMonth !== null && summaryLabel && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/15 text-teal-400 px-3 py-1 text-xs font-semibold">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {summaryThisMonth} {summaryLabel}
+                  </span>
+                )}
+                {data.reportType !== "general" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-semibold">
+                    {data.totals.conversionRate}% conv.
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -2277,98 +2260,160 @@ function TeamReportTab({ globalDateFrom, globalDateTo }: { globalDateFrom: strin
             <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
               <UsersRound className="h-10 w-10 text-muted-foreground/30" />
               <p className="font-semibold">Select a team</p>
-              <p className="text-sm text-muted-foreground">Choose a team from the dropdown above.</p>
             </div>
           ) : !data || data.rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
               <UsersRound className="h-10 w-10 text-muted-foreground/30" />
               <p className="font-semibold">No data</p>
-              <p className="text-sm text-muted-foreground">No leads found for {selectedTeamName} in this period.</p>
+              <p className="text-sm text-muted-foreground">No leads found for {selectedTeamName}.</p>
             </div>
-          ) : (
+          ) : data.reportType === "general" ? (
+            // ── GENERAL TABLE ──────────────────────────────────────────────────
             <div className="overflow-x-auto">
-              {/* Table caption */}
               <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-semibold text-foreground">Member Report</span>
-                <span className="text-xs text-muted-foreground ml-1">Lead status breakdown per member</span>
+                <span className="text-sm font-semibold">Member Report</span>
+                <span className="text-xs text-muted-foreground ml-1">Lead status breakdown per member · all time</span>
               </div>
-              <table className="w-full text-xs" style={{ minWidth: `${(TEAM_STATUS_COLUMNS.length + 2) * 90}px` }}>
+              <table className="w-full text-xs" style={{ minWidth: `${(GENERAL_STATUS_COLS.length + 2) * 88}px` }}>
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/20">
-                    <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[160px]">
-                      Member
-                    </th>
+                    <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[170px]">Member</th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Total</th>
-                    {TEAM_STATUS_COLUMNS.map((col) => (
-                      <th key={col.key} className={cn("px-4 py-3 text-right font-medium whitespace-nowrap", col.color)}>
-                        {col.label}
-                      </th>
+                    {GENERAL_STATUS_COLS.map((c) => (
+                      <th key={c.key} className={cn("px-4 py-3 text-right font-medium whitespace-nowrap", c.color)}>{c.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {data.rows.map((row, i) => (
-                    <motion.tr
-                      key={row.member._id}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="border-b border-border/20 hover:bg-muted/30 transition-colors"
-                    >
+                    <motion.tr key={row.member._id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
+                      className="border-b border-border/20 hover:bg-muted/30 transition-colors">
                       <td className="sticky left-0 z-10 bg-card px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase">
-                            {row.member.name?.charAt(0) ?? "?"}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground truncate">{row.member.name}</p>
-                            {row.member.role?.roleName && (
-                              <p className="text-[10px] text-muted-foreground truncate">{row.member.role.roleName}</p>
-                            )}
-                          </div>
-                        </div>
+                        <MemberCell name={row.member.name} roleName={row.member.role?.roleName} />
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">{row.total}</td>
-                      {TEAM_STATUS_COLUMNS.map((col) => {
-                        const val = row.counts[col.key] ?? 0;
-                        return (
-                          <td key={col.key} className="px-4 py-3 text-right tabular-nums">
-                            {val > 0 ? (
-                              <span className={cn("inline-flex items-center justify-center rounded-full px-2 py-0.5 font-semibold min-w-[28px] bg-muted/60", col.color)}>
-                                {val}
+                      {GENERAL_STATUS_COLS.map((c) => (
+                        <td key={c.key} className="px-4 py-3 text-right tabular-nums">
+                          <StatCell val={row.counts[c.key] ?? 0} color={c.color} />
+                        </td>
+                      ))}
+                    </motion.tr>
+                  ))}
+                  <tr className="border-t-2 border-border/60 bg-muted/20">
+                    <td className="sticky left-0 z-10 bg-muted/20 px-4 py-3 text-sm font-semibold">Team Total</td>
+                    <td className="px-4 py-3 text-right text-sm font-bold text-foreground tabular-nums">{data.grandTotal}</td>
+                    {GENERAL_STATUS_COLS.map((c) => (
+                      <td key={c.key} className="px-4 py-3 text-right tabular-nums">
+                        <StatCell val={data.totals[c.key] ?? 0} color={c.color} bold />
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            // ── BOOKING / CLOSING TABLE ────────────────────────────────────────
+            (() => {
+              const isBooking  = data.reportType === "booking";
+              const targetLabel  = isBooking ? "Bookings This Month" : "Closings This Month";
+              const targetColor  = isBooking ? "text-teal-400" : "text-green-400";
+              const otherCols    = isBooking ? BOOKING_OTHER_COLS : CLOSING_OTHER_COLS;
+              const specialRows  = data.rows;
+              const specialTotals= data.totals;
+
+              return (
+                <div className="overflow-x-auto">
+                  <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Member Report</span>
+                    <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full ml-1",
+                      isBooking ? "bg-teal-500/15 text-teal-400" : "bg-green-500/15 text-green-400"
+                    )}>
+                      {data.reportType}
+                    </span>
+                    <span className="text-xs text-muted-foreground">· {new Date().toLocaleString("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" })}</span>
+                  </div>
+                  <table className="w-full text-xs" style={{ minWidth: `${(otherCols.length + 6) * 88}px` }}>
+                    <thead>
+                      <tr className="border-b border-border/40 bg-muted/20">
+                        <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[170px]">Member</th>
+                        <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Total Leads</th>
+                        <th className="px-4 py-3 text-right font-medium text-blue-400 whitespace-nowrap">This Month</th>
+                        <th className="px-4 py-3 text-right font-medium text-violet-400 whitespace-nowrap">Old Conversions</th>
+                        <th className={cn("px-4 py-3 text-right font-medium whitespace-nowrap", targetColor)}>{targetLabel}</th>
+                        <th className="px-4 py-3 text-right font-medium text-amber-400 whitespace-nowrap">Conv. Rate</th>
+                        {otherCols.map((c) => (
+                          <th key={c.key} className={cn("px-4 py-3 text-right font-medium whitespace-nowrap", c.color)}>{c.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {specialRows.map((row, i) => (
+                        <motion.tr key={row.member._id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
+                          className="border-b border-border/20 hover:bg-muted/30 transition-colors">
+                          <td className="sticky left-0 z-10 bg-card px-4 py-3">
+                            <MemberCell name={row.member.name} roleName={row.member.role?.roleName} />
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">{row.total}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            <StatCell val={row.thisMonth} color="text-blue-400" />
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            <StatCell val={row.oldConversions} color="text-violet-400" />
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            <StatCell val={row.targetThisMonth} color={targetColor} />
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {row.thisMonth > 0 ? (
+                              <span className="inline-flex items-center justify-center rounded-full px-2 py-0.5 font-semibold bg-amber-500/10 text-amber-400 min-w-[44px]">
+                                {row.conversionRate}%
                               </span>
                             ) : (
                               <span className="text-muted-foreground/40">—</span>
                             )}
                           </td>
-                        );
-                      })}
-                    </motion.tr>
-                  ))}
-
-                  {/* Team Total row */}
-                  <tr className="border-t-2 border-border/60 bg-muted/20 font-semibold">
-                    <td className="sticky left-0 z-10 bg-muted/20 px-4 py-3 text-sm text-foreground">Team Total</td>
-                    <td className="px-4 py-3 text-right text-sm font-bold text-foreground tabular-nums">{data.grandTotal}</td>
-                    {TEAM_STATUS_COLUMNS.map((col) => {
-                      const val = data.totals[col.key] ?? 0;
-                      return (
-                        <td key={col.key} className="px-4 py-3 text-right tabular-nums">
-                          {val > 0 ? (
-                            <span className={cn("inline-flex items-center justify-center rounded-full px-2 py-0.5 font-semibold min-w-[28px]", col.color)}>
-                              {val}
+                          {otherCols.map((c) => (
+                            <td key={c.key} className="px-4 py-3 text-right tabular-nums">
+                              <StatCell val={row.otherCounts[c.key] ?? 0} color={c.color} />
+                            </td>
+                          ))}
+                        </motion.tr>
+                      ))}
+                      {/* Team Total row */}
+                      <tr className="border-t-2 border-border/60 bg-muted/20">
+                        <td className="sticky left-0 z-10 bg-muted/20 px-4 py-3 text-sm font-semibold">Team Total</td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-foreground tabular-nums">{specialTotals.total}</td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          <StatCell val={specialTotals.thisMonth} color="text-blue-400" bold />
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          <StatCell val={specialTotals.oldConversions} color="text-violet-400" bold />
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          <StatCell val={specialTotals.targetThisMonth} color={targetColor} bold />
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {specialTotals.thisMonth > 0 ? (
+                            <span className="inline-flex items-center justify-center rounded-full px-2 py-0.5 font-bold bg-amber-500/10 text-amber-400 min-w-[44px]">
+                              {specialTotals.conversionRate}%
                             </span>
                           ) : (
                             <span className="text-muted-foreground/40">—</span>
                           )}
                         </td>
-                      );
-                    })}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                        {otherCols.map((c) => (
+                          <td key={c.key} className="px-4 py-3 text-right tabular-nums">
+                            <StatCell val={specialTotals.otherStatuses[c.key] ?? 0} color={c.color} bold />
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()
           )}
         </CardContent>
       </Card>
