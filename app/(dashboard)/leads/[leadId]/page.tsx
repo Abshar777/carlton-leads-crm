@@ -476,7 +476,7 @@ function NotesPanel({
             ) : (
               <div className="space-y-3">
                 {sorted.map((note) => {
-                  const isAuthor = typeof note.author === "object"
+                  const isAuthor = note.author !== null && typeof note.author === "object"
                     ? (note.author as User)._id === currentUserId
                     : note.author === currentUserId;
                   const authorName = getUserName(note.author as User | string);
@@ -721,7 +721,7 @@ export default function LeadDetailPage() {
     : null;
 
   const isTeamLeader = !!teamObj?.leaders?.some(
-    (l) => (typeof l === "object" ? l._id : l) === currentUserId,
+    (l) => l !== null && (typeof l === "object" ? l._id : l) === currentUserId,
   );
 
   // Can assign/transfer: must be super admin OR team leader of this lead's team
@@ -729,7 +729,7 @@ export default function LeadDetailPage() {
 
   // Team members available for assignment (only this team's members)
   const teamMembers: User[] = teamObj?.members
-    ? (teamObj.members as User[]).filter((m) => typeof m === "object")
+    ? (teamObj.members as (User | null)[]).filter((m): m is User => m !== null && typeof m === "object")
     : [];
 
   if (isLoading) {
@@ -1252,7 +1252,7 @@ export default function LeadDetailPage() {
                     const Icon = isConnected ? PhoneCall : isVoicemail ? Voicemail : PhoneMissed;
                     const color = isConnected ? "text-green-400" : isVoicemail ? "text-amber-400" : "text-red-400";
                     const bg = isConnected ? "bg-green-500/10 border-green-500/20" : isVoicemail ? "bg-amber-500/10 border-amber-500/20" : "bg-red-500/10 border-red-500/20";
-                    const callerName = typeof log.calledBy === "object"
+                    const callerName = log.calledBy !== null && typeof log.calledBy === "object"
                       ? (log.calledBy as { name: string }).name
                       : "Unknown";
                     return (
