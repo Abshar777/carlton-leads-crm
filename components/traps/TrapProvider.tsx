@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useCallback, useEffect, useRef } from "react";
+import { createContext, useContext, useCallback, useEffect } from "react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePathname } from "next/navigation";
 import api from "@/lib/axios";
@@ -8,7 +8,6 @@ type TrapAction =
   | "download_leads"
   | "copy_phone"
   | "print_attempt"
-  | "screenshot_attempt"
   | "whatsapp_share";
 
 interface LogOptions {
@@ -35,16 +34,13 @@ export function useTrap() {
 export function TrapProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   const pathname = usePathname();
-  // Track last visibility-hidden time to detect rapid tab switches (screenshot tools)
-  const hiddenAt = useRef<number | null>(null);
 
   const logTrap = useCallback((opts: LogOptions) => {
     if (!isAuthenticated) return;
     api.post("/traps/log", { ...opts, page: pathname }).catch(() => {});
   }, [isAuthenticated, pathname]);
 
-  const interceptWhatsApp = useCallback((e: React.MouseEvent, leadId?: string, leadName?: string, phone?: string) => {
-    // Log silently, let the navigation proceed
+  const interceptWhatsApp = useCallback((_e: React.MouseEvent, leadId?: string, leadName?: string, phone?: string) => {
     logTrap({ action: "whatsapp_share", leadId, leadName, phoneNumber: phone });
   }, [logTrap]);
 
@@ -54,16 +50,13 @@ export function TrapProvider({ children }: { children: React.ReactNode }) {
 
     function handleCopy(e: ClipboardEvent) {
       const selection = window.getSelection()?.toString() ?? "";
-      // Only care about strings that look like phone numbers (7+ digits)
       if (!/\d{7,}/.test(selection.replace(/[\s\-+()]/g, ""))) return;
 
-      // Find the closest element with data-phone-trap attribute
       const target = e.target as HTMLElement | null;
       const trapEl = target?.closest("[data-phone-trap]") as HTMLElement | null;
       if (!trapEl) return;
 
       e.preventDefault();
-      // Overwrite clipboard with empty string — silent to the user
       if (e.clipboardData) {
         e.clipboardData.setData("text/plain", "");
       } else {
@@ -92,27 +85,6 @@ export function TrapProvider({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener("beforeprint", handleBeforePrint);
     return () => window.removeEventListener("beforeprint", handleBeforePrint);
-  }, [isAuthenticated, logTrap]);
-
-  // ── Screenshot trap (rapid tab-switch detection) ─────────────────────────────
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    function handleVisibility() {
-      if (document.hidden) {
-        hiddenAt.current = Date.now();
-      } else {
-        if (hiddenAt.current !== null) {
-          const elapsed = Date.now() - hiddenAt.current;
-          // Less than 3 seconds away = likely screenshot tool
-          if (elapsed < 3000) {
-            logTrap({ action: "screenshot_attempt" });
-          }
-          hiddenAt.current = null;
-        }
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [isAuthenticated, logTrap]);
 
   const wrapPhoneElement = useCallback(

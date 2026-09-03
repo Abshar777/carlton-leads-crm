@@ -9,7 +9,6 @@ export type TrapAction =
   | "download_leads"
   | "copy_phone"
   | "print_attempt"
-  | "screenshot_attempt"
   | "whatsapp_share";
 
 export interface TrapEvent {

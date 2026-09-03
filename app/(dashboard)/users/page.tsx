@@ -18,6 +18,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { User } from "@/types";
 import Link from "next/link";
+import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 
 type SortField = "name" | "email" | "createdAt" | "status";
 type SortOrder = "asc" | "desc";
@@ -110,6 +111,7 @@ function UsersPageContent() {
   const canEdit = hasPermission("users", "edit");
   const canDelete = hasPermission("users", "delete");
   const canImpersonate = hasPermission("impersonate", "create");
+  const onlineIds = useOnlineUsers();
 
   const { mutate: impersonate, isPending: isImpersonating, variables: impersonatingId } = useImpersonateUser();
 
@@ -267,11 +269,14 @@ function UsersPageContent() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                {getInitials(user.name)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <div className="relative shrink-0">
+                              <Avatar className="h-9 w-9">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${onlineIds.has(user._id) ? "bg-green-400" : "bg-muted-foreground/30"}`} />
+                            </div>
                             <div>
                               <p className="font-medium text-sm">{user.name}</p>
                               <p className="text-xs text-muted-foreground">{user.email}</p>
