@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert, Download, Copy, Printer, MessageCircle,
   Filter, RefreshCw, AlertTriangle, LogIn, LogOut,
-  Bell, BellOff, Circle, Users,
+  Bell, BellOff, Circle, Users, StopCircle,
 } from "lucide-react";
 import { useTrapEvents, useTrapSocket, type TrapAction, type TrapEvent } from "@/hooks/useTrapEvents";
 import { useLoginHistory, type LoginEvent } from "@/hooks/useLoginHistory";
@@ -29,23 +29,53 @@ function parseDevice(ua: string = "") {
   return `${device} · ${browser}`;
 }
 
-// Play a short alert beep using Web Audio API — no external file needed
-function playAlertSound() {
+// Start a 60-second looping siren using Web Audio API — returns a stop() function
+function startSiren(): () => void {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+
+    // Main oscillator — sawtooth gives a harsh siren edge
+    const mainOsc = ctx.createOscillator();
+    const gain    = ctx.createGain();
+
+    // LFO sweeps the main frequency up and down (siren sweep)
+    const lfo     = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(mainOsc.frequency);
+    mainOsc.connect(gain);
     gain.connect(ctx.destination);
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.4);
-    osc.onended = () => ctx.close();
-  } catch {}
+
+    mainOsc.type = "sawtooth";
+    mainOsc.frequency.setValueAtTime(800, ctx.currentTime); // centre pitch
+
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(1.5, ctx.currentTime);    // 1.5 sweeps/sec
+    lfoGain.gain.setValueAtTime(600, ctx.currentTime);     // ±600 Hz sweep
+
+    gain.gain.setValueAtTime(0.28, ctx.currentTime);
+
+    lfo.start(ctx.currentTime);
+    mainOsc.start(ctx.currentTime);
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    const stop = () => {
+      clearTimeout(timer);
+      try { mainOsc.stop(); } catch {}
+      try { lfo.stop(); }     catch {}
+      ctx.close().catch(() => {});
+    };
+
+    // Auto-stop after 60 s
+    timer = setTimeout(stop, 60_000);
+
+    return stop;
+  } catch {
+    return () => {};
+  }
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -83,7 +113,7 @@ function OnlineDot({ online }: { online: boolean }) {
 
 // ── Trap Events Tab ───────────────────────────────────────────────────────────
 
-function TrapEventsTab({ soundEnabled }: { soundEnabled: boolean }) {
+function TrapEventsTab({ soundEnabled, onSirenStart }: { soundEnabled: boolean; onSirenStart: (stop: () => void) => void }) {
   const [filters, setFilters] = useState<{ action: TrapAction | ""; dateFrom: string; dateTo: string; page: number }>({
     action: "", dateFrom: "", dateTo: "", page: 1,
   });
@@ -105,7 +135,10 @@ function TrapEventsTab({ soundEnabled }: { soundEnabled: boolean }) {
     const socket = getSocket(accessToken);
     function handler() {
       qc.invalidateQueries({ queryKey: ["traps"] });
-      if (soundEnabled && !isFirstRender.current) playAlertSound();
+      if (soundEnabled && !isFirstRender.current) {
+        const stop = startSiren();
+        onSirenStart(stop);
+      }
       isFirstRender.current = false;
     }
     socket.on("trap:alert", handler);
@@ -398,12 +431,32 @@ export default function SecurityAlertsPage() {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("trapSoundEnabled") !== "false";
   });
+  const [sirenPlaying, setSirenPlaying] = useState(false);
+  const stopSirenRef = useRef<(() => void) | null>(null);
+
+  const handleSirenStart = (stop: () => void) => {
+    // Stop any existing siren first
+    stopSirenRef.current?.();
+    stopSirenRef.current = () => {
+      stop();
+      setSirenPlaying(false);
+    };
+    setSirenPlaying(true);
+    // Auto-clear playing state after 60 s
+    setTimeout(() => setSirenPlaying(false), 60_000);
+  };
+
+  const handleStopSiren = () => {
+    stopSirenRef.current?.();
+    stopSirenRef.current = null;
+    setSirenPlaying(false);
+  };
 
   const toggleSound = () => {
     setSoundEnabled((v) => {
       const next = !v;
       localStorage.setItem("trapSoundEnabled", String(next));
-      if (next) playAlertSound();
+      if (!next) handleStopSiren(); // stop siren immediately when muted
       return next;
     });
   };
@@ -438,28 +491,46 @@ export default function SecurityAlertsPage() {
             <p className="text-sm text-muted-foreground">Trap events · Login history · Live presence</p>
           </div>
         </div>
-        {/* Sound toggle */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={toggleSound}
-          className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-            soundEnabled
-              ? "border-primary/30 bg-primary/5 text-primary"
-              : "border-border text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <AnimatePresence mode="wait">
-            {soundEnabled ? (
-              <motion.span key="on" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                <Bell className="h-4 w-4" /> Alert Sound On
-              </motion.span>
-            ) : (
-              <motion.span key="off" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                <BellOff className="h-4 w-4" /> Alert Sound Off
-              </motion.span>
+        <div className="flex items-center gap-2">
+          {/* Stop siren button — only visible when siren is playing */}
+          <AnimatePresence>
+            {sirenPlaying && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleStopSiren}
+                className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 animate-pulse"
+              >
+                <StopCircle className="h-4 w-4" /> Stop Siren
+              </motion.button>
             )}
           </AnimatePresence>
-        </motion.button>
+
+          {/* Sound on/off toggle */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={toggleSound}
+            className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              soundEnabled
+                ? "border-primary/30 bg-primary/5 text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <AnimatePresence mode="wait">
+              {soundEnabled ? (
+                <motion.span key="on" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" /> Sound On
+                </motion.span>
+              ) : (
+                <motion.span key="off" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
+                  <BellOff className="h-4 w-4" /> Sound Off
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -486,7 +557,7 @@ export default function SecurityAlertsPage() {
       {/* Tab content */}
       <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-          {activeTab === "traps"  && <TrapEventsTab soundEnabled={soundEnabled} />}
+          {activeTab === "traps"  && <TrapEventsTab soundEnabled={soundEnabled} onSirenStart={handleSirenStart} />}
           {activeTab === "login"  && <LoginHistoryTab />}
           {activeTab === "online" && <OnlineUsersTab />}
         </motion.div>
