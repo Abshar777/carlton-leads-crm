@@ -39,6 +39,9 @@ import type { User } from "@/types";
 import type { Course } from "@/types/course";
 import type { Team } from "@/types/team";
 import LeadDialog from "@/components/leads/LeadDialog";
+import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
+import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
+import { useAuthStore } from "@/lib/store/authStore";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -829,8 +832,10 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
   const [paymentLead, setPaymentLead]       = useState<Lead | null>(null);
   const [reminderLead, setReminderLead]     = useState<Lead | null>(null);
   const [noteLead, setNoteLead]             = useState<Lead | null>(null);
+  const [bookingLead, setBookingLead]       = useState<Lead | null>(null);
 
-  const { mutate: updateStatus } = useUpdateLeadStatus();
+  const { user: authUser } = useAuthStore();
+  const { mutate: updateStatus, isPending: bookingPending } = useUpdateLeadStatus();
   const { mutate: updateCNC }    = useUpdateCallNotConnected();
 
   const { data, isLoading } = useLeads({ ...filters, page: 1, limit: 500 });
@@ -879,6 +884,13 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
     setDraggingId(null);
     setDropTarget(null);
     if (currentStatus === targetStatus) return;
+
+    // Booking requires extra details — show modal instead of instant update
+    if (targetStatus === "booking") {
+      setBookingLead(lead);
+      return;
+    }
+
     setLocalOverrides((prev) => ({ ...prev, [leadId]: targetStatus }));
     updateStatus(
       { id: leadId, status: targetStatus },
@@ -994,6 +1006,28 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
           lead={noteLead}
           open={!!noteLead}
           onClose={() => setNoteLead(null)}
+        />
+      )}
+
+      {bookingLead && (
+        <BookingDetailsModal
+          open={!!bookingLead}
+          onOpenChange={(o) => { if (!o) setBookingLead(null); }}
+          lead={bookingLead}
+          currentUserName={authUser?.name ?? ""}
+          isPending={bookingPending}
+          onConfirm={(details: BookingFormValues) => {
+            const { reminderAt, ...bookingDetails } = details;
+            const id = bookingLead._id;
+            setLocalOverrides((prev) => ({ ...prev, [id]: "booking" }));
+            updateStatus(
+              { id, status: "booking", bookingDetails, reminderAt: reminderAt || undefined },
+              {
+                onSuccess: () => { setLocalOverrides((p) => { const n = { ...p }; delete n[id]; return n; }); setBookingLead(null); },
+                onError:   () => { setLocalOverrides((p) => { const n = { ...p }; delete n[id]; return n; }); setBookingLead(null); },
+              },
+            );
+          }}
         />
       )}
     </>

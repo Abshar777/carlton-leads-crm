@@ -666,6 +666,7 @@ export default function LeadDetailPage() {
   const { user: authUser, hasPermission } = useAuthStore();
 
   const [editOpen, setEditOpen] = useState(false);
+  const [sidebarBookingOpen, setSidebarBookingOpen] = useState(false);
 
   const { data: lead, isLoading } = useLead(leadId);
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
@@ -1039,9 +1040,10 @@ export default function LeadDetailPage() {
                       <p className="text-xs text-muted-foreground mb-1.5">Change Status</p>
                       <Select
                         value={lead.status}
-                        onValueChange={(val) =>
-                          updateStatus.mutate({ id: lead._id, status: val as LeadStatus })
-                        }
+                        onValueChange={(val) => {
+                          if (val === "booking") { setSidebarBookingOpen(true); return; }
+                          updateStatus.mutate({ id: lead._id, status: val as LeadStatus });
+                        }}
                         disabled={updateStatus.isPending}
                       >
                         <SelectTrigger className="h-8 text-xs">
@@ -1319,6 +1321,22 @@ export default function LeadDetailPage() {
         onOpenChange={setEditOpen}
         lead={lead}
         mode="edit"
+      />
+
+      {/* Sidebar "Change Status → Booking" modal */}
+      <BookingDetailsModal
+        open={sidebarBookingOpen}
+        onOpenChange={setSidebarBookingOpen}
+        lead={lead}
+        currentUserName={authUser?.name ?? ""}
+        onConfirm={(details) => {
+          const { reminderAt, ...bookingDetails } = details;
+          updateStatus.mutate(
+            { id: lead._id, status: "booking", bookingDetails, reminderAt: reminderAt || undefined },
+            { onSuccess: () => setSidebarBookingOpen(false) },
+          );
+        }}
+        isPending={updateStatus.isPending}
       />
 
       {/* Call Log Sheet */}
