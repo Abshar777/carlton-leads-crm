@@ -95,8 +95,9 @@ const ITEM_VARIANTS = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y:
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function ActionBadge({ action }: { action: TrapAction }) {
-  const cfg = ACTION_LABELS[action];
+function ActionBadge({ action }: { action: string }) {
+  const cfg = ACTION_LABELS[action as TrapAction];
+  if (!cfg) return <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-muted text-muted-foreground">{action}</span>;
   const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.color}`}>
