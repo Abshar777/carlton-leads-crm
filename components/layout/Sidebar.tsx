@@ -20,6 +20,7 @@ import {
   BrainCircuit,
   MessageCircle,
   ListTodo,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -40,6 +41,7 @@ import { useMyReminderCount } from "@/hooks/useReminders";
 import { useWAUnreadCount } from "@/hooks/useWhatsApp";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "@/lib/socket";
+import { useTrapUnreadCount } from "@/hooks/useTrapEvents";
 
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permModule: "dashboard" },
@@ -54,6 +56,7 @@ export const navItems = [
   { href: "/users", label: "Users", icon: Users, permModule: "users" },
   { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
   { href: "/settings", label: "Settings", icon: Settings, permModule: "settings" },
+  { href: "/security-alerts", label: "Security Alerts", icon: ShieldAlert, permModule: "security-alerts" },
 ];
 
 interface NavLinksProps {
@@ -69,6 +72,9 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
   const newLeadsCount = myStats?.assigned ?? 0;
   const { data: reminderCount = 0 } = useMyReminderCount();
   const { data: waUnreadCount = 0 } = useWAUnreadCount();
+  const role = (user as { role?: { isSystemRole?: boolean; roleName?: string } } | null)?.role;
+  const isSuperAdmin = role?.isSystemRole && role?.roleName === "Super Admin";
+  const { data: trapUnreadCount = 0 } = useTrapUnreadCount();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -102,8 +108,10 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                 other.href.startsWith(href + "/") &&
                 pathname.startsWith(other.href),
             ));
-        const allowed = hasPermission(permModule ?? href.split("/")[1], "view");
-        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : href === "/whatsapp" ? waUnreadCount : 0;
+        // Security Alerts only for Super Admin
+        if (href === "/security-alerts" && !isSuperAdmin) return null;
+        const allowed = href === "/security-alerts" ? isSuperAdmin : hasPermission(permModule ?? href.split("/")[1], "view");
+        const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : href === "/whatsapp" ? waUnreadCount : href === "/security-alerts" ? trapUnreadCount : 0;
         const showBadge = badgeCount > 0;
 
         const linkEl = (

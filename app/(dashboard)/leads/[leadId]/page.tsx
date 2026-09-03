@@ -46,6 +46,7 @@ import { PaymentPanel } from "@/components/leads/PaymentPanel";
 import { WhatsAppChatPanel } from "@/components/leads/WhatsAppChatPanel";
 import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
 import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
+import { useTrap } from "@/components/traps/TrapProvider";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -664,6 +665,7 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const leadId = params.leadId as string;
   const { user: authUser, hasPermission } = useAuthStore();
+  const { interceptWhatsApp } = useTrap();
 
   const [editOpen, setEditOpen] = useState(false);
   const [sidebarBookingOpen, setSidebarBookingOpen] = useState(false);
@@ -812,7 +814,15 @@ export default function LeadDetailPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground mb-1">Phone</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium font-mono">{lead.phone}</span>
+                        <span
+                          className="text-sm font-medium font-mono"
+                          data-phone-trap="1"
+                          data-lead-id={lead._id}
+                          data-lead-name={lead.name}
+                          data-phone={lead.phone}
+                        >
+                          {lead.phone}
+                        </span>
                         <motion.button
                           whileTap={{ scale: 0.93 }}
                           onClick={handleCallClick}
@@ -1305,7 +1315,17 @@ export default function LeadDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <Card className="border-border/50 overflow-hidden" style={{ height: 500 }}>
+              <Card
+                className="border-border/50 overflow-hidden"
+                style={{ height: 500 }}
+                onClick={(e) => {
+                  // Intercept any WhatsApp send/open action within the panel
+                  const target = e.target as HTMLElement;
+                  if (target.closest("a[href*='wa.me']") || target.closest("[data-wa-send]")) {
+                    interceptWhatsApp(e as unknown as React.MouseEvent, lead._id, lead.name, lead.phone);
+                  }
+                }}
+              >
                 <WhatsAppChatPanel phone={lead.phone} leadName={lead.name} />
               </Card>
             </motion.div>

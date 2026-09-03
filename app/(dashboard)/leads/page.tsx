@@ -5,7 +5,7 @@ import {
   Plus, Search, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight,
   X, Upload, UserCheck, FileText, ChevronDown, ExternalLink,
   CalendarDays, Filter, CheckSquare, Square, Tags, ArrowRightLeft, AlertTriangle,
-  LayoutGrid, List, UsersRound, StickyNote,
+  LayoutGrid, List, UsersRound, StickyNote, Download,
 } from "lucide-react";
 import Link from "next/link";
 import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
@@ -39,6 +39,7 @@ import { useTeams } from "@/hooks/useTeams";
 import { useTags } from "@/hooks/useTags";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useTrap } from "@/components/traps/TrapProvider";
 import { formatDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Lead, LeadStatus } from "@/types/lead";
@@ -370,6 +371,25 @@ function LeadsPageContent() {
   const isSuperAdmin =
     user?.role?.isSystemRole === true && user?.role?.roleName === "Super Admin";
 
+  // ── Trap hooks ───────────────────────────────────────────────────────────────
+  const { logTrap } = useTrap();
+  const handleFakeDownload = () => {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001/api/v1";
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    const a = document.createElement("a");
+    const url = `${base}/traps/fake-download`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const href = URL.createObjectURL(blob);
+        a.href = href;
+        a.download = "leads_export.xlsx";
+        a.click();
+        URL.revokeObjectURL(href);
+      })
+      .catch(() => {});
+  };
+
   // Detect if current user is a leader of any team (by checking team data)
   const myLeaderTeam = teamsData?.data?.find((t) =>
     t.leaders?.some((l) => (typeof l === "object" ? l._id : l) === user?._id),
@@ -465,6 +485,13 @@ function LeadsPageContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Trap: fake download button — visible to all, logs the attempt silently */}
+          {!isSuperAdmin && (
+            <Button variant="outline" onClick={handleFakeDownload} className="gap-2">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Download All</span>
+            </Button>
+          )}
           {canCreate && (
             <>
               <Button variant="outline" onClick={() => router.push("/leads/upload")} className="gap-2">
@@ -989,7 +1016,7 @@ function LeadsPageContent() {
                             </div>
                             {/* Contact */}
                             {lead.email && <p className="text-xs text-muted-foreground mt-0.5 truncate">{lead.email}</p>}
-                            {lead.phone && <p className="text-xs text-muted-foreground/70">{lead.phone}</p>}
+                            {lead.phone && <p className="text-xs text-muted-foreground/70" data-phone-trap="1" data-lead-id={lead._id} data-lead-name={lead.name} data-phone={lead.phone}>{lead.phone}</p>}
                             {/* Meta row */}
                             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
                               {lead.team && (
@@ -1096,7 +1123,7 @@ function LeadsPageContent() {
                             <td className="px-4 py-4">
                               <div className="space-y-0.5">
                                 {lead.email && <p className="text-sm text-muted-foreground">{lead.email}</p>}
-                                {lead.phone && <p className="text-xs text-muted-foreground/70">{lead.phone}</p>}
+                                {lead.phone && <p className="text-xs text-muted-foreground/70" data-phone-trap="1" data-lead-id={lead._id} data-lead-name={lead.name} data-phone={lead.phone}>{lead.phone}</p>}
                                 {!lead.email && !lead.phone && <span className="text-sm text-muted-foreground/50">—</span>}
                               </div>
                             </td>
