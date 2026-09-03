@@ -104,6 +104,8 @@ export interface BookingDetails {
   clientName: string;
   clientEmail?: string;
   contactNo: string;
+  amount?: number;
+  bookingDate?: string;
   bookedAt: string;
   bookedBy: User | string;
 }

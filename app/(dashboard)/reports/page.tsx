@@ -12,7 +12,7 @@ import {
   TrendingUp, Users, UsersRound, Target, Award,
   Calendar, RefreshCw, BarChart2, Activity, Layers,
   GitFork, IndianRupee, Trophy, ChevronDown, ChevronUp,
-  Loader2, Tag, X, ArrowUpRight, BookMarked, CheckCircle2, SlidersHorizontal,
+  Loader2, Tag, X, ArrowUpRight, BookMarked, CheckCircle2, SlidersHorizontal, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1752,6 +1752,7 @@ function StatusReportTab({
   dateFieldOptions,
   tableHeaders,
   renderRow,
+  exportEndpoint,
 }: {
   mode: string;
   dateFrom: string;
@@ -1764,6 +1765,7 @@ function StatusReportTab({
   dateFieldOptions: { value: string; label: string }[];
   tableHeaders: string[];
   renderRow: (lead: import("@/types/lead").Lead, i: number) => React.ReactNode;
+  exportEndpoint?: string;
 }) {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role?.isSystemRole === true && user?.role?.roleName === "Super Admin";
@@ -1776,7 +1778,9 @@ function StatusReportTab({
   const [sortOrder,  setSortOrder]  = useState<"desc"|"asc">("desc");
   const [dateField,  setDateField]  = useState(defaultDateField);
   const [page,       setPage]       = useState(1);
+  const [exporting,  setExporting]  = useState(false);
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { accessToken } = useAuthStore();
 
   const { data: teamsResult } = useTeams({ limit: "200" } as never);
   const allTeams = teamsResult?.data ?? [];
@@ -1805,21 +1809,70 @@ function StatusReportTab({
     debRef.current = setTimeout(() => { setDSearch(val); setPage(1); }, 400);
   }
 
+  async function handleExport() {
+    if (!exportEndpoint) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (dateFrom)              params.set("dateFrom",   dateFrom);
+      if (dateTo)                params.set("dateTo",     dateTo);
+      if (dateField)             params.set("dateField",  dateField);
+      if (sortBy)                params.set("sortBy",     sortBy);
+      if (sortOrder)             params.set("sortOrder",  sortOrder);
+      if (dSearch)               params.set("search",     dSearch);
+      if (teamId !== "all")      params.set("team",       teamId);
+      if (assignedTo !== "all")  params.set("assignedTo", assignedTo);
+
+      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001/api/v1";
+      const resp = await fetch(`${base}/${exportEndpoint}?${params}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!resp.ok) throw new Error("Export failed");
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `bookings-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent fail — user sees no change
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       {/* Summary */}
       <Card>
         <CardContent className="pt-4 pb-3">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentColor}/15`}>
-              <Icon className={`h-5 w-5 ${accentColor}`} />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentColor}/15`}>
+                <Icon className={`h-5 w-5 ${accentColor}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{pagination?.total ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">
+                  Total {mode}{dateFrom && dateTo ? ` (${dateFrom} → ${dateTo})` : ""}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground tabular-nums">{pagination?.total ?? "—"}</p>
-              <p className="text-xs text-muted-foreground">
-                Total {mode}{dateFrom && dateTo ? ` (${dateFrom} → ${dateTo})` : ""}
-              </p>
-            </div>
+            {exportEndpoint && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExport}
+                disabled={exporting}
+                className="gap-1.5 shrink-0"
+              >
+                {exporting
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Download className="h-3.5 w-3.5" />}
+                Export Excel
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1978,7 +2031,7 @@ const BOOKING_DATE_FIELD_OPTIONS = [
   { value: "updatedAt", label: "Updated At" },
 ];
 
-const BOOKING_HEADERS = ["Client", "Contact", "Email", "Batch", "Time", "Mode", "Staff", "WhatsApp", "Team", "Course", "Booked At"];
+const BOOKING_HEADERS = ["Client", "Contact", "Email", "Batch", "Time", "Mode", "Staff", "WhatsApp", "Team Leader", "Team", "Course", "Amount", "Booking Date", "Booked At"];
 
 function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   return (
@@ -1993,8 +2046,12 @@ function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
       defaultDateField="bookedAt"
       dateFieldOptions={BOOKING_DATE_FIELD_OPTIONS}
       tableHeaders={BOOKING_HEADERS}
+      exportEndpoint="reports/bookings/export"
       renderRow={(lead, i) => {
         const bd = lead.bookingDetails;
+        const teamLeader = lead.team && typeof lead.team === "object"
+          ? ((lead.team as { leaders?: { name?: string }[] }).leaders?.[0]?.name ?? "—")
+          : "—";
         return (
           <motion.tr
             key={lead._id}
@@ -2023,11 +2080,22 @@ function BookingsTab({ dateFrom, dateTo }: { dateFrom: string; dateTo: string })
             </td>
             <td className="px-4 py-3 font-medium">{bd?.staffName || "—"}</td>
             <td className="px-4 py-3 text-muted-foreground font-mono">{bd?.whatsappNo || "—"}</td>
+            <td className="px-4 py-3 font-medium">{teamLeader}</td>
             <td className="px-4 py-3 text-muted-foreground">
               {lead.team && typeof lead.team === "object" ? (lead.team as { name: string }).name : "—"}
             </td>
             <td className="px-4 py-3 text-muted-foreground">
               {lead.course && typeof lead.course === "object" ? (lead.course as { name: string }).name : "—"}
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap">
+              {bd?.amount != null
+                ? <span className="font-semibold text-teal-400">₹{bd.amount.toLocaleString("en-IN")}</span>
+                : <span className="text-muted-foreground">—</span>}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+              {bd?.bookingDate
+                ? new Date(bd.bookingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                : "—"}
             </td>
             <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
               {bd?.bookedAt

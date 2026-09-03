@@ -919,6 +919,12 @@ export default function LeadDetailPage() {
                       <div><span className="text-muted-foreground">Mode:</span> <span className={`font-medium capitalize ${lead.bookingDetails.mode === "online" ? "text-blue-400" : "text-orange-400"}`}>{lead.bookingDetails.mode}</span></div>
                       <div><span className="text-muted-foreground">WhatsApp:</span> <span className="font-medium">{lead.bookingDetails.whatsappNo}</span></div>
                       <div><span className="text-muted-foreground">Staff:</span> <span className="font-medium">{lead.bookingDetails.staffName}</span></div>
+                      {lead.bookingDetails.amount != null && (
+                        <div><span className="text-muted-foreground">Amount:</span> <span className="font-medium text-teal-400">₹{lead.bookingDetails.amount.toLocaleString("en-IN")}</span></div>
+                      )}
+                      {lead.bookingDetails.bookingDate && (
+                        <div><span className="text-muted-foreground">Booking Date:</span> <span className="font-medium">{new Date(lead.bookingDetails.bookingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span></div>
+                      )}
                     </div>
                   </motion.div>
                 )}

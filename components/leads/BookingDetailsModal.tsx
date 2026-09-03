@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Loader2, Calendar, Clock, Wifi, MapPin, Phone, Mail, User, Hash } from "lucide-react";
+import { Loader2, Calendar, Clock, Wifi, MapPin, Phone, Mail, User, Hash, IndianRupee } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,8 @@ const bookingSchema = z.object({
   clientName:  z.string().min(1),
   clientEmail: z.string().optional(),
   contactNo:   z.string().min(1),
+  amount:      z.coerce.number().min(0).optional(),
+  bookingDate: z.string().optional(),
   reminderAt:  z.string().optional(),
 });
 
@@ -67,6 +69,8 @@ export function BookingDetailsModal({
       clientName:  lead.name ?? "",
       clientEmail: lead.email ?? "",
       contactNo:   lead.phone ?? "",
+      amount:      undefined,
+      bookingDate: "",
       reminderAt:  "",
     },
   });
@@ -159,6 +163,35 @@ export function BookingDetailsModal({
             </Label>
             <Input id="whatsappNo" placeholder="+91 9876543210" {...register("whatsappNo")} />
             {errors.whatsappNo && <p className="text-xs text-destructive">{errors.whatsappNo.message}</p>}
+          </div>
+
+          {/* Amount + Booking Date */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="amount" className="flex items-center gap-1.5">
+                <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
+                Booking Amount
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                min={0}
+                placeholder="e.g. 5000"
+                {...register("amount")}
+              />
+              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bookingDate" className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                Booking Date
+              </Label>
+              <Input
+                id="bookingDate"
+                type="date"
+                {...register("bookingDate")}
+              />
+            </div>
           </div>
 
           <div className="border-t border-border/40 pt-3">
