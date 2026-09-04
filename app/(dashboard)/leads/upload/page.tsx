@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { uploadLeadSchema, type UploadLeadFormValues } from "@/lib/validations/leadSchema";
 import { useUploadLeads } from "@/hooks/useLeads";
 import { useTeams, useMyTeam } from "@/hooks/useTeams";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useAuthStore } from "@/lib/store/authStore";
 import type { UploadLeadsResult, InvalidRow } from "@/types/lead";
 import type { Team } from "@/types/team";
@@ -457,6 +458,10 @@ const canSeeAllTeams =
   user?.role?.roleName === "Reporter";
 const isBDE = !!user && !canSeeAllTeams;
 
+// Workflow state decides whether reserved teams are selectable at all
+const { data: appSettings } = useAppSettings();
+const workflowEnabled = !!appSettings?.workflowEnabled;
+
 // Full-access users fetch all teams; BDE users skip (they get 403 from the backend)
 const { data: teamsData, isLoading: teamsLoading } = useTeams(
   { status: "active", limit: 100 },
@@ -469,8 +474,19 @@ const { data: myOwnTeam, isLoading: myTeamLoading } = useMyTeam();
 
 const isLoading = isBDE ? myTeamLoading : teamsLoading;
 
+// Workflow-reserved teams receive leads only through workflow automation
+// (booking -> Closing, closed -> Redep, new -> Dummy). They must not appear as
+// split destinations, otherwise "Select All" feeds fresh leads straight to Closing.
+const WORKFLOW_RESERVED_TAGS = ["closing", "dummy", "redep"];
+const isWorkflowReserved = (team: { tags?: { name: string }[] }) =>
+  (team.tags ?? []).some((t) => WORKFLOW_RESERVED_TAGS.includes(t.name.trim().toLowerCase()));
+
 // Teams visible to this user
-const visibleTeams = isBDE ? (myOwnTeam ? [myOwnTeam] : []) : activeTeams;
+const allVisibleTeams = isBDE ? (myOwnTeam ? [myOwnTeam] : []) : activeTeams;
+const reservedTeams = workflowEnabled ? allVisibleTeams.filter(isWorkflowReserved) : [];
+const visibleTeams = workflowEnabled
+  ? allVisibleTeams.filter((t) => !isWorkflowReserved(t))
+  : allVisibleTeams;
 
 // ── Initialise selections once teams load ────────────────────────────────────
 useEffect(() => {
@@ -699,6 +715,17 @@ return (
                 : "Select teams and which members within each team participate in auto-split."
               }
             </p>
+
+            {reservedTeams.length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  {reservedTeams.map((t) => t.name).join(", ")}
+                </span>{" "}
+                {reservedTeams.length === 1 ? "is" : "are"} managed by the workflow and
+                cannot receive leads from a split. Leads reach {reservedTeams.length === 1 ? "it" : "them"} automatically
+                when their status changes.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             {isLoading ? (
