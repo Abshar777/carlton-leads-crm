@@ -36,6 +36,8 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.updatedTo)   params.updatedTo   = filters.updatedTo;
       if (filters?.tags)         params.tags         = filters.tags;
       if (filters?.previousTeam) params.previousTeam = filters.previousTeam;
+      if (filters?.noTeam)       params.noTeam       = filters.noTeam;
+      if (filters?.noAssignee)   params.noAssignee   = filters.noAssignee;
       const response = await api.get<ApiResponse<Lead[]>>("/leads", { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },

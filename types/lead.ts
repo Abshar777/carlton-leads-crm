@@ -137,6 +137,10 @@ export interface LeadFilters {
   /** YYYY-MM-DD — leads last updated on or before this date */
   updatedTo?: string;
   unassignedOnly?: boolean;
+  /** "true" -> only leads with no team */
+  noTeam?: string;
+  /** "true" -> only leads with no member assigned */
+  noAssignee?: string;
   tags?: string;
   previousTeam?: string;
 }
