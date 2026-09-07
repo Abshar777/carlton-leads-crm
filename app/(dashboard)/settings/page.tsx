@@ -400,7 +400,7 @@ function WorkflowTab() {
                   step: "3",
                   color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
                   label: "Redeposit Team (Redep)",
-                  desc: "Gets shared read+write access when lead is Closed. Both Closing and Redeposit can update the same lead.",
+                  desc: "Gets shared read+write access when lead is Closed. Both Closing and Redep can update the same lead.",
                 },
               ].map(({ step, color, label, desc }) => (
                 <div key={step} className="flex gap-3">
@@ -418,7 +418,7 @@ function WorkflowTab() {
 
           <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3">
             <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-              Teams are identified by their tag name. Create tags named <strong>Dummy</strong> (one entry-point team), <strong>Booking</strong> (multiple teams allowed), <strong>Closing</strong> (one team only), and <strong>Redeposit</strong> (one team only) and assign them to the respective teams.
+              Teams are identified by their tag name. Create tags named <strong>Dummy</strong> (one entry-point team), <strong>Booking</strong> (multiple teams allowed), <strong>Closing</strong> (one team only), and <strong>Redep</strong> (one team only) and assign them to the respective teams.
             </p>
           </div>
         </CardContent>
