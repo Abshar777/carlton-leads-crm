@@ -251,12 +251,12 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
     return map;
   }, [allTeams, isEdit, team]);
 
-  // Closing and Redep tags are exclusive — only one team can hold them.
+  // Closing and Redeposit tags are exclusive — only one team can hold them.
   // Booking and Dummy tags are shared — multiple teams can hold them.
   const exclusiveTagIds = useMemo<Set<string>>(() => {
     const set = new Set<string>();
     for (const tag of allTags) {
-      if (/^(closing|redep)$/i.test(tag.name)) set.add(tag._id);
+      if (/^(closing|redeposit)$/i.test(tag.name)) set.add(tag._id);
     }
     return set;
   }, [allTags]);

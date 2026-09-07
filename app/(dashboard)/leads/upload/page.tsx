@@ -475,9 +475,9 @@ const { data: myOwnTeam, isLoading: myTeamLoading } = useMyTeam();
 const isLoading = isBDE ? myTeamLoading : teamsLoading;
 
 // Workflow-reserved teams receive leads only through workflow automation
-// (booking -> Closing, closed -> Redep, new -> Dummy). They must not appear as
+// (booking -> Closing, closed -> Redeposit, new -> Dummy). They must not appear as
 // split destinations, otherwise "Select All" feeds fresh leads straight to Closing.
-const WORKFLOW_RESERVED_TAGS = ["closing", "dummy", "redep"];
+const WORKFLOW_RESERVED_TAGS = ["closing", "dummy", "redeposit"];
 const isWorkflowReserved = (team: { tags?: { name: string }[] }) =>
   (team.tags ?? []).some((t) => WORKFLOW_RESERVED_TAGS.includes(t.name.trim().toLowerCase()));
 

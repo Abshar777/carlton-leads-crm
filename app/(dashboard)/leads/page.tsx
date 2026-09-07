@@ -237,6 +237,8 @@ function LeadsPageContent() {
     const t = searchParams.get("tags");
     return t ? t.split(",").filter(Boolean) : [];
   });
+  const [noTeam, setNoTeam]         = useState<boolean>(() => searchParams.get("noTeam") === "true");
+  const [noAssignee, setNoAssignee] = useState<boolean>(() => searchParams.get("noAssignee") === "true");
   const [showFilters, setShowFilters]     = useState(() => {
     const sp = searchParams;
     return !!(sp.get("status") || sp.get("assignedTo") || sp.get("reporter") || sp.get("course") || sp.get("team") || sp.get("from") || sp.get("to") || sp.get("ufrom") || sp.get("uto") || sp.get("tags"));
@@ -269,8 +271,10 @@ function LeadsPageContent() {
     if (updatedFrom)                    params.set("ufrom", updatedFrom);
     if (updatedTo)                      params.set("uto", updatedTo);
     if (selectedTagIds.length > 0)      params.set("tags", selectedTagIds.join(","));
+    if (noTeam)                         params.set("noTeam", "true");
+    if (noAssignee)                     params.set("noAssignee", "true");
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -352,7 +356,9 @@ function LeadsPageContent() {
     ...(updatedFrom ? { updatedFrom } : {}),
     ...(updatedTo ? { updatedTo } : {}),
     ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(",") } : {}),
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds]);
+    ...(noTeam ? { noTeam: "true" } : {}),
+    ...(noAssignee ? { noAssignee: "true" } : {}),
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
@@ -422,6 +428,8 @@ function LeadsPageContent() {
     !!updatedTo,
     !!debouncedSearch,
     selectedTagIds.length > 0,
+    noTeam,
+    noAssignee,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
@@ -437,6 +445,8 @@ function LeadsPageContent() {
     setUpdatedFrom("");
     setUpdatedTo("");
     setSelectedTagIds([]);
+    setNoTeam(false);
+    setNoAssignee(false);
     setSearch("");
     setDebouncedSearch("");
     setPage(1);
@@ -540,6 +550,29 @@ function LeadsPageContent() {
               {/* Right side — Today + filter toggle + view toggle + clear */}
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+
+                {/* Unassigned quick filters — no team vs. team but no owner */}
+                <Button
+                  variant={noTeam ? "secondary" : "outline"}
+                  size="sm"
+                  className="gap-1.5"
+                  title="Leads that belong to no team"
+                  onClick={() => { setNoTeam((v) => !v); setPage(1); }}
+                >
+                  <UsersRound className="h-3.5 w-3.5" />
+                  No Team
+                </Button>
+                <Button
+                  variant={noAssignee ? "secondary" : "outline"}
+                  size="sm"
+                  className="gap-1.5"
+                  title="Leads with no member assigned"
+                  onClick={() => { setNoAssignee((v) => !v); setPage(1); }}
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Unassigned
+                </Button>
+
                 <Button
                   variant={showFilters ? "secondary" : "outline"}
                   size="sm"
