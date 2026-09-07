@@ -237,6 +237,8 @@ function LeadsPageContent() {
     const t = searchParams.get("tags");
     return t ? t.split(",").filter(Boolean) : [];
   });
+  const [splitFrom, setSplitFrom]   = useState<string>(() => searchParams.get("sfrom") ?? "");
+  const [splitTo, setSplitTo]       = useState<string>(() => searchParams.get("sto") ?? "");
   const [noTeam, setNoTeam]         = useState<boolean>(() => searchParams.get("noTeam") === "true");
   const [noAssignee, setNoAssignee] = useState<boolean>(() => searchParams.get("noAssignee") === "true");
   const [showFilters, setShowFilters]     = useState(() => {
@@ -271,10 +273,12 @@ function LeadsPageContent() {
     if (updatedFrom)                    params.set("ufrom", updatedFrom);
     if (updatedTo)                      params.set("uto", updatedTo);
     if (selectedTagIds.length > 0)      params.set("tags", selectedTagIds.join(","));
+    if (splitFrom)                      params.set("sfrom", splitFrom);
+    if (splitTo)                        params.set("sto", splitTo);
     if (noTeam)                         params.set("noTeam", "true");
     if (noAssignee)                     params.set("noAssignee", "true");
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -335,6 +339,13 @@ function LeadsPageContent() {
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  const isSplitTodayActive = splitFrom === todayISO() && splitTo === todayISO();
+  function applySplitToday() {
+    const today = todayISO();
+    if (isSplitTodayActive) { setSplitFrom(""); setSplitTo(""); }
+    else { setSplitFrom(today); setSplitTo(today); }
+    setPage(1);
+  }
   function applyToday() {
     const today = todayISO();
     if (isTodayActive) { setDateFrom(""); setDateTo(""); }
@@ -356,9 +367,11 @@ function LeadsPageContent() {
     ...(updatedFrom ? { updatedFrom } : {}),
     ...(updatedTo ? { updatedTo } : {}),
     ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(",") } : {}),
+    ...(splitFrom ? { splitFrom } : {}),
+    ...(splitTo ? { splitTo } : {}),
     ...(noTeam ? { noTeam: "true" } : {}),
     ...(noAssignee ? { noAssignee: "true" } : {}),
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee]);
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
@@ -430,6 +443,8 @@ function LeadsPageContent() {
     selectedTagIds.length > 0,
     noTeam,
     noAssignee,
+    !!splitFrom,
+    !!splitTo,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
@@ -447,6 +462,8 @@ function LeadsPageContent() {
     setSelectedTagIds([]);
     setNoTeam(false);
     setNoAssignee(false);
+    setSplitFrom("");
+    setSplitTo("");
     setSearch("");
     setDebouncedSearch("");
     setPage(1);
@@ -550,6 +567,18 @@ function LeadsPageContent() {
               {/* Right side — Today + filter toggle + view toggle + clear */}
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+
+                {/* Split today — by assignedAt, not createdAt */}
+                <Button
+                  variant={isSplitTodayActive ? "secondary" : "outline"}
+                  size="sm"
+                  className="gap-1.5"
+                  title="Leads split (assigned to a member) today"
+                  onClick={applySplitToday}
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  Split Today
+                </Button>
 
                 {/* Unassigned quick filters — no team vs. team but no owner */}
                 <Button
@@ -882,6 +911,55 @@ function LeadsPageContent() {
                           value={updatedTo}
                           min={updatedFrom || undefined}
                           onChange={(e) => { setUpdatedTo(e.target.value); setPage(1); }}
+                          className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Split date range — when the lead was assigned out to a member */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <ArrowRightLeft className="h-3 w-3" />
+                        Split Date (Assigned To Member)
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["today", "week", "month", "year"] as const).map((p) => {
+                          const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
+                          const getRangeFor = (period: string) => {
+                            const now = new Date(); const t = now.toISOString().slice(0,10);
+                            if (period === "today") return { f: t, t };
+                            if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: m.toISOString().slice(0,10), t }; }
+                            if (period === "month") return { f: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10), t };
+                            return { f: new Date(now.getFullYear(),0,1).toISOString().slice(0,10), t };
+                          };
+                          const range = getRangeFor(p);
+                          const isActive = splitFrom === range.f && splitTo === range.t;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => { if (isActive) { setSplitFrom(""); setSplitTo(""); } else { setSplitFrom(range.f); setSplitTo(range.t); } setPage(1); }}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
+                            >
+                              {labels[p]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="date"
+                          value={splitFrom}
+                          max={splitTo || undefined}
+                          onChange={(e) => { setSplitFrom(e.target.value); setPage(1); }}
+                          className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                        />
+                        <span className="text-xs text-muted-foreground shrink-0">to</span>
+                        <Input
+                          type="date"
+                          value={splitTo}
+                          min={splitFrom || undefined}
+                          onChange={(e) => { setSplitTo(e.target.value); setPage(1); }}
                           className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
                         />
                       </div>
