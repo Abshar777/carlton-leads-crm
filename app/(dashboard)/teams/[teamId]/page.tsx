@@ -2240,37 +2240,82 @@ function LeadsTab({
 // ─── Transferred Leads Tab ────────────────────────────────────────────────────
 
 function TransferredLeadsTab({ teamId }: { teamId: string }) {
-  const { data: result, isLoading } = useLeads({ previousTeam: teamId, limit: 50 });
+  // "in"  -> arrived from another team  (team = this team AND previousTeam set)
+  // "out" -> left this team             (previousTeam = this team)
+  const [direction, setDirection] = useState<"in" | "out">("in");
+
+  const { data: result, isLoading } = useLeads(
+    direction === "in"
+      ? { team: teamId, transferredIn: "true", limit: 50 }
+      : { previousTeam: teamId, limit: 50 },
+  );
   const leads = result?.data ?? [];
+  const total = result?.pagination?.total ?? leads.length;
+
+  const toggle = (
+    <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-0.5 w-fit mb-4">
+      {([
+        { id: "in",  label: "Transferred In" },
+        { id: "out", label: "Transferred Out" },
+      ] as const).map((d) => (
+        <button
+          key={d.id}
+          type="button"
+          onClick={() => setDirection(d.id)}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            direction === d.id
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {d.label}
+        </button>
+      ))}
+    </div>
+  );
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />
-        ))}
+      <div>
+        {toggle}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (!leads.length) {
     return (
+      <div>
+      {toggle}
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/60 mb-3">
           <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-muted-foreground">No transferred leads yet</p>
-        <p className="text-xs text-muted-foreground mt-1">Leads auto-transferred out of this team will appear here</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          No leads transferred {direction === "in" ? "in" : "out"} yet
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {direction === "in"
+            ? "Leads auto-transferred into this team will appear here"
+            : "Leads auto-transferred out of this team will appear here"}
+        </p>
+      </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
+      {toggle}
       <p className="text-sm text-muted-foreground mb-3">
-        {leads.length} lead{leads.length !== 1 ? "s" : ""} transferred out from this team
+        {total} lead{total !== 1 ? "s" : ""} transferred {direction === "in" ? "into" : "out from"} this team
+        {leads.length < total ? ` (showing first ${leads.length})` : ""}
       </p>
       <motion.div
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.04 } } }}
@@ -2280,6 +2325,9 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
       >
         {leads.map((lead) => {
           const currentTeam = typeof lead.team === "object" && lead.team ? (lead.team as { name?: string }).name : "–";
+          const sourceTeam = typeof lead.previousTeam === "object" && lead.previousTeam
+            ? (lead.previousTeam as { name?: string }).name ?? "–"
+            : "–";
           return (
             <motion.div
               key={lead._id}
@@ -2292,7 +2340,7 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge variant="outline" className="text-xs hidden sm:flex">
-                  Now in: {currentTeam}
+                  {direction === "in" ? `From: ${sourceTeam}` : `Now in: ${currentTeam}`}
                 </Badge>
                 <StatusBadge status={lead.status} />
                 <Button

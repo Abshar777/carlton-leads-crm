@@ -147,6 +147,8 @@ export interface LeadFilters {
   noAssignee?: string;
   tags?: string;
   previousTeam?: string;
+  /** "true" -> only leads that arrived from another team */
+  transferredIn?: string;
 }
 
 export interface LeadStats {

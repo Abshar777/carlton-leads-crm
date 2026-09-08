@@ -36,6 +36,7 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.updatedTo)   params.updatedTo   = filters.updatedTo;
       if (filters?.tags)         params.tags         = filters.tags;
       if (filters?.previousTeam) params.previousTeam = filters.previousTeam;
+      if (filters?.transferredIn) params.transferredIn = filters.transferredIn;
       if (filters?.splitFrom)    params.splitFrom    = filters.splitFrom;
       if (filters?.splitTo)      params.splitTo      = filters.splitTo;
       if (filters?.noTeam)       params.noTeam       = filters.noTeam;
