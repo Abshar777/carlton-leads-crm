@@ -32,6 +32,7 @@ import { AssignLeadDialog } from "@/components/leads/AssignLeadDialog";
 import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
 import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
+import { useLeadSources } from "@/hooks/useLeads";
 import { useLeads, useLead, useUpdateLeadStatus, useAddLeadNote, useAssignLeadToTeam, useBulkUpdateLeadStatus, useBulkDeleteLeads, useBulkAssignLeadsToTeam } from "@/hooks/useLeads";
 import { useAllCourses } from "@/hooks/useCourses";
 import { useUsers } from "@/hooks/useUsers";
@@ -232,6 +233,7 @@ function LeadsPageContent() {
   const [updatedFrom, setUpdatedFrom]     = useState<string>(() => searchParams.get("ufrom") ?? "");
   const [updatedTo, setUpdatedTo]         = useState<string>(() => searchParams.get("uto") ?? "");
   const [courseId, setCourseId]           = useState<string>(() => searchParams.get("course") ?? "all");
+  const [source, setSource]               = useState<string>(() => searchParams.get("source") ?? "all");
   const [teamId, setTeamId]               = useState<string>(() => searchParams.get("team") ?? "all");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(() => {
     const t = searchParams.get("tags");
@@ -267,6 +269,7 @@ function LeadsPageContent() {
     if (assignedTo !== "all")   params.set("assignedTo", assignedTo);
     if (reporter !== "all")     params.set("reporter", reporter);
     if (courseId !== "all")     params.set("course", courseId);
+    if (source !== "all")       params.set("source", source);
     if (teamId !== "all")       params.set("team", teamId);
     if (dateFrom)               params.set("from", dateFrom);
     if (dateTo)                 params.set("to", dateTo);
@@ -278,7 +281,7 @@ function LeadsPageContent() {
     if (noTeam)                         params.set("noTeam", "true");
     if (noAssignee)                     params.set("noAssignee", "true");
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo, source]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -361,6 +364,7 @@ function LeadsPageContent() {
     ...(assignedTo !== "all" ? { assignedTo } : {}),
     ...(reporter !== "all" ? { reporter } : {}),
     ...(courseId !== "all" ? { course: courseId } : {}),
+    ...(source !== "all" ? { source } : {}),
     ...(teamId !== "all" ? { team: teamId } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
@@ -371,12 +375,13 @@ function LeadsPageContent() {
     ...(splitTo ? { splitTo } : {}),
     ...(noTeam ? { noTeam: "true" } : {}),
     ...(noAssignee ? { noAssignee: "true" } : {}),
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo]);
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo, source]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const { data: allCourses = [] } = useAllCourses();
+  const { data: leadSources = [] } = useLeadSources();
   const { data: allTags = [] } = useTags();
 
   const leads = data?.data ?? [];
@@ -434,6 +439,7 @@ function LeadsPageContent() {
     assignedTo !== "all",
     reporter !== "all",
     courseId !== "all",
+    source !== "all",
     teamId !== "all",
     !!dateFrom,
     !!dateTo,
@@ -454,6 +460,7 @@ function LeadsPageContent() {
     setAssignedTo("all");
     setReporter("all");
     setCourseId("all");
+    setSource("all");
     setTeamId("all");
     setDateFrom("");
     setDateTo("");
@@ -798,6 +805,26 @@ function LeadsPageContent() {
                       </div>
                     )}
 
+                    {/* Source */}
+                    {leadSources.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Source</p>
+                        <Select value={source} onValueChange={(v) => applyFilter(setSource, v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="All Sources" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            <SelectItem value="all">All Sources</SelectItem>
+                            {leadSources.map((sc) => (
+                              <SelectItem key={sc.value} value={sc.value} className="capitalize">
+                                {sc.label} ({sc.count})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     {/* Team — only visible to super admins */}
                     {isSuperAdmin && (teamsData?.data?.length ?? 0) > 0 && (
                       <div className="space-y-1">
@@ -1036,6 +1063,7 @@ function LeadsPageContent() {
                   ...(assignedTo !== "all" ? { assignedTo } : {}),
                   ...(reporter !== "all" ? { reporter } : {}),
                   ...(courseId !== "all" ? { course: courseId } : {}),
+                  ...(source !== "all" ? { source } : {}),
                   ...(teamId !== "all" ? { team: teamId } : {}),
                   ...(dateFrom ? { dateFrom } : {}),
                   ...(dateTo ? { dateTo } : {}),

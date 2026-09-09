@@ -17,6 +17,18 @@ function errMsg(error: unknown, fallback: string) {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
+export interface LeadSourceOption { value: string; label: string; count: number }
+
+export const useLeadSources = () =>
+  useQuery({
+    queryKey: [...LEADS_KEY, "sources"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<LeadSourceOption[]>>("/leads/sources");
+      return res.data.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
 export const useLeads = (filters?: LeadFilters) => {
   return useQuery({
     queryKey: [...LEADS_KEY, filters],
@@ -25,6 +37,7 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.page)       params.page       = String(filters.page);
       if (filters?.limit)      params.limit      = String(filters.limit);
       if (filters?.status)     params.status     = filters.status;
+      if (filters?.source)     params.source     = filters.source;
       if (filters?.assignedTo) params.assignedTo = filters.assignedTo;
       if (filters?.team)       params.team       = filters.team;
       if (filters?.reporter)   params.reporter   = filters.reporter;

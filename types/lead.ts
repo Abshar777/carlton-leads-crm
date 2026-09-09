@@ -123,6 +123,8 @@ export interface LeadFilters {
   page?: number;
   limit?: number;
   status?: string;
+  /** Lead source, matched case-insensitively */
+  source?: string;
   assignedTo?: string;
   team?: string;
   reporter?: string;
