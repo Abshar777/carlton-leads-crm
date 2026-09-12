@@ -40,6 +40,11 @@ const STATUSES = [
   { key: "callback",       label: "Call Back",       color: "bg-sky-500/20 text-sky-500"         },
   { key: "whatsapp",       label: "WhatsApp",        color: "bg-emerald-500/20 text-emerald-500" },
   { key: "student",        label: "Student",         color: "bg-indigo-500/20 text-indigo-500"   },
+  { key: "nextbatch",      label: "Next Bt.",          color: "bg-purple-500/20 text-purple-500" },
+  { key: "reschedule",     label: "Re-Sch.",           color: "bg-fuchsia-500/20 text-fuchsia-500" },
+  { key: "paid100",        label: "100 $",             color: "bg-lime-500/20 text-lime-500" },
+  { key: "paid200",        label: "200 $",             color: "bg-green-500/20 text-green-500" },
+  { key: "paid500",        label: "500 $",             color: "bg-emerald-500/20 text-emerald-500" },
 ] as const;
 
 // ── Date helpers ──────────────────────────────────────────────────────────────

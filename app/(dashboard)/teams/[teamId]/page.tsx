@@ -524,6 +524,11 @@ function DashboardTab({
     { key: "callback",      label: "Call Back"       },
     { key: "whatsapp",      label: "WhatsApp"        },
     { key: "student",       label: "Student"         },
+    { key: "nextbatch",      label: "Next Batch" },
+    { key: "reschedule",     label: "Re-Schedule" },
+    { key: "paid100",        label: "100 $" },
+    { key: "paid200",        label: "200 $" },
+    { key: "paid500",        label: "500 $" },
   ];
 
   const medalColors = ["text-yellow-400", "text-slate-400", "text-amber-600"];

@@ -25,6 +25,11 @@ const STATUS_COLORS: Record<string, string> = {
   callback:       "bg-sky-500/15 text-sky-400 border-sky-500/30",
   whatsapp:       "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   student:        "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
+  nextbatch:      "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  reschedule:     "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",
+  paid100:        "bg-lime-500/15 text-lime-400 border-lime-500/30",
+  paid200:        "bg-green-500/15 text-green-400 border-green-500/30",
+  paid500:        "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -32,6 +37,11 @@ const STATUS_LABELS: Record<string, string> = {
   invalid: "Invalid", cnc: "CNC", booking: "Booking",
   notinterested: "Not Interested", interested: "Interested",
   rnr: "RNR", callback: "Call Back", whatsapp: "WhatsApp", student: "Student",
+  nextbatch:      "Next Batch",
+  reschedule:     "Re-Schedule",
+  paid100:        "100 $",
+  paid200:        "200 $",
+  paid500:        "500 $",
 };
 
 function StatusBadge({ status }: { status: string }) {

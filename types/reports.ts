@@ -1,17 +1,6 @@
-export type LeadStatus =
-  | "new"
-  | "assigned"
-  | "followup"
-  | "interested"
-  | "cnc"
-  | "booking"
-  | "notinterested"
-  | "closed"
-  | "invalid"
-  | "rnr"
-  | "callback"
-  | "whatsapp"
-  | "student";
+// Single source of truth: lib/leadStatus.ts
+import type { LeadStatus } from "@/lib/leadStatus";
+export type { LeadStatus };
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 

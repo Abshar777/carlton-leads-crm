@@ -69,11 +69,17 @@ const STATUS_META: Record<
   callback:       { label: "Call Back",       color: "#0ea5e9", bar: "bg-sky-500",     dot: "bg-sky-400"     },
   whatsapp:       { label: "WhatsApp",        color: "#25d366", bar: "bg-emerald-500", dot: "bg-emerald-400" },
   student:        { label: "Student",         color: "#6366f1", bar: "bg-indigo-500",  dot: "bg-indigo-400"  },
+  nextbatch:      { label: "Next Batch", color: "#a855f7", bar: "bg-purple-500", dot: "bg-purple-400" },
+  reschedule:     { label: "Re-Schedule", color: "#d946ef", bar: "bg-fuchsia-500", dot: "bg-fuchsia-400" },
+  paid100:        { label: "100 $", color: "#84cc16", bar: "bg-lime-500", dot: "bg-lime-400" },
+  paid200:        { label: "200 $", color: "#22c55e", bar: "bg-green-500", dot: "bg-green-400" },
+  paid500:        { label: "500 $", color: "#10b981", bar: "bg-emerald-500", dot: "bg-emerald-400" },
 };
 
 const ALL_STATUSES: LeadStatus[] = [
   "new","assigned","followup","interested","cnc","booking","notinterested","closed","invalid",
   "rnr","callback","whatsapp","student",
+  "nextbatch","reschedule","paid100","paid200","paid500",
 ];
 
 const SOURCE_COLORS: Record<string, string> = {

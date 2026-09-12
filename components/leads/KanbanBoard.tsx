@@ -41,7 +41,10 @@ import type { Team } from "@/types/team";
 import LeadDialog from "@/components/leads/LeadDialog";
 import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
 import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
+import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store/authStore";
+import { STATUS_LABELS, STATUS_STYLE_BY_STATUS as STATUS_STYLE, isClosingOnlyStatus } from "@/lib/leadStatus";
+import { useCanSetClosingStatuses } from "@/hooks/useClosingTeam";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -49,51 +52,13 @@ const KANBAN_STATUSES: LeadStatus[] = [
   "new", "assigned", "followup", "interested", "cnc",
   "booking", "notinterested", "closed", "invalid",
   "rnr", "callback", "whatsapp", "student",
+  // Closing-team stages — visible to everyone so their leads can be seen,
+  // but only Closing members may drop into them (enforced in handleDrop
+  // and, authoritatively, by the API).
+  "nextbatch", "reschedule", "paid100", "paid200", "paid500",
 ];
 
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  new:            "New",
-  assigned:       "Assigned",
-  followup:       "Follow Up",
-  interested:     "Interested",
-  cnc:            "CNC",
-  booking:        "Booking",
-  notinterested:  "Not Interested",
-  closed:         "Closed",
-  invalid:        "Invalid",
-  rnr:            "RNR",
-  callback:       "Call Back",
-  whatsapp:       "WhatsApp",
-  student:        "Student",
-  nextbatch:      "Next Batch",
-  reschedule:     "Re-Schedule",
-  paid100:        "100 $",
-  paid200:        "200 $",
-  paid500:        "500 $",
-};
 
-const STATUS_STYLE: Record<LeadStatus, {
-  header: string; border: string; dot: string; dropZone: string; badge: string;
-}> = {
-  new:            { header: "bg-blue-500/15 text-blue-400",       border: "border-blue-500/25",    dot: "bg-blue-400",    dropZone: "border-blue-500/50 bg-blue-500/5",       badge: "bg-blue-500/15 text-blue-400 border-blue-500/30"       },
-  assigned:       { header: "bg-yellow-500/15 text-yellow-400",   border: "border-yellow-500/25",  dot: "bg-yellow-400",  dropZone: "border-yellow-500/50 bg-yellow-500/5",   badge: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"   },
-  followup:       { header: "bg-orange-500/15 text-orange-400",   border: "border-orange-500/25",  dot: "bg-orange-400",  dropZone: "border-orange-500/50 bg-orange-500/5",   badge: "bg-orange-500/15 text-orange-400 border-orange-500/30"   },
-  interested:     { header: "bg-violet-500/15 text-violet-400",   border: "border-violet-500/25",  dot: "bg-violet-400",  dropZone: "border-violet-500/50 bg-violet-500/5",   badge: "bg-violet-500/15 text-violet-400 border-violet-500/30"   },
-  cnc:            { header: "bg-slate-500/15 text-slate-400",     border: "border-slate-500/25",   dot: "bg-slate-400",   dropZone: "border-slate-500/50 bg-slate-500/5",    badge: "bg-slate-500/15 text-slate-400 border-slate-500/30"       },
-  booking:        { header: "bg-teal-500/15 text-teal-400",       border: "border-teal-500/25",    dot: "bg-teal-400",    dropZone: "border-teal-500/50 bg-teal-500/5",       badge: "bg-teal-500/15 text-teal-400 border-teal-500/30"         },
-  notinterested:  { header: "bg-orange-500/15 text-orange-400",   border: "border-orange-500/25",  dot: "bg-orange-400",  dropZone: "border-orange-500/50 bg-orange-500/5",   badge: "bg-orange-500/15 text-orange-400 border-orange-500/30"   },
-  closed:         { header: "bg-green-500/15 text-green-400",     border: "border-green-500/25",   dot: "bg-green-400",   dropZone: "border-green-500/50 bg-green-500/5",    badge: "bg-green-500/15 text-green-400 border-green-500/30"       },
-  invalid:        { header: "bg-red-500/15 text-red-400",         border: "border-red-500/25",     dot: "bg-red-400",     dropZone: "border-red-500/50 bg-red-500/5",        badge: "bg-red-500/15 text-red-400 border-red-500/30"             },
-  rnr:            { header: "bg-amber-500/15 text-amber-400",     border: "border-amber-500/25",   dot: "bg-amber-400",   dropZone: "border-amber-500/50 bg-amber-500/5",    badge: "bg-amber-500/15 text-amber-400 border-amber-500/30"       },
-  callback:       { header: "bg-sky-500/15 text-sky-400",         border: "border-sky-500/25",     dot: "bg-sky-400",     dropZone: "border-sky-500/50 bg-sky-500/5",        badge: "bg-sky-500/15 text-sky-400 border-sky-500/30"           },
-  whatsapp:       { header: "bg-emerald-500/15 text-emerald-400", border: "border-emerald-500/25", dot: "bg-emerald-400", dropZone: "border-emerald-500/50 bg-emerald-500/5", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  student:        { header: "bg-indigo-500/15 text-indigo-400",   border: "border-indigo-500/25",  dot: "bg-indigo-400",  dropZone: "border-indigo-500/50 bg-indigo-500/5",   badge: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30"   },
-  nextbatch:      { header: "bg-purple-500/15 text-purple-400", border: "border-purple-500/25", dot: "bg-purple-400", dropZone: "border-purple-500/50 bg-purple-500/5", badge: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
-  reschedule:     { header: "bg-fuchsia-500/15 text-fuchsia-400", border: "border-fuchsia-500/25", dot: "bg-fuchsia-400", dropZone: "border-fuchsia-500/50 bg-fuchsia-500/5", badge: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30" },
-  paid100:        { header: "bg-lime-500/15 text-lime-400", border: "border-lime-500/25", dot: "bg-lime-400", dropZone: "border-lime-500/50 bg-lime-500/5", badge: "bg-lime-500/15 text-lime-400 border-lime-500/30" },
-  paid200:        { header: "bg-green-500/15 text-green-400", border: "border-green-500/25", dot: "bg-green-400", dropZone: "border-green-500/50 bg-green-500/5", badge: "bg-green-500/15 text-green-400 border-green-500/30" },
-  paid500:        { header: "bg-emerald-500/15 text-emerald-400", border: "border-emerald-500/25", dot: "bg-emerald-400", dropZone: "border-emerald-500/50 bg-emerald-500/5", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -846,6 +811,7 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
 
   const { user: authUser } = useAuthStore();
   const { mutate: updateStatus, isPending: bookingPending } = useUpdateLeadStatus();
+  const canSetClosingStatuses = useCanSetClosingStatuses();
   const { mutate: updateCNC }    = useUpdateCallNotConnected();
 
   const { data, isLoading } = useLeads({ ...filters, page: 1, limit: 500 });
@@ -895,6 +861,14 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
     setDropTarget(null);
     if (currentStatus === targetStatus) return;
 
+    // Closing-only columns are visible to everyone so their leads can be seen, but
+    // only Closing members may drop into them. The API returns 403 regardless —
+    // this just gives a useful message instead of a failed request.
+    if (isClosingOnlyStatus(targetStatus) && !canSetClosingStatuses) {
+      toast.error(`Only Closing team members can set "${STATUS_LABELS[targetStatus]}"`);
+      return;
+    }
+
     // Booking requires extra details — show modal instead of instant update
     if (targetStatus === "booking") {
       setBookingLead(lead);
@@ -909,7 +883,7 @@ export function KanbanBoard({ filters, canEdit }: KanbanBoardProps) {
         onError:   () => setLocalOverrides((p) => { const n = { ...p }; delete n[leadId]; return n; }),
       },
     );
-  }, [allLeads, localOverrides, updateStatus]);
+  }, [allLeads, localOverrides, updateStatus, canSetClosingStatuses]);
 
   const handleCNC = useCallback((leadId: string) => {
     updateCNC({ leadId, action: "increment" });
