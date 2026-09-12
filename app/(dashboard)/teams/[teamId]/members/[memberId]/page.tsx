@@ -41,6 +41,11 @@ const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: str
   callback:       { label: "Call Back",       color: "bg-sky-500/15 text-sky-400 border-sky-500/30",             dot: "bg-sky-400"     },
   whatsapp:       { label: "WhatsApp",        color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
   student:        { label: "Student",         color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",    dot: "bg-indigo-400"  },
+  nextbatch:      { label: "Next Batch",     color: "bg-purple-500/15 text-purple-400 border-purple-500/30",   dot: "bg-purple-400" },
+  reschedule:     { label: "Re-Schedule",    color: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",  dot: "bg-fuchsia-400" },
+  paid100:        { label: "100 $",          color: "bg-lime-500/15 text-lime-400 border-lime-500/30",     dot: "bg-lime-400" },
+  paid200:        { label: "200 $",          color: "bg-green-500/15 text-green-400 border-green-500/30",    dot: "bg-green-400" },
+  paid500:        { label: "500 $",          color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",  dot: "bg-emerald-400" },
 };
 
 const containerVariants = {

@@ -65,6 +65,11 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   callback:       "Call Back",
   whatsapp:       "WhatsApp",
   student:        "Student",
+  nextbatch:      "Next Batch",
+  reschedule:     "Re-Schedule",
+  paid100:        "100 $",
+  paid200:        "200 $",
+  paid500:        "500 $",
 };
 
 const STATUS_STYLE: Record<LeadStatus, {
@@ -83,6 +88,11 @@ const STATUS_STYLE: Record<LeadStatus, {
   callback:       { header: "bg-sky-500/15 text-sky-400",         border: "border-sky-500/25",     dot: "bg-sky-400",     dropZone: "border-sky-500/50 bg-sky-500/5",        badge: "bg-sky-500/15 text-sky-400 border-sky-500/30"           },
   whatsapp:       { header: "bg-emerald-500/15 text-emerald-400", border: "border-emerald-500/25", dot: "bg-emerald-400", dropZone: "border-emerald-500/50 bg-emerald-500/5", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
   student:        { header: "bg-indigo-500/15 text-indigo-400",   border: "border-indigo-500/25",  dot: "bg-indigo-400",  dropZone: "border-indigo-500/50 bg-indigo-500/5",   badge: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30"   },
+  nextbatch:      { header: "bg-purple-500/15 text-purple-400", border: "border-purple-500/25", dot: "bg-purple-400", dropZone: "border-purple-500/50 bg-purple-500/5", badge: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
+  reschedule:     { header: "bg-fuchsia-500/15 text-fuchsia-400", border: "border-fuchsia-500/25", dot: "bg-fuchsia-400", dropZone: "border-fuchsia-500/50 bg-fuchsia-500/5", badge: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30" },
+  paid100:        { header: "bg-lime-500/15 text-lime-400", border: "border-lime-500/25", dot: "bg-lime-400", dropZone: "border-lime-500/50 bg-lime-500/5", badge: "bg-lime-500/15 text-lime-400 border-lime-500/30" },
+  paid200:        { header: "bg-green-500/15 text-green-400", border: "border-green-500/25", dot: "bg-green-400", dropZone: "border-green-500/50 bg-green-500/5", badge: "bg-green-500/15 text-green-400 border-green-500/30" },
+  paid500:        { header: "bg-emerald-500/15 text-emerald-400", border: "border-emerald-500/25", dot: "bg-emerald-400", dropZone: "border-emerald-500/50 bg-emerald-500/5", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

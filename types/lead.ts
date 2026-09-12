@@ -3,7 +3,9 @@ import type { Team } from "@/types/team";
 import type { Course } from "@/types/course";
 import type { Tag } from "@/types/tag";
 
-export type LeadStatus = "new" | "assigned" | "followup" | "closed" | "invalid" | "cnc" | "booking" | "notinterested" | "interested" | "rnr" | "callback" | "whatsapp" | "student";
+// Single source of truth: lib/leadStatus.ts
+import type { LeadStatus } from "@/lib/leadStatus";
+export type { LeadStatus };
 
 export type ActivityAction =
   | "lead_created"

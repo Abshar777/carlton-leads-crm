@@ -47,6 +47,7 @@ import { WhatsAppChatPanel } from "@/components/leads/WhatsAppChatPanel";
 import { BookingDetailsModal } from "@/components/leads/BookingDetailsModal";
 import type { BookingFormValues } from "@/components/leads/BookingDetailsModal";
 import { useTrap } from "@/components/traps/TrapProvider";
+import { useSettableStatuses } from "@/hooks/useClosingTeam";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,11 @@ const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; dot: str
   callback:       { label: "Call Back",       color: "bg-sky-500/15 text-sky-400 border-sky-500/30",          dot: "bg-sky-400"     },
   whatsapp:       { label: "WhatsApp",        color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
   student:        { label: "Student",         color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30", dot: "bg-indigo-400"  },
+  nextbatch:      { label: "Next Batch",     color: "bg-purple-500/15 text-purple-400 border-purple-500/30",   dot: "bg-purple-400" },
+  reschedule:     { label: "Re-Schedule",    color: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",  dot: "bg-fuchsia-400" },
+  paid100:        { label: "100 $",          color: "bg-lime-500/15 text-lime-400 border-lime-500/30",     dot: "bg-lime-400" },
+  paid200:        { label: "200 $",          color: "bg-green-500/15 text-green-400 border-green-500/30",    dot: "bg-green-400" },
+  paid500:        { label: "500 $",          color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",  dot: "bg-emerald-400" },
 };
 
 const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; color: string; bg: string }> = {
@@ -252,6 +258,7 @@ function StatusDropdown({
   currentUserName: string;
 }) {
   const updateStatus = useUpdateLeadStatus();
+  const settable = useSettableStatuses();
   const cfg = STATUS_CONFIG[status] ?? FALLBACK_STATUS_CFG;
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
@@ -296,7 +303,7 @@ function StatusDropdown({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-48">
-          {(Object.entries(STATUS_CONFIG) as [LeadStatus, (typeof STATUS_CONFIG)[LeadStatus]][]).map(([s, c]) => (
+          {settable.map((s) => [s, STATUS_CONFIG[s]] as [LeadStatus, (typeof STATUS_CONFIG)[LeadStatus]]).map(([s, c]) => (
             <DropdownMenuItem
               key={s}
               disabled={s === status || updateStatus.isPending}
@@ -666,6 +673,7 @@ export default function LeadDetailPage() {
   const leadId = params.leadId as string;
   const { user: authUser, hasPermission } = useAuthStore();
   const { interceptWhatsApp } = useTrap();
+  const settable = useSettableStatuses();
 
   const [editOpen, setEditOpen] = useState(false);
   const [sidebarBookingOpen, setSidebarBookingOpen] = useState(false);
@@ -1060,7 +1068,7 @@ export default function LeadDetailPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {(Object.keys(STATUS_CONFIG) as LeadStatus[]).map((s) => (
+                          {settable.map((s) => (
                             <SelectItem key={s} value={s} className="text-xs">
                               {STATUS_CONFIG[s].label}
                             </SelectItem>

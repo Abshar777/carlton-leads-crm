@@ -233,6 +233,11 @@ const STATUS_CONFIG: Record<
   callback:       { label: "Call Back",       color: "bg-sky-500/15 text-sky-400 border-sky-500/30",             dot: "bg-sky-400",     bar: "bg-sky-500",     text: "text-sky-400"     },
   whatsapp:       { label: "WhatsApp",        color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400", bar: "bg-emerald-500", text: "text-emerald-400" },
   student:        { label: "Student",         color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",    dot: "bg-indigo-400",  bar: "bg-indigo-500",  text: "text-indigo-400"  },
+  nextbatch:      { label: "Next Batch", color: "bg-purple-500/15 text-purple-400 border-purple-500/30", dot: "bg-purple-400", bar: "bg-purple-500", text: "text-purple-400" },
+  reschedule:     { label: "Re-Schedule", color: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30", dot: "bg-fuchsia-400", bar: "bg-fuchsia-500", text: "text-fuchsia-400" },
+  paid100:        { label: "100 $", color: "bg-lime-500/15 text-lime-400 border-lime-500/30", dot: "bg-lime-400", bar: "bg-lime-500", text: "text-lime-400" },
+  paid200:        { label: "200 $", color: "bg-green-500/15 text-green-400 border-green-500/30", dot: "bg-green-400", bar: "bg-green-500", text: "text-green-400" },
+  paid500:        { label: "500 $", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400", bar: "bg-emerald-500", text: "text-emerald-400" },
 };
 
 const LOG_ACTION_CONFIG: Record<
@@ -667,7 +672,7 @@ function DashboardTab({
           </CardHeader>
           <CardContent className="space-y-3">
             {statusBars.map(({ key, label }) => {
-              const count = dist?.[key] ?? 0;
+              const count = (dist as Record<string, number> | undefined)?.[key] ?? 0;
               const pct = total > 0 ? (count / total) * 100 : 0;
               const cfg = STATUS_CONFIG[key];
               return (

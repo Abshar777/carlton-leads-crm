@@ -44,59 +44,20 @@ import { useTrap } from "@/components/traps/TrapProvider";
 import { formatDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Lead, LeadStatus } from "@/types/lead";
+import { LEAD_STATUSES, STATUS_LABELS, STATUS_COLORS } from "@/lib/leadStatus";
 import type { Tag } from "@/types/tag";
 import type { User } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Every status is filterable by everyone — the Closing-only restriction is on
+// SETTING a status, not on seeing or filtering by it.
 const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
-  { value: "all",           label: "All Status"      },
-  { value: "new",           label: "New"             },
-  { value: "assigned",      label: "Assigned"        },
-  { value: "followup",      label: "Follow Up"       },
-  { value: "interested",    label: "Interested"      },
-  { value: "cnc",           label: "CNC"             },
-  { value: "booking",       label: "Booking"         },
-  { value: "notinterested", label: "Not Interested"  },
-  { value: "closed",        label: "Closed"          },
-  { value: "invalid",       label: "Invalid"         },
-  { value: "rnr",           label: "RNR"             },
-  { value: "callback",      label: "Call Back"       },
-  { value: "whatsapp",      label: "WhatsApp"        },
-  { value: "student",       label: "Student"         },
+  { value: "all", label: "All Status" },
+  ...LEAD_STATUSES.map((v) => ({ value: v as LeadStatus, label: STATUS_LABELS[v] })),
 ];
 
-const STATUS_COLORS: Record<LeadStatus, string> = {
-  new:            "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  assigned:       "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-  followup:       "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  closed:         "bg-green-500/15 text-green-400 border-green-500/30",
-  invalid:        "bg-red-500/15 text-red-400 border-red-500/30",
-  cnc:            "bg-slate-500/15 text-slate-400 border-slate-500/30",
-  booking:        "bg-teal-500/15 text-teal-400 border-teal-500/30",
-  notinterested:  "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  interested:     "bg-violet-500/15 text-violet-400 border-violet-500/30",
-  rnr:            "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  callback:       "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  whatsapp:       "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  student:        "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
-};
 
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  new:            "New",
-  assigned:       "Assigned",
-  followup:       "Follow Up",
-  closed:         "Closed",
-  invalid:        "Invalid",
-  cnc:            "CNC",
-  booking:        "Booking",
-  notinterested:  "Not Interested",
-  interested:     "Interested",
-  rnr:            "RNR",
-  callback:       "Call Back",
-  whatsapp:       "WhatsApp",
-  student:        "Student",
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
