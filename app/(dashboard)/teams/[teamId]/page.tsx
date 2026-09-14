@@ -68,7 +68,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { TodayLeadsButton, TodayTransferredButton } from "@/components/leads/LeadsDateFilter";
+import { useCanSeeTransferFilter } from "@/hooks/useClosingTeam";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import {
   Select,
@@ -1078,9 +1079,19 @@ function LeadsTab({
   const [updatedFrom, setUpdatedFrom] = useState<string>(() => sp.get("lupdatedFrom") ?? "");
   const [updatedTo, setUpdatedTo] = useState<string>(() => sp.get("lupdatedTo") ?? "");
   const [unassignedOnly, setUnassignedOnly] = useState(() => sp.get("lunassigned") === "1");
+  const [transferFrom, setTransferFrom] = useState<string>(() => sp.get("ltfrom") ?? "");
+  const [transferTo, setTransferTo]     = useState<string>(() => sp.get("ltto") ?? "");
+  const canSeeTransferFilter = useCanSeeTransferFilter();
   const [viewMode, setViewMode] = useState<"table" | "kanban">(() => sp.get("lview") === "kanban" ? "kanban" : "table");
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
+  const isTransferTodayActive = transferFrom === todayISO() && transferTo === todayISO();
+  function applyTransferToday() {
+    const t = todayISO();
+    if (isTransferTodayActive) { setTransferFrom(""); setTransferTo(""); }
+    else { setTransferFrom(t); setTransferTo(t); }
+    setPage(1);
+  }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
   function applyToday() {
     const today = todayISO();
@@ -1200,6 +1211,8 @@ function LeadsTab({
     dateTo: dateTo || undefined,
     updatedFrom: updatedFrom || undefined,
     updatedTo: updatedTo || undefined,
+    transferFrom: transferFrom || undefined,
+    transferTo: transferTo || undefined,
     unassignedOnly,
     page,
     limit,
@@ -1289,6 +1302,9 @@ function LeadsTab({
             {/* Right actions */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+              {canSeeTransferFilter && (
+                <TodayTransferredButton active={isTransferTodayActive} onClick={applyTransferToday} />
+              )}
               <Button
                 variant={showFilters ? "secondary" : "outline"}
                 size="sm"

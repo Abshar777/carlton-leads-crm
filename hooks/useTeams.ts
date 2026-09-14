@@ -82,6 +82,8 @@ export const useTeamLeads = (teamId: string, filters?: LeadFilters & { unassigne
       if (filters?.updatedFrom)    params.updatedFrom    = filters.updatedFrom;
       if (filters?.updatedTo)      params.updatedTo      = filters.updatedTo;
       if (filters?.course)         params.course         = filters.course;
+      if (filters?.transferFrom)   params.transferFrom   = filters.transferFrom;
+      if (filters?.transferTo)     params.transferTo     = filters.transferTo;
       if (filters?.unassignedOnly) params.unassignedOnly = "true";
       const res = await api.get<ApiResponse<Lead[]>>(`/teams/${teamId}/leads`, { params });
       return { data: res.data.data ?? [], pagination: res.data.pagination };

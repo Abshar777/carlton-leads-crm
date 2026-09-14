@@ -8,7 +8,7 @@ import {
   LayoutGrid, List, UsersRound, StickyNote, Download,
 } from "lucide-react";
 import Link from "next/link";
-import { TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { TodayLeadsButton, TodayTransferredButton } from "@/components/leads/LeadsDateFilter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,7 +45,7 @@ import { formatDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Lead, LeadStatus } from "@/types/lead";
 import { LEAD_STATUSES, STATUS_LABELS, STATUS_COLORS } from "@/lib/leadStatus";
-import { useSettableStatuses } from "@/hooks/useClosingTeam";
+import { useSettableStatuses, useCanSeeTransferFilter } from "@/hooks/useClosingTeam";
 import type { Tag } from "@/types/tag";
 import type { User } from "@/types";
 
@@ -201,6 +201,8 @@ function LeadsPageContent() {
     const t = searchParams.get("tags");
     return t ? t.split(",").filter(Boolean) : [];
   });
+  const [transferFrom, setTransferFrom] = useState<string>(() => searchParams.get("tfrom") ?? "");
+  const [transferTo, setTransferTo]     = useState<string>(() => searchParams.get("tto") ?? "");
   const [splitFrom, setSplitFrom]   = useState<string>(() => searchParams.get("sfrom") ?? "");
   const [splitTo, setSplitTo]       = useState<string>(() => searchParams.get("sto") ?? "");
   const [noTeam, setNoTeam]         = useState<boolean>(() => searchParams.get("noTeam") === "true");
@@ -238,12 +240,14 @@ function LeadsPageContent() {
     if (updatedFrom)                    params.set("ufrom", updatedFrom);
     if (updatedTo)                      params.set("uto", updatedTo);
     if (selectedTagIds.length > 0)      params.set("tags", selectedTagIds.join(","));
+    if (transferFrom)                   params.set("tfrom", transferFrom);
+    if (transferTo)                     params.set("tto", transferTo);
     if (splitFrom)                      params.set("sfrom", splitFrom);
     if (splitTo)                        params.set("sto", splitTo);
     if (noTeam)                         params.set("noTeam", "true");
     if (noAssignee)                     params.set("noAssignee", "true");
     router.replace(`?${params.toString()}`, { scroll: false });
-  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo, source]);
+  }, [viewMode, debouncedSearch, page, limit, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo, source, transferFrom, transferTo]);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -304,6 +308,13 @@ function LeadsPageContent() {
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
+  const isTransferTodayActive = transferFrom === todayISO() && transferTo === todayISO();
+  function applyTransferToday() {
+    const today = todayISO();
+    if (isTransferTodayActive) { setTransferFrom(""); setTransferTo(""); }
+    else { setTransferFrom(today); setTransferTo(today); }
+    setPage(1);
+  }
   const isSplitTodayActive = splitFrom === todayISO() && splitTo === todayISO();
   function applySplitToday() {
     const today = todayISO();
@@ -333,11 +344,13 @@ function LeadsPageContent() {
     ...(updatedFrom ? { updatedFrom } : {}),
     ...(updatedTo ? { updatedTo } : {}),
     ...(selectedTagIds.length > 0 ? { tags: selectedTagIds.join(",") } : {}),
+    ...(transferFrom ? { transferFrom } : {}),
+    ...(transferTo ? { transferTo } : {}),
     ...(splitFrom ? { splitFrom } : {}),
     ...(splitTo ? { splitTo } : {}),
     ...(noTeam ? { noTeam: "true" } : {}),
     ...(noAssignee ? { noAssignee: "true" } : {}),
-  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo, source]);
+  }), [page, limit, debouncedSearch, status, assignedTo, reporter, courseId, teamId, dateFrom, dateTo, updatedFrom, updatedTo, selectedTagIds, noTeam, noAssignee, splitFrom, splitTo, source, transferFrom, transferTo]);
 
   const { data, isLoading, isFetching } = useLeads(filters);
   const { data: usersData } = useUsers({ status: "active", limit: "200" });
@@ -345,6 +358,7 @@ function LeadsPageContent() {
   const { data: allCourses = [] } = useAllCourses();
   const { data: leadSources = [] } = useLeadSources();
   const settableStatuses = useSettableStatuses();
+  const canSeeTransferFilter = useCanSeeTransferFilter();
   const { data: allTags = [] } = useTags();
 
   const leads = data?.data ?? [];
@@ -414,6 +428,8 @@ function LeadsPageContent() {
     noAssignee,
     !!splitFrom,
     !!splitTo,
+    !!transferFrom,
+    !!transferTo,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
@@ -434,6 +450,8 @@ function LeadsPageContent() {
     setNoAssignee(false);
     setSplitFrom("");
     setSplitTo("");
+    setTransferFrom("");
+    setTransferTo("");
     setSearch("");
     setDebouncedSearch("");
     setPage(1);
@@ -537,6 +555,10 @@ function LeadsPageContent() {
               {/* Right side — Today + filter toggle + view toggle + clear */}
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+
+                {canSeeTransferFilter && (
+                  <TodayTransferredButton active={isTransferTodayActive} onClick={applyTransferToday} />
+                )}
 
                 {/* Split today — by assignedAt, not createdAt */}
                 <Button
@@ -905,6 +927,57 @@ function LeadsPageContent() {
                         />
                       </div>
                     </div>
+
+                    {/* Transfer date range — when the lead last moved between teams */}
+                    {canSeeTransferFilter && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <ArrowRightLeft className="h-3 w-3" />
+                          Transfer Date (Moved Between Teams)
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(["today", "week", "month", "year"] as const).map((p) => {
+                            const labels = { today: "Today", week: "This Week", month: "This Month", year: "This Year" };
+                            const getRangeFor = (period: string) => {
+                              const now = new Date(); const t = now.toISOString().slice(0,10);
+                              if (period === "today") return { f: t, t };
+                              if (period === "week") { const m = new Date(now); m.setDate(now.getDate()-((now.getDay()+6)%7)); return { f: m.toISOString().slice(0,10), t }; }
+                              if (period === "month") return { f: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10), t };
+                              return { f: new Date(now.getFullYear(),0,1).toISOString().slice(0,10), t };
+                            };
+                            const range = getRangeFor(p);
+                            const isActive = transferFrom === range.f && transferTo === range.t;
+                            return (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => { if (isActive) { setTransferFrom(""); setTransferTo(""); } else { setTransferFrom(range.f); setTransferTo(range.t); } setPage(1); }}
+                                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
+                              >
+                                {labels[p]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="date"
+                            value={transferFrom}
+                            max={transferTo || undefined}
+                            onChange={(e) => { setTransferFrom(e.target.value); setPage(1); }}
+                            className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                          />
+                          <span className="text-xs text-muted-foreground shrink-0">to</span>
+                          <Input
+                            type="date"
+                            value={transferTo}
+                            min={transferFrom || undefined}
+                            onChange={(e) => { setTransferTo(e.target.value); setPage(1); }}
+                            className="h-9 text-sm px-2 flex-1 [color-scheme:dark]"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Split date range — when the lead was assigned out to a member */}
                     <div className="space-y-2">

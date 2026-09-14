@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, X, CalendarClock } from "lucide-react";
+import { CalendarDays, X, CalendarClock, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -175,6 +175,37 @@ export function TodayLeadsButton({
     >
       <CalendarClock className="h-3.5 w-3.5" />
       Today&apos;s Leads
+    </Button>
+  );
+}
+
+/**
+ * Quick filter for leads transferred between teams today.
+ *
+ * Distinct from TodayLeadsButton, which filters on creation date. Gate its
+ * visibility with useCanSeeTransferFilter() — Closing members, team leaders and
+ * Super Admin.
+ */
+export function TodayTransferredButton({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant={active ? "default" : "outline"}
+      size="sm"
+      title="Leads transferred between teams today"
+      className={cn(
+        "gap-1.5 h-8",
+        active && "bg-primary text-primary-foreground",
+      )}
+      onClick={onClick}
+    >
+      <ArrowRightLeft className="h-3.5 w-3.5" />
+      Transferred Today
     </Button>
   );
 }

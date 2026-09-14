@@ -37,3 +37,24 @@ export function useSettableStatuses(): readonly LeadStatus[] {
   const canSetClosing = useCanSetClosingStatuses();
   return canSetClosing ? LEAD_STATUSES : GENERAL_LEAD_STATUSES;
 }
+
+/**
+ * Who may see the transfer-date filter: Closing-team members, any team leader,
+ * and Super Admin. This is a UI convenience only — the filter itself leaks
+ * nothing, since every user still sees only the leads their role allows.
+ */
+export function useCanSeeTransferFilter(): boolean {
+  const { user } = useAuthStore();
+  const { data: teamsData } = useTeams({ status: "active", limit: 200 });
+  const isClosingMember = useCanSetClosingStatuses();
+
+  return useMemo(() => {
+    if (isClosingMember) return true;          // covers Closing member + Super Admin
+    if (!user?._id) return false;
+    return (teamsData?.data ?? []).some((t) =>
+      (t.leaders ?? []).some((l) =>
+        (typeof l === "object" && l !== null ? (l as { _id: string })._id : String(l)) === user._id,
+      ),
+    );
+  }, [isClosingMember, user, teamsData]);
+}

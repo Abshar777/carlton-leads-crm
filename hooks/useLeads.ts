@@ -50,6 +50,8 @@ export const useLeads = (filters?: LeadFilters) => {
       if (filters?.tags)         params.tags         = filters.tags;
       if (filters?.previousTeam) params.previousTeam = filters.previousTeam;
       if (filters?.transferredIn) params.transferredIn = filters.transferredIn;
+      if (filters?.transferFrom) params.transferFrom = filters.transferFrom;
+      if (filters?.transferTo)   params.transferTo   = filters.transferTo;
       if (filters?.splitFrom)    params.splitFrom    = filters.splitFrom;
       if (filters?.splitTo)      params.splitTo      = filters.splitTo;
       if (filters?.noTeam)       params.noTeam       = filters.noTeam;
@@ -85,6 +87,8 @@ export const useUserLeads = (userId: string, filters?: LeadFilters) => {
       if (filters?.dateTo)   params.dateTo   = filters.dateTo;
       if (filters?.updatedFrom) params.updatedFrom = filters.updatedFrom;
       if (filters?.updatedTo)   params.updatedTo   = filters.updatedTo;
+      if (filters?.transferFrom) params.transferFrom = filters.transferFrom;
+      if (filters?.transferTo)   params.transferTo   = filters.transferTo;
       const response = await api.get<ApiResponse<Lead[]>>(`/users/${userId}/leads`, { params });
       return { data: response.data.data ?? [], pagination: response.data.pagination };
     },

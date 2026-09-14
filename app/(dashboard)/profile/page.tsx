@@ -21,11 +21,12 @@ import { useUser } from "@/hooks/useUsers";
 import { useUserLeads, useUserLeadStats } from "@/hooks/useLeads";
 import { formatDate, getInitials } from "@/lib/utils";
 import { ExportPdfDialog } from "@/components/reports/ExportPdfDialog";
-import { LeadsDateFilter, TodayLeadsButton } from "@/components/leads/LeadsDateFilter";
+import { LeadsDateFilter, TodayLeadsButton, TodayTransferredButton } from "@/components/leads/LeadsDateFilter";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { useAuthStore } from "@/lib/store/authStore";
 import type { LeadStatus } from "@/types/lead";
 import Link from "next/link";
+import { useCanSeeTransferFilter } from "@/hooks/useClosingTeam";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,9 @@ export default function ProfilePage() {
   const [search,       setSearch]       = useState("");
   const [searchInput,  setSearchInput]  = useState("");
   const [dateFrom,     setDateFrom]     = useState("");
+  const [transferFrom, setTransferFrom] = useState("");
+  const [transferTo, setTransferTo]     = useState("");
+  const canSeeTransferFilter = useCanSeeTransferFilter();
   const [dateTo,       setDateTo]       = useState("");
   const [updatedFrom,  setUpdatedFrom]  = useState("");
   const [updatedTo,    setUpdatedTo]    = useState("");
@@ -107,6 +111,12 @@ export default function ProfilePage() {
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   function todayISO() { return new Date().toISOString().slice(0, 10); }
+  const isTransferTodayActive = transferFrom === todayISO() && transferTo === todayISO();
+  function applyTransferToday() {
+    const t = todayISO();
+    if (isTransferTodayActive) { setTransferFrom(""); setTransferTo(""); }
+    else { setTransferFrom(t); setTransferTo(t); }
+  }
   const isTodayActive = dateFrom === todayISO() && dateTo === todayISO();
 
   function applyToday() {
@@ -124,6 +134,8 @@ export default function ProfilePage() {
     status: statusFilter !== "all" ? statusFilter : undefined,
     search: search || undefined,
     dateFrom: dateFrom || undefined,
+    transferFrom: transferFrom || undefined,
+    transferTo: transferTo || undefined,
     dateTo: dateTo || undefined,
     updatedFrom: updatedFrom || undefined,
     updatedTo: updatedTo || undefined,
@@ -314,6 +326,9 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 <TodayLeadsButton active={isTodayActive} onClick={applyToday} />
+                {canSeeTransferFilter && (
+                  <TodayTransferredButton active={isTransferTodayActive} onClick={applyTransferToday} />
+                )}
                 <Button
                   variant={showDateFilter ? "secondary" : "outline"}
                   size="sm"

@@ -141,6 +141,10 @@ export interface LeadFilters {
   /** YYYY-MM-DD — leads last updated on or before this date */
   updatedTo?: string;
   unassignedOnly?: boolean;
+  /** YYYY-MM-DD — leads transferred between teams on or after this date */
+  transferFrom?: string;
+  /** YYYY-MM-DD — leads transferred on or before this date */
+  transferTo?: string;
   /** YYYY-MM-DD — leads split (assigned to a member) on or after this date */
   splitFrom?: string;
   /** YYYY-MM-DD — leads split on or before this date */
