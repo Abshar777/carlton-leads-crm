@@ -1067,7 +1067,7 @@ export default function LeadDetailPage() {
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-72">
                           {settable.map((s) => (
                             <SelectItem key={s} value={s} className="text-xs">
                               {STATUS_CONFIG[s].label}
@@ -1105,7 +1105,7 @@ export default function LeadDetailPage() {
                             : <SelectValue placeholder="No course" />
                           }
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-72">
                           <SelectItem value="__none__" className="text-xs text-muted-foreground">
                             — No course —
                           </SelectItem>

@@ -45,6 +45,7 @@ import { formatDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Lead, LeadStatus } from "@/types/lead";
 import { LEAD_STATUSES, STATUS_LABELS, STATUS_COLORS } from "@/lib/leadStatus";
+import { useSettableStatuses } from "@/hooks/useClosingTeam";
 import type { Tag } from "@/types/tag";
 import type { User } from "@/types";
 
@@ -343,6 +344,7 @@ function LeadsPageContent() {
   const { data: teamsData } = useTeams({ status: "active", limit: 100 });
   const { data: allCourses = [] } = useAllCourses();
   const { data: leadSources = [] } = useLeadSources();
+  const settableStatuses = useSettableStatuses();
   const { data: allTags = [] } = useTags();
 
   const leads = data?.data ?? [];
@@ -1101,8 +1103,8 @@ function LeadsPageContent() {
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                   </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
+                                <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
+                                  {settableStatuses.map((s) => (
                                     <DropdownMenuItem
                                       key={s}
                                       onClick={() => handleStatusChange(lead, s)}
@@ -1250,8 +1252,8 @@ function LeadsPageContent() {
                                     <ChevronDown className="h-3 w-3 text-muted-foreground opacity-0 group-hover/status:opacity-100 transition-opacity" />
                                   </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                  {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
+                                <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                                  {settableStatuses.map((s) => (
                                     <DropdownMenuItem
                                       key={s}
                                       onClick={() => handleStatusChange(lead, s)}
@@ -1521,8 +1523,8 @@ function LeadsPageContent() {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
+              <SelectContent className="max-h-72">
+                {settableStatuses.map((s) => (
                   <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
                 ))}
               </SelectContent>

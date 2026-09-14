@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { LEAD_STATUSES, STATUS_LABELS as LEAD_STATUS_LABELS } from "@/lib/leadStatus";
 import {
   AreaChart, Area, CartesianGrid, XAxis, YAxis,
   Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
@@ -2254,13 +2255,78 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
   // "out" -> left this team             (previousTeam = this team)
   const [direction, setDirection] = useState<"in" | "out">("in");
 
-  const { data: result, isLoading } = useLeads(
-    direction === "in"
-      ? { team: teamId, transferredIn: "true", limit: 50 }
-      : { previousTeam: teamId, limit: 50 },
-  );
+  const [search, setSearch]     = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [status, setStatus]     = useState<string>("all");
+  const [page, setPage]         = useState(1);
+  const LIMIT = 20;
+
+  // Debounce the search box so typing does not fire a request per keystroke
+  useEffect(() => {
+    const t = setTimeout(() => { setDebounced(search); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Any filter change starts again from page 1
+  useEffect(() => { setPage(1); }, [direction, status]);
+
+  const { data: result, isLoading, isFetching } = useLeads({
+    ...(direction === "in"
+      ? { team: teamId, transferredIn: "true" }
+      : { previousTeam: teamId }),
+    ...(debounced ? { search: debounced } : {}),
+    ...(status !== "all" ? { status } : {}),
+    page,
+    limit: LIMIT,
+  });
   const leads = result?.data ?? [];
   const total = result?.pagination?.total ?? leads.length;
+  const pages = result?.pagination?.totalPages ?? 1;
+
+  const controls = (
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="relative flex-1 min-w-[180px] max-w-xs">
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name, email, phone…"
+          className="h-9 pl-8 text-sm"
+        />
+      </div>
+      <Select value={status} onValueChange={setStatus}>
+        <SelectTrigger className="h-9 w-[150px] text-sm">
+          <SelectValue placeholder="All Status" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectItem value="all">All Status</SelectItem>
+          {LEAD_STATUSES.map((st) => (
+            <SelectItem key={st} value={st}>{LEAD_STATUS_LABELS[st]}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {(search || status !== "all") && (
+        <button
+          type="button"
+          onClick={() => { setSearch(""); setStatus("all"); setPage(1); }}
+          className="text-xs text-muted-foreground underline hover:text-foreground"
+        >
+          Clear
+        </button>
+      )}
+      {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+    </div>
+  );
+
+  const pagination = pages > 1 ? (
+    <div className="flex items-center justify-center gap-2 pt-4">
+      <Button variant="outline" size="sm" className="h-8" disabled={page <= 1}
+        onClick={() => setPage((p) => p - 1)}>Previous</Button>
+      <span className="text-xs text-muted-foreground">Page {page} of {pages}</span>
+      <Button variant="outline" size="sm" className="h-8" disabled={page >= pages}
+        onClick={() => setPage((p) => p + 1)}>Next</Button>
+    </div>
+  ) : null;
 
   const toggle = (
     <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-0.5 w-fit mb-4">
@@ -2288,6 +2354,7 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
     return (
       <div>
         {toggle}
+        {controls}
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />
@@ -2301,6 +2368,7 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
     return (
       <div>
       {toggle}
+      {controls}
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/60 mb-3">
           <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2323,9 +2391,9 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
   return (
     <div className="space-y-2">
       {toggle}
+      {controls}
       <p className="text-sm text-muted-foreground mb-3">
         {total} lead{total !== 1 ? "s" : ""} transferred {direction === "in" ? "into" : "out from"} this team
-        {leads.length < total ? ` (showing first ${leads.length})` : ""}
       </p>
       <motion.div
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.04 } } }}
@@ -2366,6 +2434,7 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
           );
         })}
       </motion.div>
+      {pagination}
     </div>
   );
 }
@@ -3850,7 +3919,10 @@ function TeamDetailPageContent() {
         </div>
 
         {/* Tab content */}
-        <AnimatePresence mode="wait">
+        {/* Not mode="wait": this holds many sibling conditional children rather than
+            one keyed child. With "wait" it can stall on an exiting child and never
+            mount the incoming tab, which left Transferred permanently blank. */}
+        <AnimatePresence>
           {activeTab === "dashboard" && (
             <motion.div
               key="dashboard"
