@@ -145,7 +145,7 @@ import { AiChatPanel } from "@/components/leads/AiChatPanel";
 import type { Team, TeamMemberStat, TeamUpdateItem, TeamMessageItem, TeamActivityItem } from "@/types/team";
 import type { Lead, LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
-import { useLeads } from "@/hooks/useLeads";
+import { useLeads, useLeadSources } from "@/hooks/useLeads";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2285,11 +2285,29 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
   // "out" -> left this team             (previousTeam = this team)
   const [direction, setDirection] = useState<"in" | "out">("in");
 
-  const [search, setSearch]     = useState("");
+  const [search, setSearch]       = useState("");
   const [debounced, setDebounced] = useState("");
-  const [status, setStatus]     = useState<string>("all");
-  const [page, setPage]         = useState(1);
+  const [status, setStatus]       = useState<string>("all");
+  const [assignee, setAssignee]   = useState<string>("all");
+  const [source, setSource]       = useState<string>("all");
+  const [dateFrom, setDateFrom]     = useState("");
+  const [dateTo, setDateTo]         = useState("");
+  const [tFrom, setTFrom]           = useState("");
+  const [tTo, setTTo]               = useState("");
+  const [noAssignee, setNoAssignee] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage]           = useState(1);
   const LIMIT = 20;
+
+  const { data: leadSources = [] } = useLeadSources();
+  const { data: teamForFilter }    = useTeam(teamId);
+  const filterMembers = useMemo(() => {
+    if (!teamForFilter) return [] as { _id: string; name: string }[];
+    const all = [...(teamForFilter.leaders ?? []), ...(teamForFilter.members ?? [])]
+      .map((u) => ({ _id: (u as { _id: string })._id, name: (u as { name: string }).name }));
+    const seen = new Set<string>();
+    return all.filter((u) => (seen.has(u._id) ? false : (seen.add(u._id), true)));
+  }, [teamForFilter]);
 
   // Debounce the search box so typing does not fire a request per keystroke
   useEffect(() => {
@@ -2298,7 +2316,7 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
   }, [search]);
 
   // Any filter change starts again from page 1
-  useEffect(() => { setPage(1); }, [direction, status]);
+  useEffect(() => { setPage(1); }, [direction, status, assignee, source, dateFrom, dateTo, tFrom, tTo, noAssignee]);
 
   const { data: result, isLoading, isFetching } = useLeads({
     ...(direction === "in"
@@ -2306,45 +2324,169 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
       : { previousTeam: teamId }),
     ...(debounced ? { search: debounced } : {}),
     ...(status !== "all" ? { status } : {}),
+    ...(assignee !== "all" ? { assignedTo: assignee } : {}),
+    ...(source !== "all" ? { source } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
+    ...(tFrom ? { transferFrom: tFrom } : {}),
+    ...(tTo ? { transferTo: tTo } : {}),
+    ...(noAssignee ? { noAssignee: "true" } : {}),
     page,
     limit: LIMIT,
   });
+
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const isTodayActive    = dateFrom === todayISO() && dateTo === todayISO();
+  const isTTodayActive   = tFrom === todayISO() && tTo === todayISO();
+  const activeCount = [
+    !!debounced, status !== "all", assignee !== "all", source !== "all",
+    !!dateFrom, !!dateTo, !!tFrom, !!tTo, noAssignee,
+  ].filter(Boolean).length;
+  const clearAll = () => {
+    setSearch(""); setStatus("all"); setAssignee("all"); setSource("all");
+    setDateFrom(""); setDateTo(""); setTFrom(""); setTTo(""); setNoAssignee(false); setPage(1);
+  };
   const leads = result?.data ?? [];
   const total = result?.pagination?.total ?? leads.length;
   const pages = result?.pagination?.totalPages ?? 1;
 
   const controls = (
-    <div className="flex flex-wrap items-center gap-2 mb-4">
-      <div className="relative flex-1 min-w-[180px] max-w-xs">
-        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, email, phone…"
-          className="h-9 pl-8 text-sm"
+    <div className="space-y-2 mb-4">
+      {/* Row 1 — search + quick toggles */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, email, phone…"
+            className="h-9 pl-8 text-sm"
+          />
+        </div>
+
+        <TodayLeadsButton
+          active={isTodayActive}
+          onClick={() => { if (isTodayActive) { setDateFrom(""); setDateTo(""); } else { setDateFrom(todayISO()); setDateTo(todayISO()); } }}
         />
-      </div>
-      <Select value={status} onValueChange={setStatus}>
-        <SelectTrigger className="h-9 w-[150px] text-sm">
-          <SelectValue placeholder="All Status" />
-        </SelectTrigger>
-        <SelectContent className="max-h-72">
-          <SelectItem value="all">All Status</SelectItem>
-          {LEAD_STATUSES.map((st) => (
-            <SelectItem key={st} value={st}>{LEAD_STATUS_LABELS[st]}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {(search || status !== "all") && (
-        <button
-          type="button"
-          onClick={() => { setSearch(""); setStatus("all"); setPage(1); }}
-          className="text-xs text-muted-foreground underline hover:text-foreground"
+        <TodayTransferredButton
+          active={isTTodayActive}
+          onClick={() => { if (isTTodayActive) { setTFrom(""); setTTo(""); } else { setTFrom(todayISO()); setTTo(todayISO()); } }}
+        />
+        <Button
+          variant={noAssignee ? "secondary" : "outline"}
+          size="sm"
+          className="h-8 gap-1.5"
+          title="Leads with no member assigned"
+          onClick={() => setNoAssignee((v) => !v)}
         >
-          Clear
-        </button>
-      )}
-      {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          <UserCheck className="h-3.5 w-3.5" />
+          Unassigned
+        </Button>
+
+        <Button
+          variant={showFilters ? "secondary" : "outline"}
+          size="sm"
+          className="h-8 gap-1.5 relative"
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+          {activeCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              {activeCount}
+            </span>
+          )}
+        </Button>
+
+        {activeCount > 0 && (
+          <button type="button" onClick={clearAll} className="text-xs text-muted-foreground underline hover:text-foreground">
+            Clear all
+          </button>
+        )}
+        {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+      </div>
+
+      {/* Row 2 — the full filter panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-xl border border-border bg-muted/20 p-3">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Status</p>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="all">All Status</SelectItem>
+                    {LEAD_STATUSES.map((st) => (
+                      <SelectItem key={st} value={st}>{LEAD_STATUS_LABELS[st]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Assigned To</p>
+                <Select value={assignee} onValueChange={setAssignee}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="All Members" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="all">All Members</SelectItem>
+                    {filterMembers.map((m) => (
+                      <SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Source</p>
+                <Select value={source} onValueChange={setSource}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="All Sources" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="all">All Sources</SelectItem>
+                    {leadSources.map((sc) => (
+                      <SelectItem key={sc.value} value={sc.value} className="capitalize">
+                        {sc.label} ({sc.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" /> Created
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Input type="date" value={dateFrom} max={dateTo || undefined}
+                    onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm px-2 flex-1 [color-scheme:dark]" />
+                  <span className="text-xs text-muted-foreground shrink-0">to</span>
+                  <Input type="date" value={dateTo} min={dateFrom || undefined}
+                    onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm px-2 flex-1 [color-scheme:dark]" />
+                </div>
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <ArrowRightLeft className="h-3 w-3" /> Transfer Date
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Input type="date" value={tFrom} max={tTo || undefined}
+                    onChange={(e) => setTFrom(e.target.value)} className="h-9 text-sm px-2 flex-1 [color-scheme:dark]" />
+                  <span className="text-xs text-muted-foreground shrink-0">to</span>
+                  <Input type="date" value={tTo} min={tFrom || undefined}
+                    onChange={(e) => setTTo(e.target.value)} className="h-9 text-sm px-2 flex-1 [color-scheme:dark]" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
