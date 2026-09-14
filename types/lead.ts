@@ -80,6 +80,8 @@ export interface Lead {
   assignedAt?: string | null;
   team?: Team | string | null;
   previousTeam?: Team | string | null;
+  /** When the lead last moved between teams */
+  transferredAt?: string | null;
   sharedWithTeams?: (Team | string)[];
   reporter?: User | string | null;
   notes: LeadNote[];

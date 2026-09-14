@@ -1266,6 +1266,9 @@ function LeadsPageContent() {
                         <th className="px-4 py-3 text-left hidden lg:table-cell">Team</th>
                         <th className="px-4 py-3 text-left hidden lg:table-cell">Assigned To</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Assigned At</th>
+                        {canSeeTransferFilter && (
+                          <th className="px-4 py-3 text-left hidden xl:table-cell">Transferred</th>
+                        )}
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Tags</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Reporter</th>
                         <th className="px-4 py-3 text-left hidden xl:table-cell">Created</th>
@@ -1424,6 +1427,22 @@ function LeadsPageContent() {
                                 <span className="text-xs text-muted-foreground/40">—</span>
                               )}
                             </td>
+                            {canSeeTransferFilter && (
+                              <td className="px-4 py-4 hidden xl:table-cell">
+                                {lead.transferredAt ? (
+                                  <div className="space-y-0.5">
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(lead.transferredAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" })}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground/60">
+                                      {new Date(lead.transferredAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true })} IST
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/40">—</span>
+                                )}
+                              </td>
+                            )}
                             <td className="px-4 py-4 hidden xl:table-cell">
                               {lead.tags && lead.tags.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">

@@ -612,6 +612,9 @@ export default function UserDetailPage() {
                       <th className="px-6 py-3 text-left hidden md:table-cell">Source</th>
                       <th className="px-6 py-3 text-center hidden lg:table-cell">Notes</th>
                       <th className="px-6 py-3 text-left hidden lg:table-cell">Created</th>
+                      {canSeeTransferFilter && (
+                        <th className="px-6 py-3 text-left hidden lg:table-cell">Transferred</th>
+                      )}
                       <th className="px-6 py-3 text-center">View</th>
                     </tr>
                   </thead>
@@ -667,6 +670,17 @@ export default function UserDetailPage() {
                               {formatDate(lead.createdAt)}
                             </span>
                           </td>
+                              {canSeeTransferFilter && (
+                                <td className="px-6 py-4 hidden lg:table-cell">
+                                  {lead.transferredAt ? (
+                                    <span className="text-sm text-muted-foreground">
+                                      {new Date(lead.transferredAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" })}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground/40">—</span>
+                                  )}
+                                </td>
+                              )}
                           <td className="px-6 py-4 text-center">
                             <Link href={`/leads/${lead._id}`}>
                               <Button

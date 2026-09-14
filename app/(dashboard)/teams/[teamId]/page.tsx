@@ -1715,6 +1715,9 @@ function LeadsTab({
                     <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden md:table-cell">Assigned To</th>
                     <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden lg:table-cell">Source</th>
                     <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden lg:table-cell">Date</th>
+                    {canSeeTransferFilter && (
+                      <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-left hidden lg:table-cell">Transferred</th>
+                    )}
                     <th className="px-3 py-2.5 sm:px-4 sm:py-3 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -1740,6 +1743,17 @@ function LeadsTab({
                             aria-label="Select lead"
                           />
                         </td>
+                                {canSeeTransferFilter && (
+                                  <td className="px-3 py-2.5 sm:px-4 sm:py-4 hidden lg:table-cell">
+                                    {lead.transferredAt ? (
+                                      <span className="text-sm text-muted-foreground">
+                                        {new Date(lead.transferredAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" })}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground/40">—</span>
+                                    )}
+                                  </td>
+                                )}
                         <td className="px-3 py-2.5 sm:px-4 sm:py-3">
                           <div>
                             <p className="text-sm font-medium text-foreground">{lead.name}</p>
