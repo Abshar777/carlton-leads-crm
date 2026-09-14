@@ -13,6 +13,7 @@
  */
 
 import * as React from "react";
+import { X } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   Dialog,
@@ -38,14 +39,26 @@ interface ResponsiveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  /**
+   * false → the dialog can only be closed with its X button. Blocks the mobile
+   * swipe-down gesture and the desktop click-outside / Escape, so a half-filled
+   * form is not lost by a stray tap. Pair with `showCloseButton` on the content,
+   * since the mobile drawer has no X of its own.
+   */
+  dismissible?: boolean;
 }
 
-export function ResponsiveDialog({ open, onOpenChange, children }: ResponsiveDialogProps) {
+export function ResponsiveDialog({
+  open,
+  onOpenChange,
+  children,
+  dismissible = true,
+}: ResponsiveDialogProps) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={onOpenChange} dismissible={dismissible}>
         {children}
       </Drawer>
     );
@@ -62,6 +75,13 @@ export function ResponsiveDialog({ open, onOpenChange, children }: ResponsiveDia
 
 interface ResponsiveDialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
+  /** Mobile only — render an X in the corner. The drawer has none by default. */
+  onRequestClose?: () => void;
+  /** Radix DialogContent handlers, forwarded on desktop. Call preventDefault()
+   *  on these to stop a click-outside or Escape from closing the dialog. */
+  onInteractOutside?: (e: Event) => void;
+  onPointerDownOutside?: (e: Event) => void;
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
   /** Extra className forwarded to DialogContent only (desktop) */
   className?: string;
   /** Max-width + any extra classes applied on desktop only */
@@ -75,6 +95,7 @@ export function ResponsiveDialogContent({
   className,
   desktopClassName,
   height="auto",
+  onRequestClose,
   ...props
 }: ResponsiveDialogContentProps) {
   const isMobile = useIsMobile();
@@ -87,6 +108,16 @@ export function ResponsiveDialogContent({
        * manage all scrolling.
        */
       <DrawerContent className="flex flex-col px-0">
+        {onRequestClose && (
+          <button
+            type="button"
+            onClick={onRequestClose}
+            aria-label="Close"
+            className="absolute right-3 top-3 z-20 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
         <ScrollArea
           className="w-full"
           style={{

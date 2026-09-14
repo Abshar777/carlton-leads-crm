@@ -71,6 +71,30 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
     defaultValues: { name: "", email: "", phone: "", source: "", course: "", team: "", assignedTo: "" },
   });
 
+  // ── Draft persistence ───────────────────────────────────────────────────────
+  // A half-typed new lead survives an accidental close or a page reload. Only new
+  // leads get a draft — an edit already has its values on the server, and caching
+  // those would risk showing stale data over a lead someone else changed.
+  const DRAFT_KEY = "carlton:lead-draft:new";
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch {}
+  };
+
+  // Watch every field so the draft tracks what is on screen
+  const watched = useWatch({ control }) as Partial<CreateLeadFormValues> | undefined;
+
+  useEffect(() => {
+    if (!open || isEditing || !watched) return;
+    const hasContent = Object.values(watched).some((v) => typeof v === "string" && v.trim() !== "");
+    try {
+      if (hasContent) localStorage.setItem(DRAFT_KEY, JSON.stringify(watched));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // private mode / storage disabled — drafts are a convenience, never required
+    }
+  }, [watched, open, isEditing]);
+
   // Watch team field to fetch its members
   const selectedTeamId = useWatch({ control, name: "team" as never }) as string | undefined;
   const { data: selectedTeam } = useTeam(selectedTeamId ?? "");
@@ -110,7 +134,13 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
         );
         setSelectedTagIds(ids);
       } else {
-        reset({ name: "", email: "", phone: "", source: "", course: "", team: "", assignedTo: "" });
+        const blank = { name: "", email: "", phone: "", source: "", course: "", team: "", assignedTo: "" };
+        let draft: Partial<CreateLeadFormValues> | null = null;
+        try {
+          const raw = localStorage.getItem(DRAFT_KEY);
+          if (raw) draft = JSON.parse(raw) as Partial<CreateLeadFormValues>;
+        } catch { draft = null; }
+        reset({ ...blank, ...(draft ?? {}) } as never);
         setSelectedTagIds([]);
       }
     }
@@ -144,6 +174,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
           if (selectedTagIds.length > 0 && newLead?._id) {
             updateLeadTags({ leadId: newLead._id, tagIds: selectedTagIds });
           }
+          clearDraft();   // saved for real — the draft has done its job
           onOpenChange(false);
         },
       });
@@ -151,8 +182,13 @@ export function LeadDialog({ open, onOpenChange, lead, mode }: LeadDialogProps) 
   };
 
   return (
-    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent desktopClassName="max-w-lg">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange} dismissible={false}>
+      <ResponsiveDialogContent
+        desktopClassName="max-w-lg"
+        onRequestClose={() => onOpenChange(false)}
+        onInteractOutside={(e: Event) => e.preventDefault()}
+        onEscapeKeyDown={(e: KeyboardEvent) => e.preventDefault()}
+      >
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>{isEditing ? "Edit Lead" : "Create New Lead"}</ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
