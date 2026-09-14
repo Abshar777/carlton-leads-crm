@@ -2578,6 +2578,9 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
           const sourceTeam = typeof lead.previousTeam === "object" && lead.previousTeam
             ? (lead.previousTeam as { name?: string }).name ?? "–"
             : "–";
+          const owner = typeof lead.assignedTo === "object" && lead.assignedTo
+            ? (lead.assignedTo as { name?: string }).name ?? "Unassigned"
+            : "Unassigned";
           return (
             <motion.div
               key={lead._id}
@@ -2591,6 +2594,10 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
               <div className="flex items-center gap-2 shrink-0">
                 <Badge variant="outline" className="text-xs hidden sm:flex">
                   {direction === "in" ? `From: ${sourceTeam}` : `Now in: ${currentTeam}`}
+                </Badge>
+                <Badge variant="outline" className="text-xs hidden md:flex gap-1">
+                  <UserCheck className="h-3 w-3 text-muted-foreground" />
+                  {owner}
                 </Badge>
                 <StatusBadge status={lead.status} />
                 <Button
