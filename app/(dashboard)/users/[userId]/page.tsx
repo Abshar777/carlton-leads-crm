@@ -27,6 +27,8 @@ import type { LeadStatus } from "@/types/lead";
 import type { User } from "@/types";
 import Link from "next/link";
 import { useCanSeeTransferFilter } from "@/hooks/useClosingTeam";
+import { WorkScheduleCard } from "@/components/users/WorkScheduleCard";
+import { useAuthStore } from "@/lib/store/authStore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -129,6 +131,10 @@ export default function UserDetailPage() {
   }
 
   const { data: user, isLoading: userLoading } = useUser(userId);
+  // Only a Super Admin may edit a work schedule; everyone else sees it read-only
+  const { user: viewer } = useAuthStore();
+  const isSuperAdminViewer =
+    (viewer as { role?: { roleName?: string } } | null)?.role?.roleName === "Super Admin";
   const { data: statsData, isLoading: statsLoading } = useUserLeadStats(userId);
   const {
     data: leadsData,
@@ -391,6 +397,13 @@ export default function UserDetailPage() {
       </motion.div>
 
       {/* Stats Cards — click to filter leads below */}
+      <WorkScheduleCard
+        userId={userId}
+        userName={user.name}
+        schedule={user.workSchedule}
+        canEdit={isSuperAdminViewer}
+      />
+
       <motion.div
         variants={containerVariants}
         initial="hidden"

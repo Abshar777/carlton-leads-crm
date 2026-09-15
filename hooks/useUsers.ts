@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/axios";
-import type { ApiResponse, AuthUser, User } from "@/types";
+import type { ApiResponse, AuthUser, User, WorkSchedule } from "@/types";
 import type { CreateUserFormValues, UpdateUserFormValues } from "@/lib/validations/userSchema";
 import { useAuthStore } from "@/lib/store/authStore";
 
@@ -112,6 +112,26 @@ export const useImpersonateUser = () => {
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         "Failed to impersonate user";
       toast.error(msg);
+    },
+  });
+};
+
+export const useUpdateWorkSchedule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, workSchedule }: { id: string; workSchedule: WorkSchedule | null }) => {
+      const res = await api.put<ApiResponse<User>>(`/users/${id}/work-schedule`, { workSchedule });
+      return res.data.data!;
+    },
+    onSuccess: (user) => {
+      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      queryClient.setQueryData([...USERS_KEY, user._id], user);
+      toast.success("Work schedule saved");
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
+      const detail = Object.values(e.response?.data?.errors ?? {}).flat()[0];
+      toast.error(detail ?? e.response?.data?.message ?? "Failed to save work schedule");
     },
   });
 };

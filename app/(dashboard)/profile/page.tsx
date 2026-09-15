@@ -27,6 +27,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import type { LeadStatus } from "@/types/lead";
 import Link from "next/link";
 import { useCanSeeTransferFilter } from "@/hooks/useClosingTeam";
+import { WorkScheduleCard } from "@/components/users/WorkScheduleCard";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -260,6 +261,15 @@ export default function ProfilePage() {
       </motion.div>
 
       {/* Stat Cards — click to filter leads */}
+      {user.workSchedule && (
+        <WorkScheduleCard
+          userId={userId}
+          userName={user.name}
+          schedule={user.workSchedule}
+          canEdit={false}
+        />
+      )}
+
       <motion.div
         variants={containerVariants} initial="hidden" animate="show"
         className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9"

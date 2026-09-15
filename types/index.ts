@@ -60,6 +60,25 @@ export interface Role {
 export type RoleSimple = Pick<Role, "_id" | "roleName" | "description" | "isSystemRole">;
 
 // ─── User ─────────────────────────────────────────────────────────────────────
+/** One day of a work schedule. Times are "HH:mm", read as IST. */
+export interface WorkDay {
+  /** false = weekly off; the other fields are ignored */
+  enabled: boolean;
+  loginTime?: string;
+  breakStart?: string;
+  breakEnd?: string;
+  logoutTime?: string;
+}
+
+export const WORK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export type WorkDayKey = typeof WORK_DAYS[number];
+export const WORK_DAY_LABELS: Record<WorkDayKey, string> = {
+  mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
+  fri: "Friday", sat: "Saturday", sun: "Sunday",
+};
+
+export type WorkSchedule = Record<WorkDayKey, WorkDay>;
+
 export interface User {
   _id: string;
   name: string;
@@ -69,6 +88,7 @@ export interface User {
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
+  workSchedule?: WorkSchedule | null;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
