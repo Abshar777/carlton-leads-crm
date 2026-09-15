@@ -399,7 +399,6 @@ export default function UserDetailPage() {
       {/* Stats Cards — click to filter leads below */}
       <WorkScheduleCard
         userId={userId}
-        userName={user.name}
         schedule={user.workSchedule}
         canEdit={isSuperAdminViewer}
       />

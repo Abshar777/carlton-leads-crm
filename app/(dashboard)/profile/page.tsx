@@ -261,13 +261,12 @@ export default function ProfilePage() {
       </motion.div>
 
       {/* Stat Cards — click to filter leads */}
-      {user.workSchedule && (
+      {(
         <WorkScheduleCard
-          userId={userId}
-          userName={user.name}
-          schedule={user.workSchedule}
-          canEdit={false}
-        />
+        userId={userId}
+        schedule={user.workSchedule}
+        canEdit={false}
+      />
       )}
 
       <motion.div

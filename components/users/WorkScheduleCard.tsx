@@ -1,178 +1,126 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CalendarClock, Copy, Save, Trash2, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarClock, Clock, Coffee, Timer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useUpdateWorkSchedule } from "@/hooks/useUsers";
-import { WORK_DAYS, WORK_DAY_LABELS, type WorkDay, type WorkDayKey, type WorkSchedule } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useWorkSchedules, useAssignWorkSchedule } from "@/hooks/useWorkSchedules";
+import { DAY_KEYS, DAY_LABELS, type WorkSchedule } from "@/types";
 
-const BLANK_DAY: WorkDay = { enabled: false, loginTime: "", breakStart: "", breakEnd: "", logoutTime: "" };
-const blankSchedule = (): WorkSchedule =>
-  WORK_DAYS.reduce((acc, d) => ({ ...acc, [d]: { ...BLANK_DAY } }), {} as WorkSchedule);
+const NONE = "__none__";
+
+const MODE_STYLE: Record<string, string> = {
+  full: "bg-primary text-primary-foreground border-primary",
+  half: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+  off:  "bg-muted/40 text-muted-foreground/60 border-border",
+};
 
 interface Props {
   userId: string;
-  userName: string;
-  schedule?: WorkSchedule | null;
-  /** Super Admin gets the editor; everyone else sees it read-only. */
+  schedule?: WorkSchedule | string | null;
+  /** Super Admin can change the assignment; everyone else sees it read-only. */
   canEdit: boolean;
 }
 
-export function WorkScheduleCard({ userId, userName, schedule, canEdit }: Props) {
-  const [draft, setDraft] = useState<WorkSchedule>(() => ({ ...blankSchedule(), ...(schedule ?? {}) }));
-  const [dirty, setDirty] = useState(false);
-  const { mutate: save, isPending } = useUpdateWorkSchedule();
+export function WorkScheduleCard({ userId, schedule, canEdit }: Props) {
+  const { data: schedules = [] } = useWorkSchedules();
+  const { mutate: assign, isPending } = useAssignWorkSchedule();
 
-  // Re-sync when the user loads or is switched
-  useEffect(() => {
-    setDraft({ ...blankSchedule(), ...(schedule ?? {}) });
-    setDirty(false);
-  }, [schedule, userId]);
-
-  const setDay = (day: WorkDayKey, patch: Partial<WorkDay>) => {
-    setDraft((d) => ({ ...d, [day]: { ...d[day], ...patch } }));
-    setDirty(true);
-  };
-
-  // 7 days x 4 fields is a lot of typing — copy Monday across the working week
-  const copyMondayToWeekdays = () => {
-    setDraft((d) => {
-      const mon = d.mon;
-      const next = { ...d };
-      (["tue", "wed", "thu", "fri"] as WorkDayKey[]).forEach((k) => { next[k] = { ...mon }; });
-      return next;
-    });
-    setDirty(true);
-  };
-
-  const hasAnySchedule = WORK_DAYS.some((d) => draft[d]?.enabled);
+  // The API populates this, but fall back to an id lookup so the card still
+  // renders if it ever arrives unpopulated.
+  const current: WorkSchedule | null =
+    schedule && typeof schedule === "object"
+      ? (schedule as WorkSchedule)
+      : schedules.find((s) => s._id === schedule) ?? null;
 
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-primary" />
             Work Schedule
-            <span className="text-xs font-normal text-muted-foreground">
-              {hasAnySchedule ? "" : "— not set"}
-            </span>
+            {!current && <span className="text-xs font-normal text-muted-foreground">— not set</span>}
           </CardTitle>
 
           {canEdit && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={copyMondayToWeekdays}>
-                <Copy className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Copy Mon → Fri</span>
-              </Button>
-              {hasAnySchedule && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-destructive hover:text-destructive"
-                  onClick={() => save({ id: userId, workSchedule: null })}
-                  disabled={isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Clear</span>
-                </Button>
-              )}
-              <Button
-                size="sm"
-                className="h-8 gap-1.5"
-                disabled={!dirty || isPending}
-                onClick={() => save({ id: userId, workSchedule: draft }, { onSuccess: () => setDirty(false) })}
-              >
-                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                Save
-              </Button>
-            </div>
+            <Select
+              value={current?._id ?? NONE}
+              onValueChange={(v) => assign({ userId, scheduleId: v === NONE ? null : v })}
+              disabled={isPending}
+            >
+              <SelectTrigger className="h-9 w-[220px] text-sm">
+                <SelectValue placeholder="No schedule" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value={NONE}>No schedule</SelectItem>
+                {schedules.map((s) => (
+                  <SelectItem key={s._id} value={s._id}>
+                    {s.name} · {s.loginTime}–{s.logoutTime}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {canEdit
-            ? `Optional. Times are IST. Turn a day off for ${userName.split(" ")[0]}'s weekly off.`
-            : "Times are shown in IST."}
-        </p>
+        {canEdit && (
+          <p className="text-xs text-muted-foreground">
+            Schedules are created under Settings → Work Schedules. Times are IST.
+          </p>
+        )}
       </CardHeader>
 
-      <CardContent className="space-y-2">
-        {!canEdit && !hasAnySchedule && (
-          <p className="py-6 text-center text-sm text-muted-foreground">No work schedule set.</p>
-        )}
-
-        {(canEdit || hasAnySchedule) && WORK_DAYS.map((day, i) => {
-          const d = draft[day] ?? BLANK_DAY;
-          if (!canEdit && !d.enabled) return null;
-          return (
-            <motion.div
-              key={day}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
-            >
-              <div className="flex w-32 shrink-0 items-center gap-2">
-                {canEdit && (
-                  <Switch
-                    checked={d.enabled}
-                    onCheckedChange={(v) => setDay(day, { enabled: v })}
-                  />
-                )}
-                <span className={`text-sm font-medium ${d.enabled ? "text-foreground" : "text-muted-foreground"}`}>
-                  {WORK_DAY_LABELS[day]}
+      <CardContent>
+        {!current ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No work schedule assigned.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium">{current.loginTime}</span>
+                <span className="text-muted-foreground">→</span>
+                <span className="font-medium">{current.logoutTime}</span>
+              </span>
+              {current.breakStart && current.breakEnd && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Coffee className="h-3.5 w-3.5" />
+                  Break {current.breakStart}–{current.breakEnd}
                 </span>
-              </div>
+              )}
+              {current.graceMinutes > 0 && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Timer className="h-3.5 w-3.5" />
+                  {current.graceMinutes} min grace
+                </span>
+              )}
+            </div>
 
-              <AnimatePresence mode="popLayout">
-                {d.enabled ? (
-                  <motion.div
-                    key="times"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex flex-wrap items-center gap-2"
-                  >
-                    {([
-                      ["loginTime",  "Login"],
-                      ["breakStart", "Break from"],
-                      ["breakEnd",   "Break to"],
-                      ["logoutTime", "Logout"],
-                    ] as [keyof WorkDay, string][]).map(([field, label]) => (
-                      <label key={String(field)} className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-muted-foreground w-[68px] sm:w-auto">{label}</span>
-                        {canEdit ? (
-                          <Input
-                            type="time"
-                            value={(d[field] as string) ?? ""}
-                            onChange={(e) => setDay(day, { [field]: e.target.value } as Partial<WorkDay>)}
-                            className="h-8 w-[104px] text-sm px-2 [color-scheme:dark]"
-                          />
-                        ) : (
-                          <span className="text-sm font-mono">{(d[field] as string) || "—"}</span>
-                        )}
-                      </label>
-                    ))}
-                  </motion.div>
-                ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {DAY_KEYS.map((d, i) => {
+                const mode = current.workDays?.[d] ?? "off";
+                return (
                   <motion.span
-                    key="off"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-xs text-muted-foreground/60"
+                    key={d}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={`flex min-w-[54px] flex-col items-center rounded-lg border px-2 py-1 ${MODE_STYLE[mode]}`}
                   >
-                    Weekly off
+                    <span className="text-xs font-semibold">{DAY_LABELS[d]}</span>
+                    <span className="text-[10px] uppercase tracking-wide opacity-80">{mode}</span>
                   </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          );
-        })}
+                );
+              })}
+            </div>
+
+            {current.description && (
+              <p className="text-xs text-muted-foreground">{current.description}</p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

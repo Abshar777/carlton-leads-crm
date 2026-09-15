@@ -6,8 +6,7 @@ import {
   Database, RefreshCw, RotateCcw, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Clock, AlertTriangle, CloudUpload,
   HardDrive, Loader2, MessageCircle, Wifi, WifiOff, QrCode,
-  Smartphone, Tag, GitFork,
-} from "lucide-react";
+  Smartphone, Tag, GitFork, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,7 @@ import { WA_STATUS_KEY } from "@/hooks/useWhatsApp";
 import { TagManager } from "@/components/tags/TagManager";
 import { Switch } from "@/components/ui/switch";
 import { useAppSettings, useUpdateAppSettings } from "@/hooks/useAppSettings";
+import { WorkSchedulesTab } from "@/components/settings/WorkSchedulesTab";
 
 function TagManagerInline() {
   return (
@@ -433,7 +433,7 @@ export default function SettingsPage() {
   const { user } = useAuthStore();
   const isSuperAdmin = (user as { role?: { roleName?: string } })?.role?.roleName === "Super Admin";
 
-  const [activeTab, setActiveTab] = useState<"whatsapp" | "backup" | "tags" | "workflow">("whatsapp");
+  const [activeTab, setActiveTab] = useState<"whatsapp" | "backup" | "tags" | "workflow" | "schedules">("whatsapp");
 
   const { data: manifest, isLoading, refetch } = useBackupManifest();
   const { mutate: triggerBackup, isPending: triggering } = useTriggerBackup();
@@ -469,6 +469,7 @@ export default function SettingsPage() {
           { key: "backup",   label: "Backup & Restore", icon: Database },
           { key: "tags",     label: "Tags", icon: Tag },
           { key: "workflow", label: "Workflow", icon: GitFork },
+          { key: "schedules", label: "Work Schedules", icon: CalendarClock },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -487,6 +488,11 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <AnimatePresence>
+        {activeTab === "schedules" && (
+          <motion.div key="schedules" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <WorkSchedulesTab />
+          </motion.div>
+        )}
         {activeTab === "workflow" && (
           <motion.div key="workflow" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <WorkflowTab />

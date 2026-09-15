@@ -60,24 +60,35 @@ export interface Role {
 export type RoleSimple = Pick<Role, "_id" | "roleName" | "description" | "isSystemRole">;
 
 // ─── User ─────────────────────────────────────────────────────────────────────
-/** One day of a work schedule. Times are "HH:mm", read as IST. */
-export interface WorkDay {
-  /** false = weekly off; the other fields are ignored */
-  enabled: boolean;
-  loginTime?: string;
-  breakStart?: string;
-  breakEnd?: string;
-  logoutTime?: string;
-}
+/** Days in display order, Sunday first, matching the schedule editor. */
+export const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+export type DayKey = typeof DAY_KEYS[number];
 
-export const WORK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-export type WorkDayKey = typeof WORK_DAYS[number];
-export const WORK_DAY_LABELS: Record<WorkDayKey, string> = {
-  mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
-  fri: "Friday", sat: "Saturday", sun: "Sunday",
+/** off = weekly off · full = full day · half = half day */
+export type DayMode = "off" | "full" | "half";
+export const DAY_MODES: DayMode[] = ["off", "full", "half"];
+
+export const DAY_LABELS: Record<DayKey, string> = {
+  sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat",
 };
 
-export type WorkSchedule = Record<WorkDayKey, WorkDay>;
+/** A named, reusable work schedule managed under Settings. */
+export interface WorkSchedule {
+  _id: string;
+  name: string;
+  description?: string;
+  loginTime: string;
+  logoutTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  /** When set, "half" days end here instead of logoutTime. */
+  halfDayLogoutTime?: string;
+  workDays: Record<DayKey, DayMode>;
+  graceMinutes: number;
+  isActive: boolean;
+  /** How many users this schedule is assigned to — returned by the list endpoint. */
+  assignedCount?: number;
+}
 
 export interface User {
   _id: string;
@@ -88,7 +99,7 @@ export interface User {
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
-  workSchedule?: WorkSchedule | null;
+  workSchedule?: WorkSchedule | string | null;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
