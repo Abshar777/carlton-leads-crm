@@ -10,6 +10,7 @@ import { RecentPageTracker } from "@/components/shared/CommandPalette";
 import { WAUnknownContactToast } from "@/components/shared/WAUnknownContactToast";
 import { ImpersonationBanner } from "@/components/shared/ImpersonationBanner";
 import { TrapProvider } from "@/components/traps/TrapProvider";
+import { CallPromptDialog } from "@/components/calls/CallPromptDialog";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasPermission } = useAuthStore();
@@ -51,6 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <TrapProvider>
       <div className="flex h-dvh flex-col overflow-hidden bg-slate-200 dark:bg-background pwa-safe-top">
         <RecentPageTracker />
+        <CallPromptDialog />
         <WAUnknownContactToast />
         <ImpersonationBanner />
         <div className="flex flex-1 overflow-hidden">
