@@ -73,3 +73,63 @@ export function useEndBreak() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: KEY }); toast.success("Break ended"); },
   });
 }
+
+// ── Admin overview (Super Admin only) ─────────────────────────────────────────
+
+export interface CallOverviewUserRef { _id: string; name: string; email?: string }
+export interface CallOverviewRow {
+  _id: string;
+  user: CallOverviewUserRef;
+  lead?: { _id: string; name: string; phone?: string; status?: string } | null;
+  promptedAt: string;
+  respondedAt?: string | null;
+  action?: string | null;
+  rejectReason?: string;
+  holdSeconds?: number;
+  breakMinutes?: number;
+  breakEndsAt?: string | null;
+}
+export interface CallOverviewPerUser {
+  _id: string; name?: string;
+  total: number; called: number; updated: number; rejected: number; breaks: number; expired: number;
+  avgHold?: number | null; maxHold?: number | null;
+}
+export interface CallOverview {
+  counts: Record<string, number>;
+  rejections: CallOverviewRow[];
+  flaggedHolds: CallOverviewRow[];
+  activeBreaks: CallOverviewRow[];
+  perUser: CallOverviewPerUser[];
+}
+
+export function useCallOverview(filters: { dateFrom?: string; dateTo?: string; userId?: string } = {}) {
+  const qc = useQueryClient();
+  const { accessToken, isAuthenticated } = useAuthStore();
+
+  const query = useQuery<CallOverview>({
+    queryKey: ["call-automation", "overview", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo)   params.set("dateTo", filters.dateTo);
+      if (filters.userId)   params.set("userId", filters.userId);
+      const res = await api.get<ApiResponse<CallOverview>>(`/call-automation/overview?${params}`);
+      return res.data.data!;
+    },
+    enabled: isAuthenticated,
+    // Breaks tick down and holds grow, so keep the page close to live.
+    refetchInterval: 30_000,
+  });
+
+  // A prompt anywhere in the system changes what this page shows.
+  useEffect(() => {
+    if (!accessToken || !isAuthenticated) return;
+    const socket = getSocket(accessToken);
+    const refresh = () => qc.invalidateQueries({ queryKey: ["call-automation", "overview"] });
+    socket.on("call:prompt", refresh);
+    socket.on("call:activity", refresh);
+    return () => { socket.off("call:prompt", refresh); socket.off("call:activity", refresh); };
+  }, [accessToken, isAuthenticated, qc]);
+
+  return query;
+}

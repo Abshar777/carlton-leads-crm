@@ -6,15 +6,21 @@ const SOCKET_URL = (
 ).replace(/\/api\/v1\/?$/, "");
 
 let socket: Socket | null = null;
+let socketToken: string | null = null;
 
 export function getSocket(token: string): Socket {
-  if (socket && socket.connected) return socket;
+  // Reuse the existing instance whenever the token is unchanged — including
+  // while it is still handshaking. The old check was `socket.connected`, so
+  // every caller that ran during the handshake tore the socket down and built
+  // a new one, orphaning the listeners the earlier callers had just attached.
+  if (socket && socketToken === token) return socket;
 
-  // Disconnect stale instance if token changed
+  // Genuinely stale (different token) — drop it
   if (socket) {
     socket.disconnect();
     socket = null;
   }
+  socketToken = token;
 
   socket = io(SOCKET_URL, {
     auth: { token },
@@ -46,6 +52,7 @@ export function disconnectSocket(): void {
     socket.disconnect();
     socket = null;
   }
+  socketToken = null;
 }
 
 /** Returns the active socket or null. Safe to call on every render — no side effects. */

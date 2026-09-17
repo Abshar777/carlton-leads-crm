@@ -21,6 +21,7 @@ import {
   MessageCircle,
   ListTodo,
   ShieldAlert,
+  PhoneCall,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -56,6 +57,7 @@ export const navItems = [
   { href: "/users", label: "Users", icon: Users, permModule: "users" },
   { href: "/roles", label: "Roles & Permissions", icon: Shield, permModule: "roles" },
   { href: "/settings", label: "Settings", icon: Settings, permModule: "settings" },
+  { href: "/call-automation", label: "Call Automation", icon: PhoneCall, permModule: "call-automation" },
   { href: "/security-alerts", label: "Security Alerts", icon: ShieldAlert, permModule: "security-alerts" },
 ];
 
@@ -109,8 +111,10 @@ function NavLinks({ collapsed = false, onNavigate }: NavLinksProps) {
                 pathname.startsWith(other.href),
             ));
         // Security Alerts only for Super Admin
-        if (href === "/security-alerts" && !isSuperAdmin) return null;
-        const allowed = href === "/security-alerts" ? isSuperAdmin : hasPermission(permModule ?? href.split("/")[1], "view");
+        if ((href === "/security-alerts" || href === "/call-automation") && !isSuperAdmin) return null;
+        const allowed = href === "/security-alerts" || href === "/call-automation"
+          ? isSuperAdmin
+          : hasPermission(permModule ?? href.split("/")[1], "view");
         const badgeCount = href === "/leads" ? newLeadsCount : href === "/reminders" ? reminderCount : href === "/whatsapp" ? waUnreadCount : href === "/security-alerts" ? trapUnreadCount : 0;
         const showBadge = badgeCount > 0;
 
