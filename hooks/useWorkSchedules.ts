@@ -78,3 +78,49 @@ export const useAssignWorkSchedule = () => {
     onError: fail("Failed to assign schedule"),
   });
 };
+
+// ── Membership ────────────────────────────────────────────────────────────────
+
+export interface ScheduleMember {
+  _id: string;
+  name: string;
+  email?: string;
+  isActive?: boolean;
+  role?: { roleName?: string } | null;
+}
+
+/** Who is on a schedule. Only these users get call prompts. */
+export const useScheduleMembers = (scheduleId?: string | null) =>
+  useQuery({
+    queryKey: [...KEY, scheduleId, "members"],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<ScheduleMember[]>>(`/work-schedules/${scheduleId}/members`);
+      return res.data.data ?? [];
+    },
+    enabled: !!scheduleId,
+  });
+
+/** Replace a schedule's member list. Users dropped from it end up with no schedule. */
+export const useSetScheduleMembers = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ scheduleId, userIds }: { scheduleId: string; userIds: string[] }) => {
+      const res = await api.put<ApiResponse<{ added: number; removed: number; members: ScheduleMember[] }>>(
+        `/work-schedules/${scheduleId}/members`,
+        { userIds },
+      );
+      return res.data.data!;
+    },
+    onSuccess: (data) => {
+      // Another schedule may have lost members to this one, so refresh them all
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ["users"] });
+      const bits = [
+        data.added   ? `${data.added} added`     : "",
+        data.removed ? `${data.removed} removed` : "",
+      ].filter(Boolean);
+      toast.success(bits.length ? `Members updated — ${bits.join(", ")}` : "No changes");
+    },
+    onError: fail("Failed to update members"),
+  });
+};
