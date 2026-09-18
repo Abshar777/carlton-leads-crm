@@ -453,7 +453,7 @@ export default function SettingsPage() {
   function handleCloseDialog() { setRestoreTarget(null); setShowResults(false); }
 
   return (
-    <motion.div variants={pageVariants} initial="hidden" animate="visible" className="space-y-6 p-6 max-w-3xl mx-auto">
+    <motion.div variants={pageVariants} initial="hidden" animate="visible" className="space-y-6 sm:p-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -463,7 +463,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-border bg-muted/30 p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/30 p-1">
         {([
           { key: "whatsapp", label: "WhatsApp", icon: MessageCircle },
           { key: "backup",   label: "Backup & Restore", icon: Database },
@@ -475,7 +475,7 @@ export default function SettingsPage() {
             key={key}
             onClick={() => setActiveTab(key)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+              "flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all sm:flex-1 sm:shrink sm:px-4",
               activeTab === key
                 ? "bg-card text-foreground shadow-sm border border-border"
                 : "text-muted-foreground hover:text-foreground",

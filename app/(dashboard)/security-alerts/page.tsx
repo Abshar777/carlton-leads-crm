@@ -535,12 +535,12 @@ export default function SecurityAlertsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-border bg-card p-1 w-fit">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1 sm:w-fit">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
               activeTab === id ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -548,7 +548,7 @@ export default function SecurityAlertsPage() {
               <motion.div layoutId="tab-pill" className="absolute inset-0 rounded-lg bg-primary"
                 transition={{ type: "spring", stiffness: 500, damping: 40 }} />
             )}
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="relative z-10 flex items-center gap-2 whitespace-nowrap">
               <Icon className="h-4 w-4" />{label}
             </span>
           </button>
