@@ -103,7 +103,10 @@ export function useRespondToCall() {
 export function useSubmitCallOutcome() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { sessionId: string; callResult: CallResult; durationSeconds: number; note: string }) => {
+    mutationFn: async (vars: {
+      sessionId: string; callResult: CallResult;
+      manualDurationSeconds: number; autoDurationSeconds?: number; note: string;
+    }) => {
       const { sessionId, ...body } = vars;
       const res = await api.post(`/call-automation/sessions/${sessionId}/outcome`, body);
       return res.data.data;
@@ -196,6 +199,8 @@ export interface CallOverviewRow {
   outcomeStatus?: "pending" | "submitted" | "skipped" | null;
   callResult?: CallResult | null;
   callDurationSeconds?: number;
+  autoDurationSeconds?: number;
+  manualDurationSeconds?: number;
   callNote?: string;
   outcomeAt?: string | null;
   outcomeSkipReason?: string;
@@ -214,6 +219,8 @@ export interface CallOverviewRow {
 export interface CallOutcomeEntry {
   callResult: CallResult;
   durationSeconds: number;
+  autoDurationSeconds?: number;
+  manualDurationSeconds?: number;
   note: string;
   recordedAt: string;
   recordedBy?: { _id: string; name?: string } | string | null;

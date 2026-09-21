@@ -131,6 +131,17 @@ function timeIST(iso?: string | null) {
   });
 }
 
+/**
+ * Entered far off the measured time. Not necessarily wrong — they may have
+ * taken a while to get back to their desk — but worth an admin's eye.
+ */
+function durationsDiverge(row: CallOverviewRow): boolean {
+  const a = row.autoDurationSeconds;
+  const m = row.callDurationSeconds;
+  if (a == null || m == null) return false;
+  return Math.abs(a - m) > Math.max(60, a * 0.5);
+}
+
 function OutcomeBadge({ row }: { row: CallOverviewRow }) {
   const status = row.outcomeStatus ?? "none";
   const cfg: Record<string, { label: string; cls: string }> = {
@@ -162,8 +173,15 @@ function CallLogRow({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: s
         <td className="px-4 py-3 text-xs">
           {row.callResult ? CALL_RESULT_LABELS[row.callResult] ?? row.callResult : "—"}
         </td>
-        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-          {row.callDurationSeconds != null ? hold(row.callDurationSeconds) : "—"}
+        <td className="px-4 py-3 font-mono text-xs">
+          {row.callDurationSeconds != null
+            ? <span className="text-foreground">{hold(row.callDurationSeconds)}</span>
+            : <span className="text-muted-foreground">—</span>}
+          {row.autoDurationSeconds != null && (
+            <span className={`block text-[11px] ${durationsDiverge(row) ? "text-orange-400" : "text-muted-foreground"}`}>
+              auto {hold(row.autoDurationSeconds)}
+            </span>
+          )}
         </td>
         <td className="max-w-[260px] px-4 py-3 text-xs text-muted-foreground">
           {row.outcomeStatus === "skipped"
@@ -206,6 +224,9 @@ function CallLogRow({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: s
                         <div className="mt-1 flex flex-wrap gap-3">
                           <span>{CALL_RESULT_LABELS[h.callResult] ?? h.callResult}</span>
                           <span className="font-mono">{hold(h.durationSeconds)}</span>
+                          {h.autoDurationSeconds != null && (
+                            <span className="font-mono text-muted-foreground">auto {hold(h.autoDurationSeconds)}</span>
+                          )}
                         </div>
                         <p className="mt-1 text-muted-foreground">{h.note}</p>
                       </div>
@@ -378,8 +399,13 @@ function SheetCallRow({ row }: { row: CallOverviewRow }) {
         <td className="px-3 py-2 text-xs font-medium">{row.lead?.name ?? "—"}</td>
         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{timeIST(row.callStartedAt)}</td>
         <td className="px-3 py-2 text-xs">{row.callResult ? CALL_RESULT_LABELS[row.callResult] ?? row.callResult : "—"}</td>
-        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+        <td className="px-3 py-2 font-mono text-xs">
           {row.callDurationSeconds != null ? hold(row.callDurationSeconds) : "—"}
+          {row.autoDurationSeconds != null && (
+            <span className={`block text-[10px] ${durationsDiverge(row) ? "text-orange-400" : "text-muted-foreground"}`}>
+              auto {hold(row.autoDurationSeconds)}
+            </span>
+          )}
         </td>
         <td className="px-3 py-2">
           <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5" disabled={!history.length}>
@@ -395,7 +421,7 @@ function SheetCallRow({ row }: { row: CallOverviewRow }) {
               {history.map((h, i) => (
                 <div key={i} className="text-[11px]">
                   <span className="font-semibold">{i === 0 ? "First entry" : `Edit ${i}`}</span>
-                  <span className="text-muted-foreground"> · {formatIST(h.recordedAt)} · {CALL_RESULT_LABELS[h.callResult] ?? h.callResult} · {hold(h.durationSeconds)}</span>
+                  <span className="text-muted-foreground"> · {formatIST(h.recordedAt)} · {CALL_RESULT_LABELS[h.callResult] ?? h.callResult} · {hold(h.durationSeconds)}{h.autoDurationSeconds != null ? ` (auto ${hold(h.autoDurationSeconds)})` : ""}</span>
                   <p className="text-muted-foreground">{h.note}</p>
                 </div>
               ))}

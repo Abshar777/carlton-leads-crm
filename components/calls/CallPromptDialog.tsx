@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { PhoneCall, Pencil, XCircle, Coffee, Timer, Loader2, ClipboardList } from "lucide-react";
+import { PhoneCall, Pencil, XCircle, Coffee, Timer, Loader2, ClipboardList, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -108,32 +108,38 @@ function CallOutcomeForm({
   const { mutate: skip, isPending: skipping } = useSkipCallOutcome();
 
   const [result, setResult] = useState<CallResult | "">("");
-  const [mins, setMins] = useState(0);
-  const [secs, setSecs] = useState(0);
+  /** Measured once, the moment this form opens. Never editable. */
+  const [autoSeconds, setAutoSeconds] = useState<number | null>(null);
+  const [mins, setMins] = useState("");
+  const [secs, setSecs] = useState("");
   const [note, setNote] = useState("");
   const [skipping_, setSkipMode] = useState(false);
   const [skipReason, setSkipReason] = useState("");
 
   const startedAt = session?.callStartedAt;
 
-  // Prefill the duration with however long they were away — they can correct it.
+  // Taken when the form opens — the moment they got back — so time spent
+  // filling the form in does not inflate it.
   useEffect(() => {
-    if (!startedAt) return;
-    const elapsed = Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000));
-    setMins(Math.floor(elapsed / 60));
-    setSecs(elapsed % 60);
+    if (!startedAt) { setAutoSeconds(null); return; }
+    setAutoSeconds(Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000)));
   }, [startedAt]);
 
   if (!session) return null;
 
   const lead = session.lead ?? null;
-  const complete = !!result && note.trim().length > 0;
+  // The entered duration is required, so it has to be filled in — but zero is
+  // a real answer for a call nobody picked up.
+  const durationGiven = mins.trim() !== "" || secs.trim() !== "";
+  const complete = !!result && note.trim().length > 0 && durationGiven;
 
   const save = () =>
     submit({
       sessionId: session._id,
       callResult: result as CallResult,
-      durationSeconds: Math.max(0, mins) * 60 + Math.max(0, Math.min(59, secs)),
+      manualDurationSeconds:
+        Math.max(0, Number(mins) || 0) * 60 + Math.max(0, Math.min(59, Number(secs) || 0)),
+      autoDurationSeconds: autoSeconds ?? undefined,
       note: note.trim(),
     });
 
@@ -182,16 +188,30 @@ function CallOutcomeForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Duration *</Label>
+              <Label className="flex items-center gap-1.5">
+                <Lock className="h-3 w-3 text-muted-foreground" /> Auto duration
+              </Label>
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {autoSeconds === null ? "—" : humanDuration(autoSeconds)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Measured from when you pressed Call until you came back. Cannot be edited.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Call duration *</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" min={0} value={mins} onChange={(e) => setMins(Number(e.target.value))}
+                <Input type="number" min={0} inputMode="numeric" placeholder="0"
+                  value={mins} onChange={(e) => setMins(e.target.value)}
                   className="w-20" aria-label="Minutes" />
                 <span className="text-sm text-muted-foreground">min</span>
-                <Input type="number" min={0} max={59} value={secs} onChange={(e) => setSecs(Number(e.target.value))}
+                <Input type="number" min={0} max={59} inputMode="numeric" placeholder="0"
+                  value={secs} onChange={(e) => setSecs(e.target.value)}
                   className="w-20" aria-label="Seconds" />
                 <span className="text-sm text-muted-foreground">sec</span>
               </div>
-              <p className="text-xs text-muted-foreground">Timed for you &mdash; correct it if it&apos;s wrong.</p>
+              <p className="text-xs text-muted-foreground">How long you were actually on the call.</p>
             </div>
 
             <div className="space-y-1.5">
@@ -214,6 +234,14 @@ function CallOutcomeForm({
       </AnimatePresence>
     </>
   );
+}
+
+/** "1 min 30 sec" / "45 sec" — the readable form used for the auto figure. */
+function humanDuration(total: number): string {
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (!m) return `${s} sec`;
+  return s ? `${m} min ${s} sec` : `${m} min`;
 }
 
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
