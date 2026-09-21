@@ -12,6 +12,7 @@ import {
   type CallOverviewRow, type CallOverviewPerUser, type CallOverview,
 } from "@/hooks/useCallAutomation";
 import { useUsers } from "@/hooks/useUsers";
+import { STATUS_LABELS, STATUS_COLORS, type LeadStatus } from "@/lib/leadStatus";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
@@ -142,6 +143,16 @@ function durationsDiverge(row: CallOverviewRow): boolean {
   return Math.abs(a - m) > Math.max(60, a * 0.5);
 }
 
+function LeadStatusBadge({ status }: { status?: string }) {
+  if (!status) return <span className="text-xs text-muted-foreground">—</span>;
+  const cls = STATUS_COLORS[status as LeadStatus] ?? "bg-muted text-muted-foreground border-border";
+  return (
+    <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>
+      {STATUS_LABELS[status as LeadStatus] ?? status}
+    </span>
+  );
+}
+
 function OutcomeBadge({ row }: { row: CallOverviewRow }) {
   const status = row.outcomeStatus ?? "none";
   const cfg: Record<string, { label: string; cls: string }> = {
@@ -166,6 +177,7 @@ function CallLogRow({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: s
         className="border-b border-border transition-colors hover:bg-muted/40">
         <EmployeeCell row={row} onOpen={onOpen} />
         <LeadCell row={row} />
+        <td className="px-4 py-3"><LeadStatusBadge status={row.lead?.status} /></td>
         <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
           {timeIST(row.callStartedAt)}
           {row.outcomeAt && <span className="block text-[11px] opacity-70">wrote up {timeIST(row.outcomeAt)}</span>}
@@ -203,7 +215,7 @@ function CallLogRow({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: s
       <AnimatePresence initial={false}>
         {open && history.length > 0 && (
           <tr>
-            <td colSpan={7} className="border-b border-border bg-muted/20 p-0">
+            <td colSpan={9} className="border-b border-border bg-muted/20 p-0">
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="space-y-2 px-4 py-3">
@@ -580,7 +592,7 @@ export default function CallAutomationPage() {
           {activeTab === "calls" && (
             <TableShell isLoading={isLoading} rows={callLog.length}
               empty="No calls placed in this period." emptyIcon={PhoneCall}
-              headers={["Employee", "Lead", "Called / Wrote Up", "Result", "Duration", "Notes", "Write-up", "History"]}>
+              headers={["Employee", "Lead", "Lead Status", "Called / Wrote Up", "Result", "Duration", "Notes", "Write-up", "History"]}>
               {callLog.map((c) => <CallLogRow key={c._id} row={c} onOpen={openEmployeeById} />)}
             </TableShell>
           )}
