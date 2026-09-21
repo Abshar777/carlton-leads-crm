@@ -278,3 +278,54 @@ export function useCallOverview(filters: { dateFrom?: string; dateTo?: string; u
 
   return query;
 }
+
+// ── One employee's detail (Super Admin only) ──────────────────────────────────
+
+export interface LeadEdit {
+  leadId: string;
+  leadName: string;
+  action: string;
+  description: string;
+  changes?: Record<string, { from: unknown; to: unknown }>;
+  at: string;
+}
+
+export interface EmployeeActivity {
+  sessions: CallOverviewRow[];
+  leadEdits: LeadEdit[];
+  truncated: { sessions: boolean; leads: boolean; edits: boolean };
+  totals: {
+    prompts: number;
+    byAction: Record<string, number>;
+    calls: number;
+    totalManualSeconds: number;
+    totalAutoSeconds: number;
+    callsWithDuration: number;
+  };
+  updateSummary: {
+    totalEdits: number;
+    leadsTouched: number;
+    byAction: Record<string, number>;
+    transitions: { label: string; count: number }[];
+  };
+}
+
+/** Fetched only while the detail panel is open — it is heavier than the overview. */
+export function useEmployeeActivity(
+  userId?: string | null,
+  filters: { dateFrom?: string; dateTo?: string } = {},
+) {
+  return useQuery<EmployeeActivity>({
+    queryKey: ["call-automation", "employee", userId, filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.set("dateTo", filters.dateTo);
+      const res = await api.get<ApiResponse<EmployeeActivity>>(
+        `/call-automation/employee/${userId}/activity?${params}`,
+      );
+      return res.data.data!;
+    },
+    enabled: !!userId,
+  });
+}

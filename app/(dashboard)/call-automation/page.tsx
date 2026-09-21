@@ -8,8 +8,8 @@ import {
   ClipboardList, ClipboardX, History, Clock, ChevronRight,
 } from "lucide-react";
 import {
-  useCallOverview, CALL_RESULT_LABELS,
-  type CallOverviewRow, type CallOverviewPerUser, type CallOverview,
+  useCallOverview, useEmployeeActivity, CALL_RESULT_LABELS,
+  type CallOverviewRow, type CallOverviewPerUser, type CallOverview, type LeadEdit,
 } from "@/hooks/useCallAutomation";
 import { useUsers } from "@/hooks/useUsers";
 import { STATUS_LABELS, STATUS_COLORS, type LeadStatus } from "@/lib/leadStatus";
@@ -254,6 +254,61 @@ function CallLogRow({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: s
   );
 }
 
+/** What became of a prompt, in one badge. */
+function ActionBadge({ action }: { action?: string | null }) {
+  const cfg: Record<string, { label: string; cls: string }> = {
+    called:   { label: "Called",   cls: "bg-green-500/10 text-green-500" },
+    updated:  { label: "Updated",  cls: "bg-blue-500/10 text-blue-400" },
+    rejected: { label: "Rejected", cls: "bg-red-500/10 text-red-400" },
+    break:    { label: "Break",    cls: "bg-amber-500/10 text-amber-500" },
+    expired:  { label: "Expired",  cls: "bg-muted text-muted-foreground" },
+  };
+  const c = cfg[action ?? ""] ?? { label: "Waiting", cls: "bg-sky-500/10 text-sky-400" };
+  return <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${c.cls}`}>{c.label}</span>;
+}
+
+const EDIT_LABELS: Record<string, string> = {
+  status_changed: "Status changed",
+  note_added:     "Note added",
+  note_updated:   "Note edited",
+  note_deleted:   "Note deleted",
+  lead_updated:   "Lead edited",
+  lead_assigned:  "Assigned",
+  team_assigned:  "Team set",
+  team_changed:   "Team changed",
+  team_shared:    "Shared with team",
+  lead_created:   "Lead created",
+  call_made:      "Call logged",
+};
+
+/** One edit, rendered as what actually changed rather than a generic label. */
+function LeadEditRow({ edit }: { edit: LeadEdit }) {
+  const status = edit.changes?.status;
+  const note = edit.changes?.note;
+  return (
+    <div className="rounded-lg border border-border bg-card p-2.5 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">{edit.leadName || "No name"}</span>
+        <span className="text-muted-foreground">{formatIST(edit.at)}</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {EDIT_LABELS[edit.action] ?? edit.action}
+        </span>
+        {status && (
+          <span className="flex items-center gap-1.5">
+            <LeadStatusBadge status={String(status.from ?? "")} />
+            <span className="text-muted-foreground">&rarr;</span>
+            <LeadStatusBadge status={String(status.to ?? "")} />
+          </span>
+        )}
+      </div>
+      {note?.to != null && <p className="mt-1 text-muted-foreground">&ldquo;{String(note.to)}&rdquo;</p>}
+      {!status && !note && <p className="mt-1 text-muted-foreground">{edit.description}</p>}
+    </div>
+  );
+}
+
 /** A labelled number in the detail sheet's summary strip. */
 function MiniStat({ label, value, tone = "" }: { label: string; value: string | number; tone?: string }) {
   return (
@@ -287,14 +342,16 @@ function Section({
  * always matches whatever filter is showing and opens instantly.
  */
 function EmployeeDetailSheet({
-  employee, data, rangeLabel, onClose,
+  employee, data, rangeLabel, filters, onClose,
 }: {
   employee: CallOverviewPerUser | null;
   data?: CallOverview;
   rangeLabel: string;
+  filters: { dateFrom?: string; dateTo?: string };
   onClose: () => void;
 }) {
   const id = employee?._id;
+  const { data: activity, isLoading: loadingActivity } = useEmployeeActivity(id, filters);
   const mine = <T extends CallOverviewRow>(rows: T[]) =>
     rows.filter((r) => String((r.user as { _id?: string } | null)?._id ?? r.user) === id);
 
@@ -311,7 +368,10 @@ function EmployeeDetailSheet({
             <UsersIcon className="h-4 w-4 text-primary" />
             {employee?.name ?? "Employee"}
           </SheetTitle>
-          <SheetDescription>{rangeLabel}</SheetDescription>
+          <SheetDescription className="flex items-center gap-2">
+            {rangeLabel}
+            {loadingActivity && <RefreshCw className="h-3 w-3 animate-spin" />}
+          </SheetDescription>
         </SheetHeader>
 
         {employee && (
@@ -325,7 +385,86 @@ function EmployeeDetailSheet({
               <MiniStat label="Avg hold" value={hold(employee.avgHold != null ? Math.round(employee.avgHold) : null)} />
               <MiniStat label="Max hold" value={hold(employee.maxHold)} />
               <MiniStat label="Expired"  value={employee.expired} tone="text-muted-foreground" />
+              <MiniStat
+                label={`Total talk time${activity && activity.totals.callsWithDuration < activity.totals.calls
+                  ? ` (${activity.totals.callsWithDuration}/${activity.totals.calls} written up)` : ""}`}
+                value={hold(activity?.totals.totalManualSeconds ?? null)}
+                tone="text-green-500"
+              />
+              {!!activity?.totals.totalAutoSeconds && (
+                <MiniStat label="Total measured" value={hold(activity.totals.totalAutoSeconds)} />
+              )}
             </div>
+
+            <Section title="All prompts" count={activity?.sessions.length ?? 0}>
+              <div className="overflow-hidden rounded-xl border border-border">
+                <table className="w-full">
+                  <thead className="border-b border-border bg-muted/30">
+                    <tr>{["Lead", "Offered", "Held", "What they did"].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{h}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {(activity?.sessions ?? []).map((sn) => (
+                      <tr key={sn._id} className="border-b border-border last:border-0 hover:bg-muted/40">
+                        <td className="px-3 py-2 text-xs font-medium">{sn.lead?.name || "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{timeIST(sn.promptedAt)}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{hold(sn.holdSeconds)}</td>
+                        <td className="px-3 py-2"><ActionBadge action={sn.action} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {activity?.truncated.sessions && (
+                <p className="text-[11px] text-orange-400">Showing the most recent 500 — narrow the date range to see the rest.</p>
+              )}
+            </Section>
+
+            {activity && activity.updateSummary.totalEdits > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Update summary</h3>
+                <div className="rounded-xl border border-border bg-card p-3">
+                  <p className="text-sm">
+                    <span className="font-bold">{activity.updateSummary.totalEdits}</span> change
+                    {activity.updateSummary.totalEdits === 1 ? "" : "s"} across{" "}
+                    <span className="font-bold">{activity.updateSummary.leadsTouched}</span> lead
+                    {activity.updateSummary.leadsTouched === 1 ? "" : "s"}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {Object.entries(activity.updateSummary.byAction).map(([k, n]) => (
+                      <span key={k} className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
+                        {EDIT_LABELS[k] ?? k} <span className="font-bold">{n}</span>
+                      </span>
+                    ))}
+                  </div>
+                  {activity.updateSummary.transitions.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {activity.updateSummary.transitions.map((t) => (
+                        <span key={t.label} className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                          {t.label} <span className="font-bold text-foreground">&times;{t.count}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Counts real changes to leads. The &ldquo;Updated&rdquo; figure above counts presses of the
+                    Update Lead button, so the two will not match.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Section title="Lead edits" count={activity?.leadEdits.length ?? 0}>
+              <div className="space-y-1.5">
+                {(activity?.leadEdits ?? []).map((e, i) => <LeadEditRow key={`${e.leadId}-${i}`} edit={e} />)}
+                {activity?.truncated.edits && (
+                  <p className="text-[11px] text-orange-400">
+                    Showing the most recent 300 of {activity.updateSummary.totalEdits} — narrow the date range to see the rest.
+                  </p>
+                )}
+              </div>
+            </Section>
 
             <Section title="Calls" count={calls.length}>
               <div className="overflow-hidden rounded-xl border border-border">
@@ -725,6 +864,7 @@ export default function CallAutomationPage() {
         employee={detail}
         data={data}
         rangeLabel={hasFilter ? "Filtered period" : "Today (IST)"}
+        filters={{ dateFrom: filters.dateFrom || undefined, dateTo: filters.dateTo || undefined }}
         onClose={() => setDetail(null)}
       />
 
