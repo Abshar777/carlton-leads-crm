@@ -319,18 +319,51 @@ function MiniStat({ label, value, tone = "" }: { label: string; value: string | 
   );
 }
 
+/**
+ * A collapsible block in the detail sheet. Open by default — someone opening
+ * the panel wants to see what is in it — but a long lead-edit list can be
+ * folded away to get at what is underneath.
+ *
+ * `count` of null hides the badge, for a section that is a summary rather than
+ * a list.
+ */
 function Section({
-  title, count, children,
-}: { title: string; count: number; children: React.ReactNode }) {
+  title, count, children, defaultOpen = true,
+}: { title: string; count: number | null; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const empty = count === 0;
+
   return (
     <div className="space-y-2">
-      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronRight className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
         {title}
-        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
-      </h3>
-      {count === 0
-        ? <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">Nothing in this period.</p>
-        : children}
+        {count !== null && (
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+        )}
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            {empty
+              ? <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">Nothing in this period.</p>
+              : children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -422,8 +455,7 @@ function EmployeeDetailSheet({
             </Section>
 
             {activity && activity.updateSummary.totalEdits > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Update summary</h3>
+              <Section title="Update summary" count={null}>
                 <div className="rounded-xl border border-border bg-card p-3">
                   <p className="text-sm">
                     <span className="font-bold">{activity.updateSummary.totalEdits}</span> change
@@ -452,7 +484,7 @@ function EmployeeDetailSheet({
                     Update Lead button, so the two will not match.
                   </p>
                 </div>
-              </div>
+              </Section>
             )}
 
             <Section title="Lead edits" count={activity?.leadEdits.length ?? 0}>
