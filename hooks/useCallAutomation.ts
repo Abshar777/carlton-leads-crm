@@ -15,11 +15,44 @@ export interface CallSession {
   lead?: CallSessionLead | null;
   promptedAt: string;
 }
+export const CALL_RESULTS = [
+  { value: "connected",   label: "Connected" },
+  { value: "noanswer",    label: "No Answer" },
+  { value: "busy",        label: "Busy" },
+  { value: "switchedoff", label: "Switched Off" },
+  { value: "wrongnumber", label: "Wrong Number" },
+  { value: "callback",    label: "Call Back Later" },
+] as const;
+export type CallResult = (typeof CALL_RESULTS)[number]["value"];
+
+export const CALL_RESULT_LABELS: Record<string, string> =
+  Object.fromEntries(CALL_RESULTS.map((r) => [r.value, r.label]));
+
+/** A call that has been dialled but not yet written up. */
+export interface PendingOutcome extends CallSession {
+  callStartedAt?: string | null;
+  outcomeStatus?: "pending" | "submitted" | "skipped" | null;
+  callResult?: CallResult | null;
+  callDurationSeconds?: number;
+  callNote?: string;
+}
+
 export interface MySessionState {
   onShift: boolean;
   mode?: "off" | "full" | "half";
   breakEndsAt: string | null;
   session: CallSession | null;
+  /** Set while call details are owed — the popup reopens for it. */
+  pendingOutcome?: PendingOutcome | null;
+  /** Set once a break has run out and they have not confirmed they are back. */
+  breakReturn?: BreakReturnState | null;
+}
+
+export interface BreakReturnState {
+  _id: string;
+  breakEndsAt: string | null;
+  breakReturnPromptedAt: string | null;
+  breakExtensions: number;
 }
 
 const KEY = ["call-automation", "my-session"] as const;
@@ -66,6 +99,75 @@ export function useRespondToCall() {
   });
 }
 
+/** Save (or edit) the call write-up. Every save is kept in the session history. */
+export function useSubmitCallOutcome() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { sessionId: string; callResult: CallResult; durationSeconds: number; note: string }) => {
+      const { sessionId, ...body } = vars;
+      const res = await api.post(`/call-automation/sessions/${sessionId}/outcome`, body);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      toast.success("Call details saved");
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message ?? "Could not save the call details");
+    },
+  });
+}
+
+/** The way out of the mandatory form — costs a reason, and admins see it. */
+export function useSkipCallOutcome() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sessionId, reason }: { sessionId: string; reason: string }) => {
+      const res = await api.post(`/call-automation/sessions/${sessionId}/outcome/skip`, { reason });
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      toast.message("Recorded as not filled in");
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message ?? "Could not record that");
+    },
+  });
+}
+
+/** "I'm back" once the break has run out. */
+export function useConfirmBreakReturn() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post("/call-automation/break/return")).data,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: KEY }); toast.success("Welcome back"); },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message ?? "Could not record that");
+    },
+  });
+}
+
+/** Push the break out instead of claiming to be back. */
+export function useExtendBreak() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ minutes }: { minutes: number }) =>
+      (await api.post("/call-automation/break/extend", { minutes })).data,
+    onSuccess: (d: { message?: string }) => {
+      qc.invalidateQueries({ queryKey: KEY });
+      toast.message(d?.message ?? "Break extended");
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message ?? "Could not extend the break");
+    },
+  });
+}
+
 export function useEndBreak() {
   const qc = useQueryClient();
   return useMutation({
@@ -88,6 +190,33 @@ export interface CallOverviewRow {
   holdSeconds?: number;
   breakMinutes?: number;
   breakEndsAt?: string | null;
+
+  // Call write-up
+  callStartedAt?: string | null;
+  outcomeStatus?: "pending" | "submitted" | "skipped" | null;
+  callResult?: CallResult | null;
+  callDurationSeconds?: number;
+  callNote?: string;
+  outcomeAt?: string | null;
+  outcomeSkipReason?: string;
+  outcomeHistory?: CallOutcomeEntry[];
+
+  // Break return
+  breakReturnPromptedAt?: string | null;
+  breakReturnedAt?: string | null;
+  breakReturnHoldSeconds?: number;
+  breakOverrunSeconds?: number;
+  breakReturnClosedAt?: string | null;
+  breakExtensions?: number;
+}
+
+/** One filling-in of a call's details. Edits append, so this is the full trail. */
+export interface CallOutcomeEntry {
+  callResult: CallResult;
+  durationSeconds: number;
+  note: string;
+  recordedAt: string;
+  recordedBy?: { _id: string; name?: string } | string | null;
 }
 export interface CallOverviewPerUser {
   _id: string; name?: string;
@@ -100,6 +229,15 @@ export interface CallOverview {
   flaggedHolds: CallOverviewRow[];
   activeBreaks: CallOverviewRow[];
   perUser: CallOverviewPerUser[];
+  /** Every dialled call in the period, newest first. */
+  callLog: CallOverviewRow[];
+  outcomeCounts: Record<string, number>;
+  pendingOutcomes: CallOverviewRow[];
+  skippedOutcomes: CallOverviewRow[];
+  /** Every break in the period, and how it ended. */
+  breakLog: CallOverviewRow[];
+  awaitingReturn: CallOverviewRow[];
+  unconfirmedReturns: CallOverviewRow[];
 }
 
 export function useCallOverview(filters: { dateFrom?: string; dateTo?: string; userId?: string } = {}) {

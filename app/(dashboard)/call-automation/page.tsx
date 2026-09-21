@@ -5,8 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   PhoneCall, XCircle, Timer, Coffee, RefreshCw, Filter, ShieldAlert,
   PhoneOff, CheckCircle2, PencilLine, AlertTriangle, Users,
+  ClipboardList, ClipboardX, History, Clock,
 } from "lucide-react";
-import { useCallOverview, type CallOverviewRow, type CallOverviewPerUser } from "@/hooks/useCallAutomation";
+import {
+  useCallOverview, CALL_RESULT_LABELS,
+  type CallOverviewRow, type CallOverviewPerUser,
+} from "@/hooks/useCallAutomation";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/authStore";
 
@@ -108,16 +112,114 @@ function TableShell({
   );
 }
 
+/** Just the clock time — the date is already fixed by the filter. */
+function timeIST(iso?: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true,
+  });
+}
+
+function OutcomeBadge({ row }: { row: CallOverviewRow }) {
+  const status = row.outcomeStatus ?? "none";
+  const cfg: Record<string, { label: string; cls: string }> = {
+    submitted: { label: "Filled in",     cls: "bg-green-500/10 text-green-500" },
+    pending:   { label: "Awaiting",      cls: "bg-blue-500/10 text-blue-400" },
+    skipped:   { label: "Not filled in", cls: "bg-orange-500/10 text-orange-400" },
+    none:      { label: "—",             cls: "bg-muted text-muted-foreground" },
+  };
+  const c = cfg[status] ?? cfg.none;
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${c.cls}`}>{c.label}</span>;
+}
+
+/** One call, expandable to show every time its details were entered or edited. */
+function CallLogRow({ row }: { row: CallOverviewRow }) {
+  const [open, setOpen] = useState(false);
+  const history = row.outcomeHistory ?? [];
+  const edits = Math.max(0, history.length - 1);
+
+  return (
+    <>
+      <motion.tr variants={ITEM_VARIANTS} initial="hidden" animate="visible"
+        className="border-b border-border transition-colors hover:bg-muted/40">
+        <EmployeeCell row={row} />
+        <LeadCell row={row} />
+        <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+          {timeIST(row.callStartedAt)}
+          {row.outcomeAt && <span className="block text-[11px] opacity-70">wrote up {timeIST(row.outcomeAt)}</span>}
+        </td>
+        <td className="px-4 py-3 text-xs">
+          {row.callResult ? CALL_RESULT_LABELS[row.callResult] ?? row.callResult : "—"}
+        </td>
+        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+          {row.callDurationSeconds != null ? hold(row.callDurationSeconds) : "—"}
+        </td>
+        <td className="max-w-[260px] px-4 py-3 text-xs text-muted-foreground">
+          {row.outcomeStatus === "skipped"
+            ? <span className="text-orange-400">{row.outcomeSkipReason || "no reason given"}</span>
+            : <span className="line-clamp-2">{row.callNote || "—"}</span>}
+        </td>
+        <td className="px-4 py-3"><OutcomeBadge row={row} /></td>
+        <td className="px-4 py-3">
+          {history.length > 0 && (
+            <button onClick={() => setOpen((v) => !v)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <History className="h-3 w-3" />
+              {history.length}{edits > 0 ? ` (${edits} edit${edits === 1 ? "" : "s"})` : ""}
+            </button>
+          )}
+        </td>
+      </motion.tr>
+
+      <AnimatePresence initial={false}>
+        {open && history.length > 0 && (
+          <tr>
+            <td colSpan={7} className="border-b border-border bg-muted/20 p-0">
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                <div className="space-y-2 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Every time these details were entered
+                  </p>
+                  {history.map((h, i) => {
+                    const by = typeof h.recordedBy === "object" && h.recordedBy ? h.recordedBy.name : undefined;
+                    return (
+                      <div key={i} className="rounded-lg border border-border bg-card p-2.5 text-xs">
+                        <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                          <span className="font-semibold text-foreground">
+                            {i === 0 ? "First entry" : `Edit ${i}`}
+                          </span>
+                          <span>{formatIST(h.recordedAt)}</span>
+                          {by && <span>· by {by}</span>}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-3">
+                          <span>{CALL_RESULT_LABELS[h.callResult] ?? h.callResult}</span>
+                          <span className="font-mono">{hold(h.durationSeconds)}</span>
+                        </div>
+                        <p className="mt-1 text-muted-foreground">{h.note}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </td>
+          </tr>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type Tab = "rejections" | "holds" | "breaks" | "employees";
+type Tab = "calls" | "rejections" | "holds" | "breaks" | "employees";
 
 export default function CallAutomationPage() {
   const { user } = useAuthStore();
   const role = user?.role as { isSystemRole?: boolean; roleName?: string } | undefined;
   const isSuperAdmin = !!role?.isSystemRole && role?.roleName === "Super Admin";
 
-  const [activeTab, setActiveTab] = useState<Tab>("rejections");
+  const [activeTab, setActiveTab] = useState<Tab>("calls");
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", userId: "" });
   // Break countdowns need their own tick — the query only refetches every 30s.
   const [now, setNow] = useState(() => Date.now());
@@ -147,12 +249,19 @@ export default function CallAutomationPage() {
   const flaggedHolds = data?.flaggedHolds ?? [];
   const activeBreaks = data?.activeBreaks ?? [];
   const perUser      = data?.perUser      ?? [];
+  const callLog        = data?.callLog        ?? [];
+  const pendingOutcomes = data?.pendingOutcomes ?? [];
+  const skippedOutcomes = data?.skippedOutcomes ?? [];
+  const breakLog          = data?.breakLog          ?? [];
+  const awaitingReturn    = data?.awaitingReturn    ?? [];
+  const unconfirmedReturns = data?.unconfirmedReturns ?? [];
   const hasFilter = !!(filters.dateFrom || filters.dateTo || filters.userId);
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; count: number }[] = [
+    { id: "calls",      label: "Call Log",     icon: ClipboardList, count: callLog.length },
     { id: "rejections", label: "Rejections",   icon: XCircle, count: rejections.length },
     { id: "holds",      label: "Long Holds",   icon: Timer,   count: flaggedHolds.length },
-    { id: "breaks",     label: "On Break",     icon: Coffee,  count: activeBreaks.length },
+    { id: "breaks",     label: "Breaks",       icon: Coffee,  count: breakLog.length },
     { id: "employees",  label: "By Employee",  icon: Users,   count: perUser.length },
   ];
 
@@ -166,7 +275,7 @@ export default function CallAutomationPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">Call Automation</h1>
-            <p className="text-sm text-muted-foreground">Rejections · Long holds · Breaks</p>
+            <p className="text-sm text-muted-foreground">Calls &middot; Write-ups &middot; Holds &middot; Breaks</p>
           </div>
         </div>
         <button onClick={() => refetch()} disabled={isFetching}
@@ -178,11 +287,13 @@ export default function CallAutomationPage() {
       {/* Summary */}
       <motion.div initial="hidden" animate="visible"
         variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={CheckCircle2} label="Calls Made"  value={counts.called   ?? 0} tone="bg-green-500/10 text-green-500" />
-        <StatCard icon={PencilLine}   label="Lead Updates" value={counts.updated ?? 0} tone="bg-blue-500/10 text-blue-500" />
-        <StatCard icon={XCircle}      label="Rejected"    value={counts.rejected ?? 0} tone="bg-red-500/10 text-red-500" />
-        <StatCard icon={Coffee}       label="Breaks Taken" value={counts.break   ?? 0} tone="bg-amber-500/10 text-amber-500" />
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard icon={CheckCircle2} label="Calls Made"      value={counts.called ?? 0}          tone="bg-green-500/10 text-green-500" />
+        <StatCard icon={Clock}        label="Write-up Pending" value={pendingOutcomes.length}      tone="bg-blue-500/10 text-blue-500" />
+        <StatCard icon={ClipboardX}   label="Not Filled In"    value={skippedOutcomes.length}      tone="bg-orange-500/10 text-orange-500" />
+        <StatCard icon={XCircle}      label="Rejected"         value={counts.rejected ?? 0}        tone="bg-red-500/10 text-red-500" />
+        <StatCard icon={Coffee}       label="Back Yet?"        value={awaitingReturn.length}       tone="bg-amber-500/10 text-amber-500" />
+        <StatCard icon={AlertTriangle} label="Never Confirmed" value={unconfirmedReturns.length}   tone="bg-orange-500/10 text-orange-400" />
       </motion.div>
 
       {/* Filters */}
@@ -237,6 +348,14 @@ export default function CallAutomationPage() {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}>
 
+          {activeTab === "calls" && (
+            <TableShell isLoading={isLoading} rows={callLog.length}
+              empty="No calls placed in this period." emptyIcon={PhoneCall}
+              headers={["Employee", "Lead", "Called / Wrote Up", "Result", "Duration", "Notes", "Write-up", "History"]}>
+              {callLog.map((c) => <CallLogRow key={c._id} row={c} />)}
+            </TableShell>
+          )}
+
           {activeTab === "rejections" && (
             <TableShell isLoading={isLoading} rows={rejections.length}
               empty="No rejections in this period." emptyIcon={PhoneOff}
@@ -280,22 +399,54 @@ export default function CallAutomationPage() {
           )}
 
           {activeTab === "breaks" && (
-            <TableShell isLoading={isLoading} rows={activeBreaks.length}
-              empty="Nobody is on a break right now." emptyIcon={Coffee}
-              headers={["Employee", "Break Length", "Started", "Time Remaining"]}>
-              {activeBreaks.map((b) => (
-                <motion.tr key={b._id} variants={ITEM_VARIANTS} initial="hidden" animate="visible"
-                  className="border-b border-border transition-colors hover:bg-muted/40">
-                  <EmployeeCell row={b} />
-                  <td className="px-4 py-3 text-sm">{b.breakMinutes ?? "—"} min</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatIST(b.respondedAt)}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 font-mono text-xs font-semibold text-amber-500">
-                      <Coffee className="h-3 w-3" />{remaining(b.breakEndsAt, now)}
-                    </span>
-                  </td>
-                </motion.tr>
-              ))}
+            <TableShell isLoading={isLoading} rows={breakLog.length}
+              empty="No breaks taken in this period." emptyIcon={Coffee}
+              headers={["Employee", "Length", "Started", "Due Back", "Back At", "Late By", "Popup Held", "Status"]}>
+              {breakLog.map((b) => {
+                const live = !!b.breakEndsAt && new Date(b.breakEndsAt).getTime() > now;
+                const asked = !!b.breakReturnPromptedAt && !b.breakReturnedAt && !b.breakReturnClosedAt;
+                const status = live
+                  ? { label: `On break · ${remaining(b.breakEndsAt, now)}`, cls: "bg-amber-500/10 text-amber-500" }
+                  : asked
+                    ? { label: "Asked, no answer", cls: "bg-blue-500/10 text-blue-400" }
+                    : b.breakReturnedAt
+                      ? { label: "Confirmed back", cls: "bg-green-500/10 text-green-500" }
+                      : b.breakReturnClosedAt
+                        ? { label: "Never confirmed", cls: "bg-orange-500/10 text-orange-400" }
+                        : { label: "—", cls: "bg-muted text-muted-foreground" };
+
+                return (
+                  <motion.tr key={b._id} variants={ITEM_VARIANTS} initial="hidden" animate="visible"
+                    className="border-b border-border transition-colors hover:bg-muted/40">
+                    <EmployeeCell row={b} />
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      {b.breakMinutes ?? "—"} min
+                      {(b.breakExtensions ?? 0) > 0 && (
+                        <span className="ml-1 text-[11px] text-amber-400">+{b.breakExtensions}&times; extended</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{timeIST(b.respondedAt)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{timeIST(b.breakEndsAt)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{timeIST(b.breakReturnedAt)}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      {b.breakOverrunSeconds != null && b.breakOverrunSeconds > 0
+                        ? <span className="text-orange-400">{hold(b.breakOverrunSeconds)}</span>
+                        : <span className="text-muted-foreground">&mdash;</span>}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      {b.breakReturnHoldSeconds != null ? hold(b.breakReturnHoldSeconds)
+                        : asked && b.breakReturnPromptedAt
+                          ? hold(Math.round((now - new Date(b.breakReturnPromptedAt).getTime()) / 1000))
+                          : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${status.cls}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </TableShell>
           )}
 
