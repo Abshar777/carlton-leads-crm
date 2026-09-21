@@ -4,14 +4,17 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PhoneCall, XCircle, Timer, Coffee, RefreshCw, Filter, ShieldAlert,
-  PhoneOff, CheckCircle2, PencilLine, AlertTriangle, Users,
-  ClipboardList, ClipboardX, History, Clock,
+  PhoneOff, CheckCircle2, PencilLine, AlertTriangle, Users, Users as UsersIcon,
+  ClipboardList, ClipboardX, History, Clock, ChevronRight,
 } from "lucide-react";
 import {
   useCallOverview, CALL_RESULT_LABELS,
-  type CallOverviewRow, type CallOverviewPerUser,
+  type CallOverviewRow, type CallOverviewPerUser, type CallOverview,
 } from "@/hooks/useCallAutomation";
 import { useUsers } from "@/hooks/useUsers";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
 import { useAuthStore } from "@/lib/store/authStore";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,11 +61,19 @@ function StatCard({
   );
 }
 
-function EmployeeCell({ row }: { row: CallOverviewRow }) {
+function EmployeeCell({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: string) => void }) {
+  const id = String((row.user as { _id?: string } | null)?._id ?? "");
   return (
     <td className="px-4 py-3">
-      <div className="text-sm font-semibold">{row.user?.name ?? "—"}</div>
-      <div className="text-xs text-muted-foreground">{row.user?.email}</div>
+      <button
+        type="button"
+        disabled={!onOpen || !id}
+        onClick={(e) => { e.stopPropagation(); if (id) onOpen?.(id); }}
+        className="text-left enabled:hover:underline disabled:cursor-default"
+      >
+        <div className="text-sm font-semibold">{row.user?.name ?? "—"}</div>
+        <div className="text-xs text-muted-foreground">{row.user?.email}</div>
+      </button>
     </td>
   );
 }
@@ -133,7 +144,7 @@ function OutcomeBadge({ row }: { row: CallOverviewRow }) {
 }
 
 /** One call, expandable to show every time its details were entered or edited. */
-function CallLogRow({ row }: { row: CallOverviewRow }) {
+function CallLogRow({ row, onOpen }: { row: CallOverviewRow; onOpen?: (userId: string) => void }) {
   const [open, setOpen] = useState(false);
   const history = row.outcomeHistory ?? [];
   const edits = Math.max(0, history.length - 1);
@@ -142,7 +153,7 @@ function CallLogRow({ row }: { row: CallOverviewRow }) {
     <>
       <motion.tr variants={ITEM_VARIANTS} initial="hidden" animate="visible"
         className="border-b border-border transition-colors hover:bg-muted/40">
-        <EmployeeCell row={row} />
+        <EmployeeCell row={row} onOpen={onOpen} />
         <LeadCell row={row} />
         <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
           {timeIST(row.callStartedAt)}
@@ -210,6 +221,192 @@ function CallLogRow({ row }: { row: CallOverviewRow }) {
   );
 }
 
+/** A labelled number in the detail sheet's summary strip. */
+function MiniStat({ label, value, tone = "" }: { label: string; value: string | number; tone?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2">
+      <div className={`text-lg font-bold ${tone}`}>{value}</div>
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function Section({
+  title, count, children,
+}: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+      </h3>
+      {count === 0
+        ? <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">Nothing in this period.</p>
+        : children}
+    </div>
+  );
+}
+
+/**
+ * Everything one employee did in the period the page is filtered to.
+ *
+ * Built from the rows already on the page rather than a second request, so it
+ * always matches whatever filter is showing and opens instantly.
+ */
+function EmployeeDetailSheet({
+  employee, data, rangeLabel, onClose,
+}: {
+  employee: CallOverviewPerUser | null;
+  data?: CallOverview;
+  rangeLabel: string;
+  onClose: () => void;
+}) {
+  const id = employee?._id;
+  const mine = <T extends CallOverviewRow>(rows: T[]) =>
+    rows.filter((r) => String((r.user as { _id?: string } | null)?._id ?? r.user) === id);
+
+  const calls      = mine(data?.callLog      ?? []);
+  const rejections = mine(data?.rejections   ?? []);
+  const holds      = mine(data?.flaggedHolds ?? []);
+  const breaks     = mine(data?.breakLog     ?? []);
+
+  return (
+    <Sheet open={!!employee} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <UsersIcon className="h-4 w-4 text-primary" />
+            {employee?.name ?? "Employee"}
+          </SheetTitle>
+          <SheetDescription>{rangeLabel}</SheetDescription>
+        </SheetHeader>
+
+        {employee && (
+          <div className="mt-4 space-y-5">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              <MiniStat label="Prompts"  value={employee.total} />
+              <MiniStat label="Called"   value={employee.called}   tone="text-green-500" />
+              <MiniStat label="Updated"  value={employee.updated}  tone="text-blue-500" />
+              <MiniStat label="Rejected" value={employee.rejected} tone="text-red-400" />
+              <MiniStat label="Breaks"   value={employee.breaks}   tone="text-amber-500" />
+              <MiniStat label="Avg hold" value={hold(employee.avgHold != null ? Math.round(employee.avgHold) : null)} />
+              <MiniStat label="Max hold" value={hold(employee.maxHold)} />
+              <MiniStat label="Expired"  value={employee.expired} tone="text-muted-foreground" />
+            </div>
+
+            <Section title="Calls" count={calls.length}>
+              <div className="overflow-hidden rounded-xl border border-border">
+                <table className="w-full">
+                  <thead className="border-b border-border bg-muted/30">
+                    <tr>{["Lead", "Called", "Result", "Duration", "Write-up"].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{h}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {calls.map((c) => <SheetCallRow key={c._id} row={c} />)}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+
+            <Section title="Rejections" count={rejections.length}>
+              <div className="space-y-1.5">
+                {rejections.map((r) => (
+                  <div key={r._id} className="rounded-lg border border-border bg-card p-2.5 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{r.lead?.name ?? "—"}</span>
+                      <span className="text-muted-foreground">{formatIST(r.respondedAt)} · held {hold(r.holdSeconds)}</span>
+                    </div>
+                    <p className="mt-1 text-red-400">{r.rejectReason || "no reason given"}</p>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="Breaks" count={breaks.length}>
+              <div className="space-y-1.5">
+                {breaks.map((b) => (
+                  <div key={b._id} className="rounded-lg border border-border bg-card p-2.5 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">
+                        {b.breakMinutes ?? "—"} min
+                        {(b.breakExtensions ?? 0) > 0 && <span className="ml-1 text-amber-400">+{b.breakExtensions}&times; extended</span>}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {timeIST(b.respondedAt)} &rarr; due {timeIST(b.breakEndsAt)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-3 text-muted-foreground">
+                      <span>back {timeIST(b.breakReturnedAt)}</span>
+                      {b.breakOverrunSeconds != null && b.breakOverrunSeconds > 0 &&
+                        <span className="text-orange-400">late by {hold(b.breakOverrunSeconds)}</span>}
+                      {b.breakReturnHoldSeconds != null && <span>popup held {hold(b.breakReturnHoldSeconds)}</span>}
+                      {!b.breakReturnedAt && b.breakReturnClosedAt && <span className="text-orange-400">never confirmed</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="Long holds" count={holds.length}>
+              <div className="space-y-1.5">
+                {holds.map((h) => (
+                  <div key={h._id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-2.5 text-xs">
+                    <span className="font-medium">{h.lead?.name ?? "—"}</span>
+                    <span className="flex items-center gap-1.5 text-amber-500">
+                      <Timer className="h-3 w-3" />{hold(h.holdSeconds)} &middot; {h.action ?? "open"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** Compact call row for the sheet, expandable to the write-up history. */
+function SheetCallRow({ row }: { row: CallOverviewRow }) {
+  const [open, setOpen] = useState(false);
+  const history = row.outcomeHistory ?? [];
+
+  return (
+    <>
+      <tr className="border-b border-border last:border-0 hover:bg-muted/40">
+        <td className="px-3 py-2 text-xs font-medium">{row.lead?.name ?? "—"}</td>
+        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{timeIST(row.callStartedAt)}</td>
+        <td className="px-3 py-2 text-xs">{row.callResult ? CALL_RESULT_LABELS[row.callResult] ?? row.callResult : "—"}</td>
+        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+          {row.callDurationSeconds != null ? hold(row.callDurationSeconds) : "—"}
+        </td>
+        <td className="px-3 py-2">
+          <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5" disabled={!history.length}>
+            <OutcomeBadge row={row} />
+            {history.length > 0 && <History className="h-3 w-3 text-muted-foreground" />}
+          </button>
+        </td>
+      </tr>
+      {open && history.length > 0 && (
+        <tr>
+          <td colSpan={5} className="border-b border-border bg-muted/20 px-3 py-2">
+            <div className="space-y-1.5">
+              {history.map((h, i) => (
+                <div key={i} className="text-[11px]">
+                  <span className="font-semibold">{i === 0 ? "First entry" : `Edit ${i}`}</span>
+                  <span className="text-muted-foreground"> · {formatIST(h.recordedAt)} · {CALL_RESULT_LABELS[h.callResult] ?? h.callResult} · {hold(h.durationSeconds)}</span>
+                  <p className="text-muted-foreground">{h.note}</p>
+                </div>
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 type Tab = "calls" | "rejections" | "holds" | "breaks" | "employees";
@@ -222,6 +419,12 @@ export default function CallAutomationPage() {
   const [activeTab, setActiveTab] = useState<Tab>("calls");
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", userId: "" });
   // Break countdowns need their own tick — the query only refetches every 30s.
+  const [detail, setDetail] = useState<CallOverviewPerUser | null>(null);
+  /** Opening from a call/rejection/break row, where only the user id is to hand. */
+  const openEmployeeById = (userId: string) => {
+    const row = (data?.perUser ?? []).find((p) => p._id === userId);
+    if (row) setDetail(row);
+  };
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -352,7 +555,7 @@ export default function CallAutomationPage() {
             <TableShell isLoading={isLoading} rows={callLog.length}
               empty="No calls placed in this period." emptyIcon={PhoneCall}
               headers={["Employee", "Lead", "Called / Wrote Up", "Result", "Duration", "Notes", "Write-up", "History"]}>
-              {callLog.map((c) => <CallLogRow key={c._id} row={c} />)}
+              {callLog.map((c) => <CallLogRow key={c._id} row={c} onOpen={openEmployeeById} />)}
             </TableShell>
           )}
 
@@ -363,7 +566,7 @@ export default function CallAutomationPage() {
               {rejections.map((r) => (
                 <motion.tr key={r._id} variants={ITEM_VARIANTS} initial="hidden" animate="visible"
                   className="border-b border-border transition-colors hover:bg-muted/40">
-                  <EmployeeCell row={r} />
+                  <EmployeeCell row={r} onOpen={openEmployeeById} />
                   <LeadCell row={r} />
                   <td className="px-4 py-3">
                     <span className="inline-flex rounded-lg bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400">
@@ -384,7 +587,7 @@ export default function CallAutomationPage() {
               {flaggedHolds.map((h) => (
                 <motion.tr key={h._id} variants={ITEM_VARIANTS} initial="hidden" animate="visible"
                   className="border-b border-border transition-colors hover:bg-muted/40">
-                  <EmployeeCell row={h} />
+                  <EmployeeCell row={h} onOpen={openEmployeeById} />
                   <LeadCell row={h} />
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 font-mono text-xs font-semibold text-amber-500">
@@ -418,7 +621,7 @@ export default function CallAutomationPage() {
                 return (
                   <motion.tr key={b._id} variants={ITEM_VARIANTS} initial="hidden" animate="visible"
                     className="border-b border-border transition-colors hover:bg-muted/40">
-                    <EmployeeCell row={b} />
+                    <EmployeeCell row={b} onOpen={openEmployeeById} />
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {b.breakMinutes ?? "—"} min
                       {(b.breakExtensions ?? 0) > 0 && (
@@ -456,8 +659,16 @@ export default function CallAutomationPage() {
               headers={["Employee", "Prompts", "Called", "Updated", "Rejected", "Breaks", "Avg Hold", "Max Hold"]}>
               {perUser.map((p: CallOverviewPerUser) => (
                 <motion.tr key={p._id} variants={ITEM_VARIANTS} initial="hidden" animate="visible"
-                  className="border-b border-border transition-colors hover:bg-muted/40">
-                  <td className="px-4 py-3 text-sm font-semibold">{p.name ?? "—"}</td>
+                  onClick={() => setDetail(p)}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetail(p); } }}
+                  className="cursor-pointer border-b border-border transition-colors hover:bg-muted/40 focus:bg-muted/60 focus:outline-none">
+                  <td className="px-4 py-3 text-sm font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      {p.name ?? "—"}
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-sm">{p.total}</td>
                   <td className="px-4 py-3 text-sm text-green-500">{p.called}</td>
                   <td className="px-4 py-3 text-sm text-blue-500">{p.updated}</td>
@@ -471,6 +682,13 @@ export default function CallAutomationPage() {
           )}
         </motion.div>
       </AnimatePresence>
+
+      <EmployeeDetailSheet
+        employee={detail}
+        data={data}
+        rangeLabel={hasFilter ? "Filtered period" : "Today (IST)"}
+        onClose={() => setDetail(null)}
+      />
 
       {/* Note */}
       <div className="flex items-start gap-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
