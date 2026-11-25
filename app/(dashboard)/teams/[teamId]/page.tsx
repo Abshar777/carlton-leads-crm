@@ -287,6 +287,13 @@ function timeAgo(dateStr: string): string {
   return formatDate(dateStr);
 }
 
+/** Day the user would call it — the lead's own timezone, not the browser's. */
+function formatISTDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
 const FALLBACK_STATUS_CFG = {
   label: "Unknown",
   color: "bg-muted/15 text-muted-foreground border-border/50",
@@ -2590,6 +2597,17 @@ function TransferredLeadsTab({ teamId }: { teamId: string }) {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{lead.name || "–"}</p>
                 <p className="text-xs text-muted-foreground">{lead.phone || "–"}</p>
+                {/* The two dates the filters above work on, so a filtered list can be read back. */}
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                  <span className="text-[11px] text-muted-foreground/60 flex items-center gap-0.5 whitespace-nowrap">
+                    <Calendar className="h-2.5 w-2.5 shrink-0" />
+                    Created {lead.createdAt ? formatISTDate(lead.createdAt) : "—"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/60 flex items-center gap-0.5 whitespace-nowrap">
+                    <ArrowRightLeft className="h-2.5 w-2.5 shrink-0" />
+                    Transferred {lead.transferredAt ? formatISTDate(lead.transferredAt) : "—"}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge variant="outline" className="text-xs hidden sm:flex">
